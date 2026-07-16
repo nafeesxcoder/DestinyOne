@@ -289,7 +289,7 @@ function DestinyOneApp() {
     {screen==='circle'&&<TrustedCircle vouches={vouches} coinBalance={coinBalance} onBack={()=>setScreen('home')} onAddVouch={(quality)=>{if(vouches.length<3&&!vouches.includes(quality)){setVouches(current=>[...current,quality]);setCoinBalance(balance=>balance+100)}}}/>} 
     {screen==='discovery'&&<DiscoveryCenter filters={matchFilters} onFiltersChange={setMatchFilters} signals={discoverySignals} smartDiscovery={smartDiscovery} crossedPaths={crossedPaths} onSmartChange={setSmartDiscovery} onCrossedChange={setCrossedPaths} onClear={()=>setDiscoverySignals([])} onBack={()=>setScreen('home')}/>} 
     {screen==='coach'&&<RelationshipCoach match={selected} preferences={{intent,vibes:vibeList,filters:matchFilters}} onBack={()=>setScreen('home')} onOpenFilters={()=>setScreen('discovery')} onUseInChat={useCoachDraftInChat}/>} 
-    {screen==='events'&&<EventsHub onBack={()=>setScreen('home')} onOpenDatePlan={()=>setScreen('datePlan')} />} 
+    {screen==='events'&&<EventsHub onBack={()=>setScreen('home')} onOpenDatePlan={()=>setScreen('datePlan')} navigate={setScreen} />} 
     {screen==='executive'&&<ExecutiveCircle navigate={setScreen} onBack={()=>setScreen('profile')} onOpenEvents={()=>setScreen('events')} onOpenPricing={()=>setScreen('pricing')} onOpenVerify={()=>setScreen('verifyHub')} onOpenDatePlan={()=>setScreen('datePlan')}/>} 
     {screen==='verifyHub'&&<VerificationHub verified={verified} selfieUri={selfieUri} hasVoiceIntro={!!voiceIntroUri} vouches={vouches} onBack={()=>setScreen('profile')} onVerify={()=>{setVerified(true);setAppNotice({title:'Trust badge upgraded',body:'Selfie verification is marked complete in this preview. Production will connect liveness and ID providers.',icon:'shield-checkmark',tone:'gold'})}} onOpenSafety={()=>setScreen('safety')}/>} 
     {screen==='admin'&&<AdminModerationPanel reports={reports} blockedCount={blockedIds.length} onBack={()=>setScreen('profile')}/>} 
@@ -1080,7 +1080,8 @@ function RelationshipCoach({match,preferences,onBack,onOpenFilters,onUseInChat}:
   </ScrollView></SafeAreaView></LinearGradient>
 }
 
-function EventsHub({onBack,onOpenDatePlan}:{onBack:()=>void;onOpenDatePlan:()=>void}){
+function EventsHub({onBack,onOpenDatePlan,navigate}:{onBack:()=>void;onOpenDatePlan:()=>void;navigate:(screen:Screen)=>void}){
+  const [section,setSection]=useState<'places'|'packages'|'events'>('places');
   const [query,setQuery]=useState('');
   const [kind,setKind]=useState<'All'|PlaceKind>('All');
   const [city,setCity]=useState('All');
@@ -1134,9 +1135,16 @@ function EventsHub({onBack,onOpenDatePlan}:{onBack:()=>void;onOpenDatePlan:()=>v
           <EventStat value={`${placeCities.length-1}`} label="main cities"/>
           <EventStat value={`${datePackages.length}`} label="date packages"/>
         </View>
-        <DateMarketplaceCard snapshot={marketplaceSnapshot}/>
-        <LiveMarketplaceOpsCard snapshot={liveOpsSnapshot}/>
-        <CityLaunchRoadmap/>
+        <View style={styles.segment}>
+          <Segment label="Places" active={section==='places'} onPress={()=>setSection('places')}/>
+          <Segment label="Date packages" active={section==='packages'} onPress={()=>setSection('packages')}/>
+          <Segment label="Events" active={section==='events'} onPress={()=>setSection('events')}/>
+        </View>
+        {section==='places'&&<>
+        <View style={coachStyles.boundaryCard}>
+          <PremiumIcon name="location" tone="gold" size={44} iconSize={19}/>
+          <View style={{flex:1}}><Text style={styles.cardTitle}>Find the right first-date setting</Text><Text style={styles.helper}>Browse cafés, restaurants, cultural places, parks and activities across major USA and Canada cities.</Text></View>
+        </View>
         <View style={coachStyles.searchPanel}>
           <View style={selectorStyles.searchBox}>
             <MiniPremiumIcon name="search" tone="rose" size={32} iconSize={15}/>
@@ -1174,13 +1182,20 @@ function EventsHub({onBack,onOpenDatePlan}:{onBack:()=>void;onOpenDatePlan:()=>v
         </View>
         {filtered.length>8&&<View style={{gap:12}}>
           <Text style={styles.sectionLabel}>MORE OPTIONS</Text>
-          {filtered.slice(8,28).map(place=><PlaceCard key={place.id} compact place={place} saved={saved.includes(place.id)} onSave={()=>toggleSaved(place.id)} onDetail={()=>setSelected(place)} onPlan={onOpenDatePlan}/>)}
+          {filtered.slice(8,14).map(place=><PlaceCard key={place.id} compact place={place} saved={saved.includes(place.id)} onSave={()=>toggleSaved(place.id)} onDetail={()=>setSelected(place)} onPlan={onOpenDatePlan}/>)}
+          {filtered.length>14&&<Text style={[styles.helper,{textAlign:'center'}]}>Use city, category or search to explore all {filtered.length} matching places.</Text>}
         </View>}
         {!filtered.length&&<View style={[shared.card,{alignItems:'center',gap:10}]}>
           <PremiumIcon name="search" tone="ruby" size={54} iconSize={25}/>
           <Text style={styles.cardTitle}>No place found</Text>
           <Text style={[styles.helper,{textAlign:'center'}]}>Try a city, restaurant, café, park, tourist place, lounge or activity keyword.</Text>
         </View>}
+        </>}
+        {section==='packages'&&<>
+        <View style={coachStyles.boundaryCard}>
+          <PremiumIcon name="sparkles" tone="gold" size={44} iconSize={19}/>
+          <View style={{flex:1}}><Text style={styles.cardTitle}>Curated date packages</Text><Text style={styles.helper}>Pick a low-pressure café, an activity, dinner or a premium hosted experience. Every package includes a public-place safety plan.</Text></View>
+        </View>
         <View style={{gap:12}}>
           <View style={shared.row}>
             <Text style={styles.sectionLabel}>DATE PACKAGES</Text>
@@ -1188,6 +1203,14 @@ function EventsHub({onBack,onOpenDatePlan}:{onBack:()=>void;onOpenDatePlan:()=>v
             <Pressable onPress={onOpenDatePlan}><Text style={coachStyles.inlineLink}>Open concierge</Text></Pressable>
           </View>
           {datePackages.map(item=><DatePackageCard key={item.id} item={item} onPlan={onOpenDatePlan}/>)}
+        </View>
+        <ReservationOpsCard/>
+        <Button label="Open Date Concierge" icon="calendar" onPress={onOpenDatePlan}/>
+        </>}
+        {section==='events'&&<>
+        <View style={coachStyles.boundaryCard}>
+          <PremiumIcon name="people" tone="ruby" size={44} iconSize={19}/>
+          <View style={{flex:1}}><Text style={styles.cardTitle}>Meet through shared culture and intent</Text><Text style={styles.helper}>Verified mixers, video speed dates, community nights and small hosted dinners for serious singles.</Text></View>
         </View>
         <View style={{gap:12}}>
           <Text style={styles.sectionLabel}>INDIAN MIXERS · VIDEO SPEED DATES · PREMIUM DINNERS</Text>
@@ -1203,38 +1226,18 @@ function EventsHub({onBack,onOpenDatePlan}:{onBack:()=>void;onOpenDatePlan:()=>v
               <Text style={styles.helper}>{event.body}</Text>
               <View style={coachStyles.eventFooter}>
                 <View style={coachStyles.eventTag}><PremiumIcon name="shield-checkmark" tone="gold" size={24} iconSize={11}/><Text style={coachStyles.eventTagText}>{event.tag}</Text></View>
-                <Pressable onPress={()=>rsvp(event)} style={coachStyles.rsvpButton}><Text style={coachStyles.rsvpText}>RSVP</Text></Pressable>
+                <Pressable onPress={()=>rsvp(event)} style={coachStyles.rsvpButton}><Text style={coachStyles.rsvpText}>Details & RSVP</Text></Pressable>
               </View>
             </View>
           </View>)}
         </View>
-        <View style={ventureStyles.section}>
-          <Text style={styles.sectionLabel}>PARTNER / RESERVATION PIPELINE</Text>
-          {partnerPipeline.map(([title,body,done])=><ChecklistRow key={title} title={title} body={body} done={done}/>)}
-        </View>
-        <ReservationOpsCard/>
-        <View style={coachStyles.partnerCta}>
-          <PremiumIcon name="storefront-outline" tone="gold" size={48} iconSize={22}/>
-          <View style={{flex:1}}>
-            <Text style={styles.cardTitle}>Restaurant/café partner intake</Text>
-            <Text style={styles.helper}>Use this to queue partner venues for package menus, reservation holds, support SLA and safety review.</Text>
-            {!!partnerStatus&&<Text style={coachStyles.partnerStatus}>{partnerStatus}</Text>}
-          </View>
-          <Pressable onPress={()=>setPartnerOpen(true)} style={coachStyles.rsvpButton}><Text style={coachStyles.rsvpText}>Add partner</Text></Pressable>
-        </View>
-        <View style={coachStyles.boundaryCard}>
-          <PremiumIcon name="restaurant" tone="ruby" size={44} iconSize={19}/>
-          <View style={{flex:1}}>
-            <Text style={styles.cardTitle}>Live Places + Reservation API ready</Text>
-            <Text style={styles.helper}>Preview uses curated data. Production can connect Google Places/Yelp/Tripadvisor-style venue providers plus OpenTable/SevenRooms/Toast-style reservation adapters.</Text>
-          </View>
-        </View>
-        <Button label="Open Date Concierge" icon="calendar" onPress={onOpenDatePlan}/>
+        </>}
         <Text style={styles.legal}>Places are curated preview suggestions, not live availability. Always verify hours and meet safely in public.</Text>
       </ScrollView>
       <PlaceDetailModal place={selected} saved={!!selected&&saved.includes(selected.id)} onClose={()=>setSelected(null)} onSave={()=>selected&&toggleSaved(selected.id)} onPlan={onOpenDatePlan}/>
       <EventRsvpSheet event={rsvpEvent} onClose={()=>setRsvpEvent(null)} onPlan={()=>{setRsvpEvent(null);onOpenDatePlan()}}/>
       <PartnerInterestSheet visible={partnerOpen} request={partnerRequest} onChange={updatePartnerRequest} onClose={()=>setPartnerOpen(false)} onSubmit={submitPartnerRequest}/>
+      <BottomNav active="events" navigate={navigate}/>
     </SafeAreaView>
   </LinearGradient>
 }
@@ -1414,8 +1417,11 @@ function PartnerInterestSheet({visible,request,onChange,onClose,onSubmit}:{visib
 }
 
 function EventRsvpSheet({event,onClose,onPlan}:{event:typeof eventExperiences[number]|null;onClose:()=>void;onPlan:()=>void}){
+  const [saved,setSaved]=useState(false);
+  useEffect(()=>setSaved(false),[event?.title]);
   if(!event)return null;
-  return <Modal visible transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={chatStyles.sheet}><SheetHeader title="RSVP preview saved" subtitle={`${event.city} · ${event.date}`} onClose={onClose}/><View style={coachStyles.rsvpConfirm}><PremiumIcon name="ticket" tone="gold" size={58} iconSize={27}/><View style={{flex:1}}><Text style={styles.cardTitle}>{event.title}</Text><Text style={styles.helper}>{event.body}</Text></View></View><View style={coachStyles.detailRows}><DetailRow icon="location-outline" label="City" value={event.city}/><DetailRow icon="calendar-outline" label="When" value={event.date}/><DetailRow icon="shield-checkmark-outline" label="Trust" value={event.tag}/></View><Button label="Plan a date around this" icon="calendar" variant="gold" onPress={onPlan}/><Button label="Done" variant="secondary" onPress={onClose}/><Text style={styles.legal}>Production will connect tickets, city capacity and ID-verified check-in.</Text></SafeAreaView></Modal>
+  const groupSize=event.type==='Online'?'Private 1:1 rounds':event.type==='Private dinner'||event.type==='Invite only'?'8–12 approved guests':'Small hosted groups';
+  return <Modal visible transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={chatStyles.sheet}><SheetHeader title="Event details & RSVP" subtitle={`${event.city} · ${event.date}`} onClose={onClose}/><ScrollView contentContainerStyle={{gap:12,paddingBottom:8}} showsVerticalScrollIndicator={false}><View style={coachStyles.rsvpConfirm}><PremiumIcon name="ticket" tone="gold" size={58} iconSize={27}/><View style={{flex:1}}><Text style={styles.cardTitle}>{event.title}</Text><Text style={styles.helper}>{event.body}</Text></View></View><View style={coachStyles.detailRows}><DetailRow icon="location-outline" label="Location" value={event.city}/><DetailRow icon="calendar-outline" label="Schedule" value={event.date}/><DetailRow icon="people-outline" label="Group format" value={groupSize}/><DetailRow icon="shield-checkmark-outline" label="Entry standard" value={event.tag}/></View><View style={coachStyles.opsGrid}><View style={coachStyles.opsItem}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={30} iconSize={14}/><Text style={coachStyles.opsTitle}>Verified arrival</Text><Text style={coachStyles.opsBody}>Host check-in and clear community expectations before introductions begin.</Text></View><View style={coachStyles.opsItem}><MiniPremiumIcon name="chatbubbles" tone="rose" size={30} iconSize={14}/><Text style={coachStyles.opsTitle}>Guided connection</Text><Text style={coachStyles.opsBody}>Conversation prompts and small groups keep the experience warm, not awkward.</Text></View><View style={coachStyles.opsItem}><MiniPremiumIcon name="lock-closed" tone="gold" size={30} iconSize={14}/><Text style={coachStyles.opsTitle}>Private follow-up</Text><Text style={coachStyles.opsBody}>Contact details stay hidden; mutual interest can unlock an in-app chat afterward.</Text></View></View>{saved&&<View style={coachStyles.savedNote}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><Text style={coachStyles.savedNoteText}>RSVP saved for this preview. Live ticket confirmation and reminders connect with the backend later.</Text></View>}<Button label={saved?'RSVP saved':'Save RSVP'} icon={saved?'checkmark-circle':'ticket-outline'} onPress={()=>setSaved(true)}/><Button label="Plan a date around this" icon="calendar" variant="gold" onPress={onPlan}/><Button label="Done" variant="secondary" onPress={onClose}/><Text style={styles.legal}>Event inventory is preview data. Production will connect tickets, capacity, payment and ID-verified check-in.</Text></ScrollView></SafeAreaView></Modal>
 }
 
 function placeKindIcon(kind:PlaceKind):keyof typeof Ionicons.glyphMap{
@@ -3691,7 +3697,7 @@ function Segment({label,active,onPress}:{label:string;active:boolean;onPress:()=
 function Info({title,body}:{title:string;body:string}){return <View style={{gap:8}}><Text style={styles.sectionLabel}>{title.toUpperCase()}</Text><Text style={[shared.body,{color:'#D3CED6'}]}>{body}</Text></View>}
 function LifeAlignment({match}:{match:Match}){const rows=[['diamond-outline','Marriage outlook',match.timeline],['happy-outline','Family plans',match.children],['people-outline','Family involvement',match.family],['home-outline','Relocation',match.relocation],['chatbubbles-outline','Languages',match.languages.join(' · ')]] as const;return <View style={{gap:10}}><Text style={styles.sectionLabel}>LIFE ALIGNMENT</Text><View style={styles.alignmentCard}>{rows.map(([icon,label,value])=><View key={label} style={styles.alignmentRow}><MiniPremiumIcon name={icon} tone="rose" size={34} iconSize={16}/><View style={{flex:1}}><Text style={styles.alignmentRowLabel}>{label}</Text><Text style={styles.alignmentRowValue}>{value}</Text></View></View>)}</View><Text style={styles.alignmentPrivacy}>Shared to make intentions clear—not to reduce a person to a checklist.</Text><View style={circleStyles.profileVouch}><PremiumIcon name="people" tone="gold" size={46} iconSize={22}/><View style={{flex:1}}><Text style={circleStyles.profileVouchTitle}>Vouched for by {match.vouches.count} friends</Text><Text style={circleStyles.profileVouchBody}>People who know {match.name} describe her as:</Text><View style={circleStyles.qualityWrap}>{match.vouches.qualities.map(quality=><View key={quality} style={circleStyles.qualityPill}><Text style={circleStyles.qualityText}>{quality}</Text></View>)}</View></View></View><Text style={styles.alignmentPrivacy}>Friend vouches confirm character, not identity or safety. Always use your own judgment.</Text></View>}
 function BottomNav({active,navigate}:{active:string;navigate:(s:Screen)=>void}){
-  const items:[string,keyof typeof Ionicons.glyphMap,Screen,PremiumIconTone][]=[['Matches','heart','home','ruby'],['Discover','options','discovery','plum'],['Likes','heart-circle','likes','rose'],['Chat','chatbubble','chat','ruby'],['Executive','briefcase','executive','gold'],['Profile','person','profile','dark']];
+  const items:[string,keyof typeof Ionicons.glyphMap,Screen,PremiumIconTone][]=[['Matches','heart','home','ruby'],['Dates','calendar','events','gold'],['Likes','heart-circle','likes','rose'],['Chat','chatbubble','chat','ruby'],['Executive','briefcase','executive','gold'],['Profile','person','profile','dark']];
   return <View accessibilityRole="tablist" style={bottomNavStyles.nav}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={bottomNavStyles.navScroller}>{items.map(([label,icon,target,tone])=>{
     const selected=active===target;
     return <Pressable accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{selected}} key={label} onPress={()=>navigate(target)} style={bottomNavStyles.navItem}>
