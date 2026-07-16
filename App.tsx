@@ -930,6 +930,7 @@ type PlaceKind='Restaurant'|'Cafe'|'Tourist'|'Activity'|'Park'|'Dessert'|'Lounge
 type PlaceItem={id:string;name:string;city:string;country:'USA'|'Canada';kind:PlaceKind;area:string;price:string;vibe:string;bestTime:string;safety:string;icon:string;tags:string[]};
 type DatePackage={id:string;title:string;tier:string;city:string;price:string;duration:string;includes:string[];safety:string;icon:keyof typeof Ionicons.glyphMap};
 type PartnerRequest={venue:string;city:string;contact:string;packageTitle:string};
+type CoupleBundle={id:string;title:string;city:string;price:string;priceCents:number;duration:string;mood:string;icon:keyof typeof Ionicons.glyphMap;includes:string[];flexibility:string;safety:string};
 const placeKinds:('All'|PlaceKind)[]=['All','Restaurant','Cafe','Tourist','Activity','Park','Dessert','Lounge','Cultural'];
 const placeCities=['All','New York, NY','Los Angeles, CA','Chicago, IL','Houston, TX','Dallas, TX','Austin, TX','San Francisco, CA','Seattle, WA','Miami, FL','Boston, MA','Washington, DC','San Diego, CA','Atlanta, GA','Denver, CO','Las Vegas, NV','Orlando, FL','Toronto, ON','Vancouver, BC','Montreal, QC','Calgary, AB','Ottawa, ON'];
 const datePackages:DatePackage[]=[
@@ -940,6 +941,21 @@ const datePackages:DatePackage[]=[
   {id:'rooftop-table',title:'Premium Rooftop Table',tier:'Premium',city:'NYC · LA · Miami · Toronto',price:'$95–$180 pp',duration:'2 hours',icon:'wine',includes:['Rooftop or lounge table','Mocktail/dessert option','Concierge reminder'],safety:'Staffed venue, separate arrivals encouraged.'},
   {id:'executive-dinner',title:'Executive Invite-only Dinner',tier:'Executive Circle',city:'NYC · SF · Dallas',price:'Included after approval',duration:'2.5 hours',icon:'diamond',includes:['Verified guest list','Hosted table','Private concierge follow-up'],safety:'Invite-only, ID/business verified, host present.'},
 ];
+const coupleBundles:CoupleBundle[]=[
+  {id:'easy-first-date',title:'The Easy First Date',city:'Any USA / Canada city',price:'From $69',priceCents:6900,duration:'2–3 hours',mood:'Cozy',icon:'cafe',includes:['Café or dessert reservation','Shared-interest activity','Parking/transit guidance','Safety check-in'],flexibility:'Free plan changes before venue confirmation.',safety:'Public venues, separate arrival options and private contact details.'},
+  {id:'date-night',title:'Dinner + Something Fun',city:'Any USA / Canada city',price:'From $189',priceCents:18900,duration:'4–5 hours',mood:'Playful',icon:'restaurant',includes:['Dinner table for two','Comedy, games or live show','Dessert stop','One shared itinerary'],flexibility:'Flexible time swap when inventory allows.',safety:'Verified reservation trail and optional trusted-contact share.'},
+  {id:'city-escape',title:'Romantic City Escape',city:'Any USA / Canada city',price:'From $649',priceCents:64900,duration:'1 night',mood:'Romantic',icon:'bed',includes:['Boutique hotel stay','Dinner reservation','Couples experience','Breakfast or late checkout'],flexibility:'Refund and cancellation terms shown before confirmation.',safety:'Hotel and venue details unlock only after both partners accept.'},
+  {id:'weekend',title:'Anniversary Weekend',city:'Any USA / Canada city',price:'From $1,249',priceCents:124900,duration:'2 nights',mood:'Luxury',icon:'diamond',includes:['Premium romantic hotel','Chef-led dinner','Spa or wellness session','Flowers and private concierge'],flexibility:'Concierge handles changes across the complete itinerary.',safety:'One support contact for stay, dining, experience and transport issues.'},
+];
+const marketplaceBookingTypes=[
+  {title:'Restaurants & cafés',body:'Real-time tables, dietary preferences, deposits and cancellation terms.',icon:'restaurant' as const,tone:'ruby' as PremiumIconTone},
+  {title:'Hotels & romantic stays',body:'Room availability, total price, amenities, policies and secure booking.',icon:'bed' as const,tone:'gold' as PremiumIconTone},
+  {title:'Experiences & tours',body:'Cooking, pottery, comedy, museums, cruises and local activities.',icon:'ticket' as const,tone:'plum' as PremiumIconTone},
+  {title:'Events & entertainment',body:'Concerts, sports, theatre, festivals and DestinyOne hosted mixers.',icon:'musical-notes' as const,tone:'rose' as PremiumIconTone},
+  {title:'Spa & wellness',body:'Couples massage, wellness day, yoga and relaxing retreat options.',icon:'flower' as const,tone:'gold' as PremiumIconTone},
+  {title:'Surprises & gifting',body:'Flowers, dessert, room décor and meaningful add-ons in one order.',icon:'gift' as const,tone:'ruby' as PremiumIconTone},
+  {title:'Transport & arrival',body:'Parking, transit, separate arrival plans and future ride integrations.',icon:'car' as const,tone:'dark' as PremiumIconTone},
+] as const;
 const partnerPipeline=[
   ['Venue database','Curated USA/Canada places with safe-first-date notes, category filters and city search.',true],
   ['Partner outreach','Restaurant/café partner program with package menu, refund SLA and support contact.',true],
@@ -1092,6 +1108,7 @@ function EventsHub({onBack,onOpenDatePlan,navigate}:{onBack:()=>void;onOpenDateP
   const [saved,setSaved]=useState<string[]>([]);
   const [selected,setSelected]=useState<PlaceItem|null>(null);
   const [rsvpEvent,setRsvpEvent]=useState<typeof eventExperiences[number]|null>(null);
+  const [bundleCheckout,setBundleCheckout]=useState<CoupleBundle|null>(null);
   const [partnerOpen,setPartnerOpen]=useState(false);
   const [partnerStatus,setPartnerStatus]=useState('');
   const [partnerRequest,setPartnerRequest]=useState<PartnerRequest>({venue:'',city:'New York, NY',contact:'',packageTitle:'First Date Safe Café'});
@@ -1132,9 +1149,10 @@ function EventsHub({onBack,onOpenDatePlan,navigate}:{onBack:()=>void;onOpenDateP
         </View>
         <View style={coachStyles.eventStats}>
           <EventStat value={`${placeDirectory.length}`} label="curated places"/>
-          <EventStat value={`${placeCities.length-1}`} label="main cities"/>
-          <EventStat value={`${datePackages.length}`} label="date packages"/>
+          <EventStat value="USA + Canada" label="coverage model"/>
+          <EventStat value={`${marketplaceBookingTypes.length}`} label="booking types"/>
         </View>
+        <CouplesPlanBuilder onBook={setBundleCheckout}/>
         <View style={styles.segment}>
           <Segment label="Places" active={section==='places'} onPress={()=>setSection('places')}/>
           <Segment label="Date packages" active={section==='packages'} onPress={()=>setSection('packages')}/>
@@ -1237,9 +1255,53 @@ function EventsHub({onBack,onOpenDatePlan,navigate}:{onBack:()=>void;onOpenDateP
       <PlaceDetailModal place={selected} saved={!!selected&&saved.includes(selected.id)} onClose={()=>setSelected(null)} onSave={()=>selected&&toggleSaved(selected.id)} onPlan={onOpenDatePlan}/>
       <EventRsvpSheet event={rsvpEvent} onClose={()=>setRsvpEvent(null)} onPlan={()=>{setRsvpEvent(null);onOpenDatePlan()}}/>
       <PartnerInterestSheet visible={partnerOpen} request={partnerRequest} onChange={updatePartnerRequest} onClose={()=>setPartnerOpen(false)} onSubmit={submitPartnerRequest}/>
+      <MarketplaceCheckoutSheet bundle={bundleCheckout} onClose={()=>setBundleCheckout(null)}/>
       <BottomNav active="events" navigate={navigate}/>
     </SafeAreaView>
   </LinearGradient>
+}
+
+function CouplesPlanBuilder({onBook}:{onBook:(bundle:CoupleBundle)=>void}){
+  const [city,setCity]=useState('');
+  const [mood,setMood]=useState('Cozy');
+  const [budget,setBudget]=useState('Under $100');
+  const [ready,setReady]=useState(false);
+  const moods=['Cozy','Playful','Romantic','Luxury'];
+  const budgets=['Under $100','$100–$400','$400–$900','Luxury'];
+  const bundleIndex=Math.max(0,budgets.indexOf(budget));
+  const baseBundle=coupleBundles[bundleIndex]??coupleBundles[0]!;
+  const bundle:{id:string;title:string;city:string;price:string;priceCents:number;duration:string;mood:string;icon:keyof typeof Ionicons.glyphMap;includes:string[];flexibility:string;safety:string}={...baseBundle,city:city.trim()||baseBundle.city,mood};
+  return <View style={couplesMarketStyles.builder}>
+    <View style={shared.row}><PremiumIcon name="sparkles" tone="gold" size={52} iconSize={24}/><View style={{flex:1,marginLeft:10}}><Text style={styles.kicker}>DESTINYONE COMPLETE PLAN</Text><Text style={styles.cardTitle}>One booking. Your whole date.</Text><Text style={styles.helper}>Stay, dining, experiences, surprises and arrival details in one itinerary.</Text></View></View>
+    <View style={selectorStyles.searchBox}><MiniPremiumIcon name="location" tone="rose" size={32} iconSize={15}/><TextInput value={city} onChangeText={(value)=>{setCity(value);setReady(false)}} placeholder="Any USA or Canada city / postal code" placeholderTextColor="#71626A" style={selectorStyles.searchInput}/>{!!city&&<Pressable onPress={()=>{setCity('');setReady(false)}}><MiniPremiumIcon name="close-circle" tone="dark" size={30} iconSize={14}/></Pressable>}</View>
+    <View style={{gap:8}}><Text style={styles.sectionLabel}>MOOD</Text><View style={couplesMarketStyles.choiceRow}>{moods.map(option=><Pressable key={option} onPress={()=>{setMood(option);setReady(false)}} style={[couplesMarketStyles.choice,mood===option&&couplesMarketStyles.choiceOn]}><Text style={[couplesMarketStyles.choiceText,mood===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}</View></View>
+    <View style={{gap:8}}><Text style={styles.sectionLabel}>TOTAL BUDGET</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>{budgets.map(option=><Pressable key={option} onPress={()=>{setBudget(option);setReady(false)}} style={[couplesMarketStyles.budget,budget===option&&couplesMarketStyles.budgetOn]}><Text style={[couplesMarketStyles.choiceText,budget===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}</ScrollView></View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:9}}>{marketplaceBookingTypes.map(item=><View key={item.title} style={couplesMarketStyles.bookingType}><MiniPremiumIcon name={item.icon} tone={item.tone} size={32} iconSize={15}/><Text style={couplesMarketStyles.bookingTypeTitle}>{item.title}</Text><Text style={couplesMarketStyles.bookingTypeBody}>{item.body}</Text></View>)}</ScrollView>
+    {!ready?<Button label="Build complete itinerary" icon="sparkles" onPress={()=>setReady(true)}/>:<View style={couplesMarketStyles.generated}>
+      <View style={shared.row}><PremiumIcon name={bundle.icon} tone={bundle.mood==='Luxury'?'gold':'ruby'} size={48} iconSize={22}/><View style={{flex:1,marginLeft:9}}><Text style={styles.cardTitle}>{bundle.title}</Text><Text style={coachStyles.eventMeta}>{bundle.city} · {bundle.duration} · {bundle.price}</Text></View><MiniPremiumIcon name="checkmark-circle" tone="gold" size={34} iconSize={16}/></View>
+      <View style={couplesMarketStyles.itinerary}>{bundle.includes.map((item,index)=><View key={item} style={couplesMarketStyles.itineraryRow}><View style={couplesMarketStyles.stepNumber}><Text style={couplesMarketStyles.stepNumberText}>{index+1}</Text></View><Text style={couplesMarketStyles.itineraryText}>{item}</Text></View>)}</View>
+      <View style={couplesMarketStyles.policyRow}><MiniPremiumIcon name="refresh-circle" tone="gold" size={28} iconSize={13}/><Text style={couplesMarketStyles.policyText}>{bundle.flexibility}</Text></View>
+      <View style={couplesMarketStyles.policyRow}><MiniPremiumIcon name="shield-checkmark" tone="rose" size={28} iconSize={13}/><Text style={couplesMarketStyles.policyText}>{bundle.safety}</Text></View>
+      <Button label="Reserve complete plan" icon="wallet" variant="gold" onPress={()=>onBook(bundle)}/>
+      <Pressable onPress={()=>setReady(false)} style={couplesMarketStyles.startOver}><Text style={couplesMarketStyles.startOverText}>Change plan</Text></Pressable>
+    </View>}
+  </View>
+}
+
+function MarketplaceCheckoutSheet({bundle,onClose}:{bundle:CoupleBundle|null;onClose:()=>void}){
+  const [payment,setPayment]=useState('Card');
+  const [confirmed,setConfirmed]=useState(false);
+  useEffect(()=>{setConfirmed(false);setPayment('Card')},[bundle?.id,bundle?.city]);
+  if(!bundle)return null;
+  const confirmation=`DO-${bundle.id.toUpperCase().slice(0,6)}-2026`;
+  return <Modal visible transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={chatStyles.sheet}><SheetHeader title={confirmed?'Itinerary reserved':'Complete your booking'} subtitle={`${bundle.city} · ${bundle.duration}`} onClose={onClose}/><ScrollView contentContainerStyle={{gap:12,paddingBottom:10}} showsVerticalScrollIndicator={false}>
+    <View style={couplesMarketStyles.checkoutHero}><PremiumIcon name={confirmed?'checkmark-circle':'wallet'} tone="gold" size={56} iconSize={26}/><View style={{flex:1}}><Text style={styles.cardTitle}>{confirmed?'Your complete plan is ready':bundle.title}</Text><Text style={styles.helper}>{confirmed?`Confirmation ${confirmation}`:'One checkout and one support contact for the full itinerary.'}</Text></View></View>
+    <View style={coachStyles.detailRows}><DetailRow icon="location-outline" label="Destination" value={bundle.city}/><DetailRow icon="time-outline" label="Duration" value={bundle.duration}/><DetailRow icon="receipt-outline" label="Estimated total" value={bundle.price}/><DetailRow icon="refresh-circle-outline" label="Changes" value={bundle.flexibility}/></View>
+    <View style={couplesMarketStyles.checkoutItems}>{bundle.includes.map((item,index)=><View key={item} style={couplesMarketStyles.checkoutItem}><MiniPremiumIcon name={index===0?'bed':index===1?'restaurant':index===2?'ticket':'sparkles'} tone={index%2?'ruby':'gold'} size={32} iconSize={15}/><View style={{flex:1}}><Text style={couplesMarketStyles.checkoutItemTitle}>{item}</Text><Text style={couplesMarketStyles.checkoutItemMeta}>{confirmed?'Reserved in preview itinerary':'Availability checked at confirmation'}</Text></View>{confirmed&&<MiniPremiumIcon name="checkmark-circle" tone="gold" size={26} iconSize={12}/>}</View>)}</View>
+    {!confirmed&&<><Text style={styles.sectionLabel}>PAYMENT</Text><View style={couplesMarketStyles.paymentRow}>{['Card','Apple Pay','Google Pay'].map(option=><Pressable key={option} onPress={()=>setPayment(option)} style={[couplesMarketStyles.paymentChoice,payment===option&&couplesMarketStyles.paymentChoiceOn]}><MiniPremiumIcon name={option==='Card'?'card':option==='Apple Pay'?'logo-apple':'logo-google'} tone={payment===option?'gold':'dark'} size={28} iconSize={13}/><Text style={[couplesMarketStyles.paymentText,payment===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}</View><View style={couplesMarketStyles.totalRow}><Text style={styles.cardTitle}>Estimated total</Text><Text style={couplesMarketStyles.totalPrice}>{bundle.price}</Text></View><Button label="Confirm preview booking" icon="lock-closed" onPress={()=>setConfirmed(true)}/></>}
+    {confirmed&&<><View style={coachStyles.savedNote}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><Text style={coachStyles.savedNoteText}>Stay, dining, activity and add-ons are grouped into one DestinyOne itinerary.</Text></View><Button label="Done" icon="checkmark" onPress={onClose}/></>}
+    <Text style={styles.legal}>Preview mode does not charge a card or reserve live inventory. Production booking activates only after provider contracts, server-side price checks, payment webhooks and cancellation support are connected.</Text>
+  </ScrollView></SafeAreaView></Modal>
 }
 
 function DateMarketplaceCard({snapshot}:{snapshot:DateMarketplaceSnapshot}){
@@ -3750,6 +3812,40 @@ const bottomNavStyles=StyleSheet.create({
   inactiveIcon:{width:31,height:31,borderRadius:16,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
   navText:{fontFamily:'Poppins_700Bold',fontSize:7.4,color:colors.muted},
   navTextOn:{color:colors.ivory},
+});
+
+const couplesMarketStyles=StyleSheet.create({
+  builder:{gap:16,paddingVertical:4},
+  choiceRow:{flexDirection:'row',flexWrap:'wrap',gap:8},
+  choice:{minHeight:38,paddingHorizontal:14,borderRadius:19,borderWidth:1,borderColor:'rgba(255,255,255,.10)',backgroundColor:'rgba(255,255,255,.045)',alignItems:'center',justifyContent:'center'},
+  choiceOn:{backgroundColor:'#85152A',borderColor:'rgba(255,80,105,.55)'},
+  choiceText:{fontFamily:'Poppins_600SemiBold',fontSize:10.5,color:colors.muted},
+  budget:{minHeight:38,paddingHorizontal:14,borderRadius:19,borderWidth:1,borderColor:'rgba(212,175,55,.18)',backgroundColor:'rgba(212,175,55,.055)',alignItems:'center',justifyContent:'center'},
+  budgetOn:{backgroundColor:'rgba(156,116,18,.42)',borderColor:colors.gold},
+  bookingType:{width:190,minHeight:126,padding:13,borderRadius:8,backgroundColor:'rgba(28,8,13,.92)',borderWidth:1,borderColor:'rgba(255,255,255,.09)',gap:6},
+  bookingTypeTitle:{fontFamily:'Poppins_700Bold',fontSize:11,color:colors.ivory},
+  bookingTypeBody:{fontFamily:'Poppins_400Regular',fontSize:9.3,lineHeight:14,color:colors.muted},
+  generated:{gap:12,paddingTop:15,borderTopWidth:1,borderTopColor:'rgba(212,175,55,.22)'},
+  itinerary:{gap:8},
+  itineraryRow:{minHeight:40,flexDirection:'row',alignItems:'center',gap:9},
+  stepNumber:{width:26,height:26,borderRadius:13,backgroundColor:'rgba(212,175,55,.13)',borderWidth:1,borderColor:'rgba(212,175,55,.30)',alignItems:'center',justifyContent:'center'},
+  stepNumberText:{fontFamily:'Poppins_700Bold',fontSize:9,color:'#F3D894'},
+  itineraryText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:11,color:'#EED8DD'},
+  policyRow:{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:11,paddingVertical:9,borderRadius:8,backgroundColor:'rgba(255,255,255,.035)'},
+  policyText:{flex:1,fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:colors.muted},
+  startOver:{alignSelf:'center',paddingHorizontal:12,paddingVertical:8},
+  startOverText:{fontFamily:'Poppins_600SemiBold',fontSize:10,color:colors.pinkSoft},
+  checkoutHero:{padding:14,borderRadius:8,backgroundColor:'rgba(212,175,55,.075)',borderWidth:1,borderColor:'rgba(212,175,55,.24)',flexDirection:'row',alignItems:'center',gap:12},
+  checkoutItems:{gap:8},
+  checkoutItem:{minHeight:58,paddingHorizontal:12,paddingVertical:9,borderRadius:8,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.07)',flexDirection:'row',alignItems:'center',gap:9},
+  checkoutItemTitle:{fontFamily:'Poppins_600SemiBold',fontSize:10.5,color:colors.ivory},
+  checkoutItemMeta:{fontFamily:'Poppins_400Regular',fontSize:8.8,color:colors.muted,marginTop:2},
+  paymentRow:{flexDirection:'row',gap:8},
+  paymentChoice:{flex:1,minHeight:48,paddingHorizontal:6,borderRadius:8,borderWidth:1,borderColor:'rgba(255,255,255,.09)',backgroundColor:'rgba(255,255,255,.04)',alignItems:'center',justifyContent:'center',gap:3},
+  paymentChoiceOn:{borderColor:colors.gold,backgroundColor:'rgba(212,175,55,.10)'},
+  paymentText:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:colors.muted,textAlign:'center'},
+  totalRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingTop:4},
+  totalPrice:{fontFamily:'Poppins_700Bold',fontSize:22,color:colors.gold},
 });
 
 const gameStyles=StyleSheet.create({
