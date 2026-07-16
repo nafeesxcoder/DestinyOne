@@ -2907,8 +2907,10 @@ const coupleThemes=[
 ];
 
 function Chat({match,messages,settings,initialDraft,onDraftConsumed,onSettingsChange,coinBalance,roseAvailability,onRose,onSend,onSpendCoins,onReport,onBlock,onUnmatch,navigate}:{match:Match;messages:ChatMessage[];settings:CoupleChatSettings;initialDraft?:string;onDraftConsumed?:()=>void;onSettingsChange:(settings:CoupleChatSettings)=>void;coinBalance:number;roseAvailability:RoseAvailability;onRose:()=>void;onSend:(message:ChatMessage)=>void;onSpendCoins:(coins:number)=>void;onReport:(reason:string,details?:string)=>void;onBlock:()=>void;onUnmatch:()=>void;navigate:(s:Screen)=>void}) {
+  const {width:chatWidth}=useWindowDimensions();
   const [text,setText]=useState('');
   const [showAttachments,setShowAttachments]=useState(false);
+  const [attachmentPage,setAttachmentPage]=useState<'main'|'more'>('main');
   const [showEmoji,setShowEmoji]=useState(false);
   const [showCoach,setShowCoach]=useState(false);
   const [gifOpen,setGifOpen]=useState(false);
@@ -3006,9 +3008,23 @@ function Chat({match,messages,settings,initialDraft,onDraftConsumed,onSettingsCh
     </ScrollView>
     <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={chatStyles.keyboardWrap}>
       {text.trim()&&messageSafety.signals.length>0&&<SafetyNudge scan={messageSafety} onOpenSafety={()=>navigate('safety')}/>}
-      {showAttachments&&<View style={chatStyles.attachmentTray}><Attachment icon="images" label="Gallery" color="#A71D35" onPress={()=>void sendPhoto()}/><Attachment icon="camera" label="Camera" color="#E5092F" onPress={()=>void sendCameraPhoto()}/><Attachment icon="happy" label="GIF" color="#B9293F" onPress={()=>setGifOpen(true)}/><Attachment icon="gift" label="Gift" color="#D4AF37" onPress={()=>setGiftOpen(true)}/><Attachment icon="location" label="Location" color="#D4AF37" onPress={()=>void shareLiveLocation()}/><Attachment icon="calendar" label="Date" color="#A75A1D" onPress={()=>navigate('datePlan')}/><Attachment icon="game-controller" label="Games" color="#7A1FE0" onPress={()=>setGamesOpen(true)}/><Attachment icon="aperture" label="Snap" color="#B9293F" onPress={()=>setSnapOpen(true)}/><Attachment icon="person-circle" label="Face" color="#89162C" onPress={()=>setFaceEmojiOpen(true)}/></View>}
+      {showAttachments&&<View style={[chatStyles.attachmentTray,chatWidth>=600&&chatStyles.attachmentTrayWide]}>{attachmentPage==='main'?<>
+        <Attachment icon="images" label="Gallery" color="#A71D35" onPress={()=>void sendPhoto()}/>
+        <Attachment icon="camera" label="Camera" color="#E5092F" onPress={()=>void sendCameraPhoto()}/>
+        <Attachment icon="location" label="Location" color="#D4AF37" onPress={()=>void shareLiveLocation()}/>
+        <Attachment icon="happy" label="GIF" color="#B9293F" onPress={()=>setGifOpen(true)}/>
+        <Attachment icon="gift" label="Gift" color="#D4AF37" onPress={()=>setGiftOpen(true)}/>
+        <Attachment icon="calendar" label="Date" color="#A75A1D" onPress={()=>{setShowAttachments(false);navigate('datePlan')}}/>
+        <Attachment icon="sparkles" label="Spark" color="#D4AF37" onPress={()=>{setShowAttachments(false);onRose()}}/>
+        <Attachment icon="ellipsis-horizontal" label="More" color="#7A1FE0" onPress={()=>setAttachmentPage('more')}/>
+      </>:<>
+        <Attachment icon="game-controller" label="Games" color="#7A1FE0" onPress={()=>setGamesOpen(true)}/>
+        <Attachment icon="aperture" label="Snap" color="#B9293F" onPress={()=>setSnapOpen(true)}/>
+        <Attachment icon="person-circle" label="Face" color="#89162C" onPress={()=>setFaceEmojiOpen(true)}/>
+        <Attachment icon="arrow-back" label="Back" color="#7A1FE0" onPress={()=>setAttachmentPage('main')}/>
+      </>}</View>}
       {showEmoji&&<View style={chatStyles.emojiPanel}><View style={chatStyles.emojiHeader}><Text style={chatStyles.emojiTitle}>Emojis</Text><Text style={chatStyles.emojiCount}>{quickEmojis.length} daily-use</Text></View><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={chatStyles.emojiTray}>{quickEmojis.map((emoji,index)=><Pressable key={`${emoji}-${index}`} style={chatStyles.emojiButton} onPress={()=>setText(value=>value+emoji)}><Text style={chatStyles.emoji}>{emoji}</Text></Pressable>)}</ScrollView></View>}
-      <View style={[styles.composer,chatPremiumStyles.composer]}><Pressable accessibilityRole="button" accessibilityLabel={showAttachments?'Close attachments':'Add attachment'} onPress={()=>{setShowAttachments(value=>!value);setShowEmoji(false)}}><PremiumIcon name={showAttachments?'close':'add-circle-outline'} tone={showAttachments?'ruby':'dark'} size={36} iconSize={17}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Send ${match.name} a Golden Spark`} onPress={onRose} style={aiStyles.chatRose}><PremiumIcon name="sparkles" tone="gold" size={32} iconSize={14}/>{roseAvailability.freeAvailable&&<View style={aiStyles.freeDot}/>}</Pressable><View style={[chatStyles.inputWrap,{backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:recorderState.isRecording?colors.gold:'rgba(255,255,255,.10)'}]}><TextInput value={text} onChangeText={setText} onSubmitEditing={sendText} returnKeyType="send" placeholder={recorderState.isRecording?'Recording voice note…':'Message…'} placeholderTextColor="#8C7888" editable={!recorderState.isRecording} style={[styles.chatInput,chatPremiumStyles.chatInput]}/><Pressable accessibilityRole="button" accessibilityLabel={showEmoji?'Close emoji picker':'Open emoji picker'} onPress={()=>{setShowEmoji(value=>!value);setShowAttachments(false)}}><PremiumIcon name="happy-outline" tone={showEmoji?'gold':'dark'} size={32} iconSize={15}/></Pressable></View><Pressable accessibilityRole="button" accessibilityLabel={text.trim()?'Send message':recorderState.isRecording?'Stop recording':'Record voice note'} onPress={sendOrRecord} style={[styles.send,{backgroundColor:'transparent'}]}><PremiumIcon name={text.trim()?'send':recorderState.isRecording?'stop':'mic'} tone={recorderState.isRecording?'gold':'ruby'} size={40} iconSize={18}/></Pressable></View>
+      <View style={[styles.composer,chatPremiumStyles.composer]}><Pressable accessibilityRole="button" accessibilityLabel={showAttachments?'Close attachments':'Add attachment'} onPress={()=>{setShowAttachments(value=>{if(!value)setAttachmentPage('main');return !value});setShowEmoji(false)}}><PremiumIcon name={showAttachments?'close':'add-circle-outline'} tone={showAttachments?'ruby':'dark'} size={36} iconSize={17}/></Pressable><View style={[chatStyles.inputWrap,{backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:recorderState.isRecording?colors.gold:'rgba(255,255,255,.10)'}]}><TextInput value={text} onChangeText={setText} onSubmitEditing={sendText} returnKeyType="send" placeholder={recorderState.isRecording?'Recording voice note…':'Message…'} placeholderTextColor="#8C7888" editable={!recorderState.isRecording} style={[styles.chatInput,chatPremiumStyles.chatInput]}/><Pressable accessibilityRole="button" accessibilityLabel={showEmoji?'Close emoji picker':'Open emoji picker'} onPress={()=>{setShowEmoji(value=>!value);setShowAttachments(false)}}><Ionicons name={showEmoji?'close':'happy-outline'} size={21} color={showEmoji?colors.gold:'#B59DA4'}/></Pressable></View><Pressable accessibilityRole="button" accessibilityLabel={text.trim()?'Send message':recorderState.isRecording?'Stop recording':'Record voice note'} onPress={sendOrRecord} style={chatStyles.sendButton}><Ionicons name={text.trim()?'send':recorderState.isRecording?'stop':'mic'} size={20} color={colors.ivory}/></Pressable></View>
     </KeyboardAvoidingView>
     <BottomNav active="chat" navigate={navigate}/>
     <GifPicker visible={gifOpen} onClose={()=>setGifOpen(false)} onSelect={sendGif}/>
@@ -3093,8 +3109,8 @@ function SafetyNudge({scan,onOpenSafety}:{scan:MessageSafetyScan;onOpenSafety:()
 }
 
 function Attachment({icon,label,color,onPress}:{icon:keyof typeof Ionicons.glyphMap;label:string;color:string;onPress:()=>void}){
-  const tone:PremiumIconTone=color==='#D4AF37'||label==='Real Gift'||label==='Location'?'gold':label==='Games'?'plum':label==='GIF'?'rose':'ruby';
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={chatStyles.attachment}><PremiumIcon name={icon} tone={tone} size={49} iconSize={21}/><Text style={chatStyles.attachmentLabel}>{label}</Text></Pressable>
+  const tone:PremiumIconTone=color==='#D4AF37'||['Gift','Spark','Location'].includes(label)?'gold':['Games','More','Back'].includes(label)?'plum':label==='GIF'?'rose':'ruby';
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={chatStyles.attachment}><PremiumIcon name={icon} tone={tone} size={44} iconSize={19}/><Text style={chatStyles.attachmentLabel}>{label}</Text></Pressable>
 }
 
 function RoseComposer({visible,recipientName,availability,onClose,onSend}:{visible:boolean;recipientName:string;availability:RoseAvailability;onClose:()=>void;onSend:(note:string)=>void}){
@@ -3675,7 +3691,7 @@ function Segment({label,active,onPress}:{label:string;active:boolean;onPress:()=
 function Info({title,body}:{title:string;body:string}){return <View style={{gap:8}}><Text style={styles.sectionLabel}>{title.toUpperCase()}</Text><Text style={[shared.body,{color:'#D3CED6'}]}>{body}</Text></View>}
 function LifeAlignment({match}:{match:Match}){const rows=[['diamond-outline','Marriage outlook',match.timeline],['happy-outline','Family plans',match.children],['people-outline','Family involvement',match.family],['home-outline','Relocation',match.relocation],['chatbubbles-outline','Languages',match.languages.join(' · ')]] as const;return <View style={{gap:10}}><Text style={styles.sectionLabel}>LIFE ALIGNMENT</Text><View style={styles.alignmentCard}>{rows.map(([icon,label,value])=><View key={label} style={styles.alignmentRow}><MiniPremiumIcon name={icon} tone="rose" size={34} iconSize={16}/><View style={{flex:1}}><Text style={styles.alignmentRowLabel}>{label}</Text><Text style={styles.alignmentRowValue}>{value}</Text></View></View>)}</View><Text style={styles.alignmentPrivacy}>Shared to make intentions clear—not to reduce a person to a checklist.</Text><View style={circleStyles.profileVouch}><PremiumIcon name="people" tone="gold" size={46} iconSize={22}/><View style={{flex:1}}><Text style={circleStyles.profileVouchTitle}>Vouched for by {match.vouches.count} friends</Text><Text style={circleStyles.profileVouchBody}>People who know {match.name} describe her as:</Text><View style={circleStyles.qualityWrap}>{match.vouches.qualities.map(quality=><View key={quality} style={circleStyles.qualityPill}><Text style={circleStyles.qualityText}>{quality}</Text></View>)}</View></View></View><Text style={styles.alignmentPrivacy}>Friend vouches confirm character, not identity or safety. Always use your own judgment.</Text></View>}
 function BottomNav({active,navigate}:{active:string;navigate:(s:Screen)=>void}){
-  const items:[string,keyof typeof Ionicons.glyphMap,Screen,PremiumIconTone][]=[['Matches','heart','home','ruby'],['Discover','options','discovery','plum'],['Likes','heart-circle','likes','rose'],['Chat','chatbubble','chat','ruby'],['Profile','person','profile','dark']];
+  const items:[string,keyof typeof Ionicons.glyphMap,Screen,PremiumIconTone][]=[['Matches','heart','home','ruby'],['Discover','options','discovery','plum'],['Likes','heart-circle','likes','rose'],['Chat','chatbubble','chat','ruby'],['Executive','briefcase','executive','gold'],['Profile','person','profile','dark']];
   return <View accessibilityRole="tablist" style={bottomNavStyles.nav}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={bottomNavStyles.navScroller}>{items.map(([label,icon,target,tone])=>{
     const selected=active===target;
     return <Pressable accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{selected}} key={label} onPress={()=>navigate(target)} style={bottomNavStyles.navItem}>
@@ -4551,7 +4567,7 @@ const chatStyles=StyleSheet.create({
   dayLabel:{alignSelf:'center',fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:1.2,color:'#BDA5AB',backgroundColor:'rgba(255,255,255,.045)',paddingHorizontal:10,paddingVertical:5,borderRadius:10},
   typingBubble:{alignSelf:'flex-start',flexDirection:'row',gap:4,paddingHorizontal:13,paddingVertical:10,borderRadius:18,borderBottomLeftRadius:6,backgroundColor:'rgba(255,255,255,.055)'},
   typingDot:{width:6,height:6,borderRadius:3,backgroundColor:colors.muted},
-  keyboardWrap:{marginBottom:78,backgroundColor:'rgba(9,0,3,.98)'},
+  keyboardWrap:{marginBottom:78,backgroundColor:'rgba(9,0,3,.98)',position:'relative',zIndex:12},
   inputWrap:{flex:1,height:43,borderRadius:22,backgroundColor:colors.surface,flexDirection:'row',alignItems:'center',paddingRight:10},
   safetyNudge:{marginHorizontal:10,marginBottom:8,padding:11,borderRadius:18,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.22)',flexDirection:'row',alignItems:'flex-start',gap:9},
   safetyNudgeTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
@@ -4561,10 +4577,12 @@ const chatStyles=StyleSheet.create({
   safetySignalText:{fontFamily:'Poppins_700Bold',fontSize:7.8,color:'#F5DDE2'},
   safetyNudgeButton:{alignSelf:'center',paddingHorizontal:10,paddingVertical:7,borderRadius:16,backgroundColor:'rgba(229,9,47,.16)',borderWidth:1,borderColor:'rgba(229,9,47,.35)'},
   safetyNudgeButtonText:{fontFamily:'Poppins_700Bold',fontSize:9,color:colors.pinkSoft},
-  attachmentTray:{flexDirection:'row',flexWrap:'wrap',justifyContent:'space-between',gap:8,paddingHorizontal:14,paddingVertical:11,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.06)',backgroundColor:'rgba(15,3,7,.98)'},
-  attachment:{width:'18%',minWidth:54,alignItems:'center',gap:4},
+  attachmentTray:{position:'absolute',left:12,right:12,bottom:62,zIndex:20,flexDirection:'row',flexWrap:'wrap',gap:8,padding:12,borderRadius:22,backgroundColor:'rgba(27,8,13,.99)',borderWidth:1,borderColor:'rgba(255,255,255,.12)',shadowColor:'#000',shadowOpacity:.5,shadowRadius:24,shadowOffset:{width:0,height:12},elevation:18},
+  attachmentTrayWide:{right:undefined,width:388},
+  attachment:{width:'23%',minWidth:60,alignItems:'center',gap:4},
   attachmentIcon:{width:42,height:42,borderRadius:21,alignItems:'center',justifyContent:'center'},
   attachmentLabel:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:colors.muted},
+  sendButton:{width:42,height:42,borderRadius:21,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center',shadowColor:colors.pink,shadowOpacity:.3,shadowRadius:10},
   emojiPanel:{maxHeight:250,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.07)',backgroundColor:'rgba(13,3,7,.98)',paddingTop:10},
   emojiHeader:{paddingHorizontal:18,marginBottom:8,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   emojiTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},

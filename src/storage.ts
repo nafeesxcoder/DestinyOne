@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const STORAGE_KEY = '@destinyone/app_state/v1';
-const LEGACY_STORAGE_KEYS = ['@mi_amore/app_state/v1'];
+const STORAGE_KEY = '@destinyone/app_state/v2';
+const LEGACY_STORAGE_KEYS = ['@destinyone/app_state/v1', '@mi_amore/app_state/v1'];
 
 export type ChatMessage = {
   id: string;
@@ -140,11 +140,11 @@ export const initialRoseLedger: RoseLedger = {
 };
 
 export const initialProfileDraft: ProfileDraft = {
-  firstName: 'Arjun',
-  age: '30',
-  city: 'New York, NY',
-  height: '5′ 10″',
-  profession: 'Strategy Consultant',
+  firstName: '',
+  age: '',
+  city: '',
+  height: '',
+  profession: '',
   religion: '',
   community: '',
 };
@@ -200,11 +200,15 @@ export async function loadAppState(): Promise<PersistedAppState> {
         status:'read' as const,
       }:message),
     ]));
+    const profileDraft = { ...initialProfileDraft, ...(parsed.profileDraft ?? {}) };
+    const hasLegacyDemoProfile = !parsed.onboardingComplete
+      && profileDraft.firstName === 'Arjun'
+      && profileDraft.profession === 'Strategy Consultant';
     return {
       ...initialPersistedState,
       ...parsed,
       chats,
-      profileDraft: { ...initialProfileDraft, ...(parsed.profileDraft ?? {}) },
+      profileDraft: hasLegacyDemoProfile ? initialProfileDraft : profileDraft,
       matchFilters: { ...defaultMatchFilters, ...(parsed.matchFilters ?? {}) },
       roseLedger: { ...initialRoseLedger, ...(parsed.roseLedger ?? {}) },
     };
