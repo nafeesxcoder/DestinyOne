@@ -12,6 +12,7 @@
     "test": "vitest run",
     "check": "pnpm typecheck && pnpm test",
     "export:web": "expo export --platform web --output-dir dist",
+    "build": "pnpm build:web",
     "build:web": "pnpm export:web",
     "release:check": "pnpm check && pnpm build:web",
     "supabase:start": "supabase start",
