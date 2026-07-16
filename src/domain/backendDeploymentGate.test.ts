@@ -1,0 +1,36 @@
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+
+const workflow = readFileSync('.github/workflows/supabase-production.yml', 'utf8');
+const preflight = readFileSync('scripts/preflight-supabase-production.mjs', 'utf8');
+const verifier = readFileSync('scripts/verify-supabase-deployment.mjs', 'utf8');
+
+describe('hosted backend deployment gate', () => {
+  it('requires a manual production deployment and reviewed legacy baseline', () => {
+    expect(workflow).toContain('workflow_dispatch:');
+    expect(workflow).toContain("inputs.confirm == 'DEPLOY' && inputs.baseline_reviewed");
+    expect(workflow).toContain('environment: production');
+    expect(workflow).not.toContain('pull_request:');
+    expect(workflow).not.toContain('push:');
+  });
+
+  it('runs validation and a dry run before changing the hosted database', () => {
+    expect(workflow.indexOf('pnpm backend:preflight --remote')).toBeLessThan(workflow.indexOf('Apply reviewed migrations'));
+    expect(workflow.indexOf('supabase db push --dry-run')).toBeLessThan(workflow.indexOf('supabase db push --include-all'));
+    expect(workflow.indexOf('Apply reviewed migrations')).toBeLessThan(workflow.indexOf('pnpm supabase:verify'));
+  });
+
+  it('requires remote credentials without putting service-role secrets in Expo', () => {
+    expect(preflight).toContain("'SUPABASE_ACCESS_TOKEN'");
+    expect(preflight).toContain("'SUPABASE_DB_PASSWORD'");
+    expect(preflight).toContain("process.env.SUPABASE_BASELINE_APPROVED === 'true'");
+    expect(preflight).toContain('EXPO_PUBLIC_(?:SUPABASE_)?SERVICE_ROLE');
+  });
+
+  it('fails verification for missing objects, anonymous exposure, or unhealthy endpoints', () => {
+    expect(verifier).toContain('anonymousExposures');
+    expect(verifier).toContain('summary.present !== summary.expected');
+    expect(verifier).toContain('summary.anonymousExposures.length > 0');
+    expect(verifier).toContain('summary.unhealthy.length > 0');
+  });
+});

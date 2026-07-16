@@ -16,6 +16,9 @@ const readyInput: BackendLaunchInput = {
   emailOtpReady: true,
   phoneOtpProviderReady: true,
   databaseTypesReady: true,
+  hostedSchemaVerified: true,
+  migrationHistoryAligned: true,
+  databaseTestsPassed: true,
   rlsPoliciesReady: true,
   storageBucketsReady: true,
   realtimePersistenceReady: true,
@@ -54,6 +57,18 @@ describe('backend launch readiness', () => {
       'secrets_environment',
       'backup_monitoring',
     ]);
+  });
+
+  it('does not treat source migrations as a deployed production schema', () => {
+    const snapshot = buildBackendLaunchSnapshot({
+      ...readyInput,
+      hostedSchemaVerified: false,
+      migrationHistoryAligned: false,
+      databaseTestsPassed: false,
+    });
+
+    expect(snapshot.status).toBe('Backend setup needed');
+    expect(snapshot.blockers.map((gate) => gate.id)).toContain('schema_migrations');
   });
 
   it('passes when auth, migrations, RLS, realtime, storage, functions, secrets and monitoring are ready', () => {

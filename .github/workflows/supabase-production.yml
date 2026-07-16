@@ -1,0 +1,74 @@
+name: Supabase production gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type DEPLOY after reviewing the dry run and hosted baseline
+        required: true
+        type: string
+      baseline_reviewed:
+        description: Existing profiles/messages schema was reviewed and migration history was aligned
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: destinyone-supabase-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm backend:preflight
+      - run: pnpm check
+
+  deploy:
+    needs: validate
+    if: inputs.confirm == 'DEPLOY' && inputs.baseline_reviewed
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_BASELINE_APPROVED: 'true'
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm backend:preflight --remote
+      - name: Link reviewed project
+        run: pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Show migration dry run
+        run: pnpm exec supabase db push --dry-run --include-all --password "$SUPABASE_DB_PASSWORD"
+      - name: Apply reviewed migrations
+        run: pnpm exec supabase db push --include-all --password "$SUPABASE_DB_PASSWORD"
+      - name: Deploy Edge Functions
+        run: |
+          pnpm exec supabase functions deploy create-date-reservation-intent --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          pnpm exec supabase functions deploy create-gift-order --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          pnpm exec supabase functions deploy relationship-reminders --project-ref "$SUPABASE_PROJECT_REF" --use-api
+      - name: Verify hosted schema and anonymous denial
+        run: pnpm supabase:verify

@@ -20,7 +20,8 @@
     "supabase:lint": "supabase db lint --level error",
     "supabase:types": "supabase gen types typescript --local",
     "supabase:check": "pnpm supabase:reset && pnpm supabase:test && pnpm supabase:lint",
-    "supabase:verify": "node scripts/verify-supabase-deployment.mjs"
+    "supabase:verify": "node scripts/verify-supabase-deployment.mjs",
+    "backend:preflight": "node scripts/preflight-supabase-production.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.4.1",

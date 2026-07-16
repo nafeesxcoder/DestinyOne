@@ -29,6 +29,11 @@ The app has a strong Supabase-shaped backend foundation:
 - realtime chat/persistence hooks
 - private media upload paths
 - Edge Function stubs for real gifts and date reservations
+- a source preflight that validates migration order, database contracts, pgTAP
+  coverage, Edge Function entrypoints, and client secret boundaries
+- a manual GitHub production workflow with an environment approval gate, remote
+  credential checks, migration dry run, reviewed push, Edge Function deployment,
+  and post-deploy schema/security verification
 
 But production launch still needs:
 
@@ -51,9 +56,29 @@ But production launch still needs:
 - Do not run migration 001 blindly against this existing project: it already
   contains tables named `profiles` and `messages`, so a clean development
   project or reviewed baseline migration is required.
-- `pnpm supabase:verify` reproduces the read-only deployment check.
-- The current expanded check finds 2 of 25 expected objects; both present legacy
+- `pnpm backend:preflight` verifies source readiness without remote credentials.
+- `pnpm supabase:verify` reproduces the non-destructive deployment check and
+  fails for missing objects, anonymous access, or unhealthy endpoints.
+- The current expanded check finds 2 of 27 expected objects; both present legacy
   tables reject anonymous reads, while all newer tables and RPCs are absent.
+
+## Safe hosted deployment sequence
+
+1. Create a staging Supabase project and run `pnpm supabase:check` there first.
+2. Inspect the existing hosted `profiles` and `messages` definitions and data.
+3. Decide whether to migrate that legacy data or use a clean production project.
+4. Align `supabase_migrations.schema_migrations`; never mark 001 applied without
+   proving its full schema contract exists.
+5. Configure the GitHub `production` environment with required reviewers and:
+   `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`,
+   `EXPO_PUBLIC_SUPABASE_URL`, and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+6. Run **Supabase production gate** manually, type `DEPLOY`, and confirm that the
+   legacy baseline was reviewed. The job performs a dry run before any push.
+7. Require the final hosted verifier to report every object present, zero
+   anonymous exposures, and zero unhealthy endpoints.
+
+The Admin Audit now keeps the schema gate incomplete until hosted verification,
+migration-history alignment, and target database tests are all proven.
 
 ## Production rule
 

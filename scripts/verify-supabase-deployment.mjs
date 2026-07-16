@@ -1,3 +1,13 @@
+import { existsSync, readFileSync } from 'node:fs';
+
+if (existsSync('.env.local')) {
+  for (const line of readFileSync('.env.local', 'utf8').split(/\r?\n/)) {
+    const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!match || process.env[match[1]] !== undefined) continue;
+    process.env[match[1]] = match[2].trim().replace(/^(['"])(.*)\1$/, '$2');
+  }
+}
+
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
 const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -21,6 +31,7 @@ const objects = [
   ['table', 'daily_match_recommendations'],
   ['table', 'match_feedback'],
   ['table', 'matching_model_versions'],
+  ['table', 'matching_model_events'],
   ['rpc', 'daily_matches'],
   ['rpc', 'get_current_member_bootstrap'],
   ['rpc', 'send_match_message'],
@@ -32,6 +43,7 @@ const objects = [
   ['rpc', 'record_discovery_signal'],
   ['rpc', 'submit_match_feedback'],
   ['rpc', 'clear_matching_learning'],
+  ['rpc', 'submit_match_decision'],
 ];
 
 const rpcBodies = {
@@ -79,6 +91,10 @@ const rpcBodies = {
     p_use_for_matching: false,
     p_client_action_id: 'deployment-probe',
   },
+  submit_match_decision: {
+    recipient_id: '00000000-0000-4000-8000-000000000000',
+    decision: 'pass',
+  },
 };
 
 async function probe(kind, name) {
@@ -87,15 +103,31 @@ async function probe(kind, name) {
     : `${url}/rest/v1/${name}?select=*&limit=0`;
   const response = await fetch(endpoint, {
     method: kind === 'rpc' ? 'POST' : 'GET',
-    headers: { apikey: key, 'Content-Type': 'application/json' },
+    headers: {
+      apikey: key,
+      'Content-Type': 'application/json',
+      Prefer: 'tx=rollback,return=minimal',
+    },
     body: kind === 'rpc' ? JSON.stringify(rpcBodies[name] ?? {}) : undefined,
+    signal: AbortSignal.timeout(10_000),
   });
   const body = await response.json().catch(() => ({}));
   const missing = response.status === 404 && (body.code === 'PGRST202' || body.code === 'PGRST205');
-  return { kind, name, present: !missing, status: response.status, code: body.code ?? null };
+  return {
+    kind,
+    name,
+    present: !missing,
+    anonymousAccess: response.ok,
+    healthy: response.status < 500,
+    status: response.status,
+    code: body.code ?? null,
+  };
 }
 
-const authResponse = await fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } });
+const authResponse = await fetch(`${url}/auth/v1/settings`, {
+  headers: { apikey: key },
+  signal: AbortSignal.timeout(10_000),
+});
 const auth = await authResponse.json().catch(() => ({}));
 const results = [];
 for (const [kind, name] of objects) results.push(await probe(kind, name));
@@ -111,7 +143,15 @@ const summary = {
   schema: results,
   present: results.filter((item) => item.present).length,
   expected: results.length,
+  missing: results.filter((item) => !item.present).map((item) => `${item.kind}:${item.name}`),
+  anonymousExposures: results.filter((item) => item.anonymousAccess).map((item) => `${item.kind}:${item.name}`),
+  unhealthy: results.filter((item) => !item.healthy).map((item) => `${item.kind}:${item.name}`),
 };
 
 console.log(JSON.stringify(summary, null, 2));
-if (!authResponse.ok || summary.present !== summary.expected) process.exit(1);
+if (
+  !authResponse.ok ||
+  summary.present !== summary.expected ||
+  summary.anonymousExposures.length > 0 ||
+  summary.unhealthy.length > 0
+) process.exit(1);
