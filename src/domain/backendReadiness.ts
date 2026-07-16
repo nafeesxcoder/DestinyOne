@@ -81,7 +81,7 @@ export function buildBackendLaunchSnapshot(input: BackendLaunchInput): BackendLa
     );
   const authReady = backendConnected && input.authAdapterReady && input.emailOtpReady && input.phoneOtpProviderReady;
   const schemaCoverage = percent(input.backendReadyModuleCount, input.dataModuleCount);
-  const schemaReady = input.migrationCount >= 14 &&
+  const schemaReady = input.migrationCount >= 15 &&
     input.databaseTypesReady &&
     input.hostedSchemaVerified &&
     input.migrationHistoryAligned &&
