@@ -84,6 +84,7 @@ function DestinyOneApp() {
   const [satisfy] = useSatisfy({Satisfy_400Regular});
   const [screen,setScreen] = useState<Screen>('splash');
   const [selected,setSelected] = useState<Match>(matches[0]!);
+  const [datePlanPreset,setDatePlanPreset] = useState<PlaceItem|null>(null);
   const [vibeList,setVibeList] = useState<string[]>([]);
   const [intent,setIntent] = useState('Long-term, leading to Marriage');
   const [alignment,setAlignment] = useState<Record<string,string>>({});
@@ -289,7 +290,7 @@ function DestinyOneApp() {
     {screen==='circle'&&<TrustedCircle vouches={vouches} coinBalance={coinBalance} onBack={()=>setScreen('home')} onAddVouch={(quality)=>{if(vouches.length<3&&!vouches.includes(quality)){setVouches(current=>[...current,quality]);setCoinBalance(balance=>balance+100)}}}/>} 
     {screen==='discovery'&&<DiscoveryCenter filters={matchFilters} onFiltersChange={setMatchFilters} signals={discoverySignals} smartDiscovery={smartDiscovery} crossedPaths={crossedPaths} onSmartChange={setSmartDiscovery} onCrossedChange={setCrossedPaths} onClear={()=>setDiscoverySignals([])} onBack={()=>setScreen('home')}/>} 
     {screen==='coach'&&<RelationshipCoach match={selected} preferences={{intent,vibes:vibeList,filters:matchFilters}} onBack={()=>setScreen('home')} onOpenFilters={()=>setScreen('discovery')} onUseInChat={useCoachDraftInChat}/>} 
-    {screen==='events'&&<EventsHub onBack={()=>setScreen('home')} onOpenDatePlan={()=>setScreen('datePlan')} navigate={setScreen} />} 
+    {screen==='events'&&<EventsHub defaultCity={profileDraft.city} onBack={()=>setScreen('home')} onOpenDatePlan={(place)=>{setDatePlanPreset(place??null);setScreen('datePlan')}} navigate={setScreen} />}
     {screen==='executive'&&<ExecutiveCircle navigate={setScreen} onBack={()=>setScreen('profile')} onOpenEvents={()=>setScreen('events')} onOpenPricing={()=>setScreen('pricing')} onOpenVerify={()=>setScreen('verifyHub')} onOpenDatePlan={()=>setScreen('datePlan')}/>} 
     {screen==='verifyHub'&&<VerificationHub verified={verified} selfieUri={selfieUri} hasVoiceIntro={!!voiceIntroUri} vouches={vouches} onBack={()=>setScreen('profile')} onVerify={()=>{setVerified(true);setAppNotice({title:'Trust badge upgraded',body:'Selfie verification is marked complete in this preview. Production will connect liveness and ID providers.',icon:'shield-checkmark',tone:'gold'})}} onOpenSafety={()=>setScreen('safety')}/>} 
     {screen==='admin'&&<AdminModerationPanel reports={reports} blockedCount={blockedIds.length} onBack={()=>setScreen('profile')}/>} 
@@ -297,7 +298,7 @@ function DestinyOneApp() {
     {screen==='mutual'&&<Mutual match={selected} next={()=>setScreen('icebreaker')} back={()=>setScreen('home')}/>} 
     {screen==='icebreaker'&&<Icebreaker match={selected} question={icebreakerQuestion} onSubmit={answerIcebreaker}/>} 
     {screen==='chat'&&<Chat match={selected} messages={chatMessages[selected.id]??[]} settings={chatSettings[selected.id]??{nickname:'',theme:'Ruby Velvet'}} initialDraft={chatDrafts[selected.id]??''} onDraftConsumed={()=>setChatDrafts(current=>{const next={...current};delete next[selected.id];return next})} onSettingsChange={updateSelectedChatSettings} coinBalance={coinBalance} roseAvailability={roseAvailability} onRose={()=>openRose(selected)} onSend={(message)=>appendChatMessage(selected.id,message)} onSpendCoins={(coins)=>setCoinBalance(balance=>spendCoins(balance,coins))} onReport={reportSelected} onBlock={()=>{blockMatch(selected);setScreen('home')}} onUnmatch={()=>{passMatch(selected);setScreen('home')}} navigate={setScreen}/>} 
-    {screen==='datePlan'&&<DatePlanner match={selected} onBack={()=>setScreen('chat')} onSend={(message)=>{appendChatMessage(selected.id,message);setScreen('chat')}}/>} 
+    {screen==='datePlan'&&<DatePlanner match={selected} preset={datePlanPreset} onBack={()=>setScreen('events')} onSend={(message)=>{appendChatMessage(selected.id,message);setScreen('chat')}}/>}
     {screen==='safety'&&<SafetyCenter reports={reports} blockedCount={blockedIds.length} datePlans={Object.values(chatMessages).flat().filter(message=>message.type==='date')} safeCheckIns={safeCheckIns} onCheckIn={(id)=>setSafeCheckIns(current=>[...new Set([...current,id])])} onDeleteAccount={deleteAccount} onBack={()=>setScreen('profile')}/>} 
     {screen==='likes'&&<Likes openPricing={()=>setScreen('pricing')} navigate={setScreen}/>} 
     {screen==='profile'&&<Profile profile={profileDraft} verified={verified} profilePhoto={profilePhotos[0]} hasVoiceIntro={!!voiceIntroUri} lastSeenVisible={lastSeenVisible} onLastSeenVisibleChange={updateLastSeenPrivacy} navigate={setScreen} onReset={resetDemo}/>} 
@@ -926,13 +927,19 @@ const eventExperiences=[
   {title:'Executive Private Dinner',city:'New York, NY',date:'Monthly',type:'Invite only',icon:'🥂',tag:'Executive Circle',body:'Founder and business-owner dinner for members approved through Executive Circle verification.'},
 ];
 
-type PlaceKind='Restaurant'|'Cafe'|'Tourist'|'Activity'|'Park'|'Dessert'|'Lounge'|'Cultural';
-type PlaceItem={id:string;name:string;city:string;country:'USA'|'Canada';kind:PlaceKind;area:string;price:string;vibe:string;bestTime:string;safety:string;icon:string;tags:string[]};
+type PlaceKind='Restaurant'|'Cafe'|'Hotel'|'Wellness'|'Tourist'|'Activity'|'Park'|'Dessert'|'Lounge'|'Cultural';
+type PlaceItem={id:string;name:string;city:string;country:'USA'|'Canada';kind:PlaceKind;area:string;price:string;vibe:string;bestTime:string;safety:string;icon:string;tags:string[];photo?:string};
 type DatePackage={id:string;title:string;tier:string;city:string;price:string;duration:string;includes:string[];safety:string;icon:keyof typeof Ionicons.glyphMap};
 type PartnerRequest={venue:string;city:string;contact:string;packageTitle:string};
 type CoupleBundle={id:string;title:string;city:string;price:string;priceCents:number;duration:string;mood:string;icon:keyof typeof Ionicons.glyphMap;includes:string[];flexibility:string;safety:string};
-const placeKinds:('All'|PlaceKind)[]=['All','Restaurant','Cafe','Tourist','Activity','Park','Dessert','Lounge','Cultural'];
+const placeKinds:('All'|PlaceKind)[]=['All','Restaurant','Cafe','Hotel','Wellness','Tourist','Activity','Park','Dessert','Lounge','Cultural'];
 const placeCities=['All','New York, NY','Los Angeles, CA','Chicago, IL','Houston, TX','Dallas, TX','Austin, TX','San Francisco, CA','Seattle, WA','Miami, FL','Boston, MA','Washington, DC','San Diego, CA','Atlanta, GA','Denver, CO','Las Vegas, NV','Orlando, FL','Toronto, ON','Vancouver, BC','Montreal, QC','Calgary, AB','Ottawa, ON'];
+const cityCoordinates:Record<string,{latitude:number;longitude:number}>={
+  'Toronto, ON':{latitude:43.6532,longitude:-79.3832},'Mississauga, ON':{latitude:43.5890,longitude:-79.6441},'Brampton, ON':{latitude:43.7315,longitude:-79.7624},'Markham, ON':{latitude:43.8561,longitude:-79.3370},'Vaughan, ON':{latitude:43.8361,longitude:-79.4983},'Oakville, ON':{latitude:43.4675,longitude:-79.6877},'Burlington, ON':{latitude:43.3255,longitude:-79.7990},'Hamilton, ON':{latitude:43.2557,longitude:-79.8711},'Niagara-on-the-Lake, ON':{latitude:43.2549,longitude:-79.0773},'Niagara Falls, ON':{latitude:43.0896,longitude:-79.0849},
+  'New York, NY':{latitude:40.7128,longitude:-74.0060},'Los Angeles, CA':{latitude:34.0522,longitude:-118.2437},'Chicago, IL':{latitude:41.8781,longitude:-87.6298},'Houston, TX':{latitude:29.7604,longitude:-95.3698},'Dallas, TX':{latitude:32.7767,longitude:-96.7970},'Austin, TX':{latitude:30.2672,longitude:-97.7431},'San Francisco, CA':{latitude:37.7749,longitude:-122.4194},'Seattle, WA':{latitude:47.6062,longitude:-122.3321},'Miami, FL':{latitude:25.7617,longitude:-80.1918},'Boston, MA':{latitude:42.3601,longitude:-71.0589},'Washington, DC':{latitude:38.9072,longitude:-77.0369},'San Diego, CA':{latitude:32.7157,longitude:-117.1611},'Atlanta, GA':{latitude:33.7490,longitude:-84.3880},'Denver, CO':{latitude:39.7392,longitude:-104.9903},'Las Vegas, NV':{latitude:36.1699,longitude:-115.1398},'Orlando, FL':{latitude:28.5383,longitude:-81.3792},'Portland, OR':{latitude:45.5152,longitude:-122.6784},'Phoenix, AZ':{latitude:33.4484,longitude:-112.0740},'Tampa, FL':{latitude:27.9506,longitude:-82.4572},'Charlotte, NC':{latitude:35.2271,longitude:-80.8431},'Philadelphia, PA':{latitude:39.9526,longitude:-75.1652},'Minneapolis, MN':{latitude:44.9778,longitude:-93.2650},'Nashville, TN':{latitude:36.1627,longitude:-86.7816},'Salt Lake City, UT':{latitude:40.7608,longitude:-111.8910},'Kansas City, MO':{latitude:39.0997,longitude:-94.5786},'Raleigh, NC':{latitude:35.7796,longitude:-78.6382},'Columbus, OH':{latitude:39.9612,longitude:-82.9988},'Detroit, MI':{latitude:42.3314,longitude:-83.0458},
+  'Vancouver, BC':{latitude:49.2827,longitude:-123.1207},'Montreal, QC':{latitude:45.5019,longitude:-73.5674},'Calgary, AB':{latitude:51.0447,longitude:-114.0719},'Ottawa, ON':{latitude:45.4215,longitude:-75.6972},'Edmonton, AB':{latitude:53.5461,longitude:-113.4938},'Quebec City, QC':{latitude:46.8139,longitude:-71.2080},'Winnipeg, MB':{latitude:49.8951,longitude:-97.1384},'Halifax, NS':{latitude:44.6488,longitude:-63.5752},'Victoria, BC':{latitude:48.4284,longitude:-123.3656},'Saskatoon, SK':{latitude:52.1332,longitude:-106.6700},'Regina, SK':{latitude:50.4452,longitude:-104.6189},
+};
+const citySuggestions=Object.keys(cityCoordinates);
 const datePackages:DatePackage[]=[
   {id:'safe-cafe',title:'First Date Safe Café',tier:'Starter',city:'Any major city',price:'$18–$35 pp',duration:'60–75 min',icon:'cafe',includes:['Quiet public café shortlist','Two time options','Safety check-in reminder'],safety:'Public, easy exit, no private address shared.'},
   {id:'chai-dessert',title:'Chai + Dessert Walk',tier:'Community favorite',city:'NYC · Toronto · Dallas',price:'$22–$45 pp',duration:'90 min',icon:'ice-cream',includes:['Indian dessert spot','Nearby public walk','Conversation prompts'],safety:'Busy area, daytime/evening public route.'},
@@ -1027,13 +1034,32 @@ const placeDirectory:PlaceItem[]=[
   {id:'cal-prince',name:"Prince's Island Park",city:'Calgary, AB',country:'Canada',kind:'Park',area:'Downtown Calgary',price:'Free',vibe:'Relaxed green-space date',bestTime:'Morning',safety:'Public park in daylight',icon:'🍃',tags:['park','walk','calm']},
   {id:'ott-byward',name:'ByWard Market Food Walk',city:'Ottawa, ON',country:'Canada',kind:'Restaurant',area:'ByWard Market',price:'$$',vibe:'Food stalls, desserts and lively streets',bestTime:'Weekend afternoon',safety:'Busy public market',icon:'🥐',tags:['market','food','dessert']},
   {id:'ott-canal',name:'Rideau Canal Walk',city:'Ottawa, ON',country:'Canada',kind:'Tourist',area:'Downtown Ottawa',price:'Free',vibe:'Scenic walk with historic city feel',bestTime:'Afternoon',safety:'Public path; daytime recommended',icon:'⛸️',tags:['walk','tourist','views']},
+  {id:'tor-romantic-dinner',name:'Toronto Skyline Dinner for Two',city:'Toronto, ON',country:'Canada',kind:'Restaurant',area:'Financial District',price:'$$$',vibe:'Window-table dining with skyline views and a polished evening atmosphere',bestTime:'Friday · 7:30 PM',safety:'Staffed downtown venue near transit',icon:'🍽️',tags:['romantic','dinner','views','reservable'],photo:'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=82'},
+  {id:'tor-boutique-stay',name:'Boutique Romance Stay',city:'Toronto, ON',country:'Canada',kind:'Hotel',area:'Queen Street East',price:'$$$$',vibe:'Design-led suite, breakfast and spa add-on for a one-night city escape',bestTime:'Weekend check-in',safety:'Verified hotel desk and private itinerary details',icon:'🛏️',tags:['hotel','romantic','spa','breakfast'],photo:'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=82'},
+  {id:'tor-spa-day',name:'Couples Spa + Afternoon Tea',city:'Toronto, ON',country:'Canada',kind:'Wellness',area:'Yorkville',price:'$$$',vibe:'Relaxing couples treatment followed by tea in a calm upscale setting',bestTime:'Saturday · 2 PM',safety:'Licensed staffed wellness venue',icon:'🌸',tags:['spa','wellness','tea','couples'],photo:'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=82'},
+  {id:'mis-lakefront',name:'Port Credit Lakefront Date',city:'Mississauga, ON',country:'Canada',kind:'Cafe',area:'Port Credit',price:'$$',vibe:'Coffee, waterfront walk and sunset with easy GO Transit access',bestTime:'Sunday · 4 PM',safety:'Busy public waterfront and main-street cafés',icon:'☕',tags:['coffee','waterfront','sunset','public'],photo:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=82'},
+  {id:'oak-harbour',name:'Oakville Harbour Dinner Walk',city:'Oakville, ON',country:'Canada',kind:'Restaurant',area:'Old Oakville',price:'$$$',vibe:'Intimate dinner followed by a quiet harbour walk',bestTime:'Saturday · 6 PM',safety:'Active downtown streets and staffed restaurant',icon:'🌊',tags:['dinner','harbour','romantic','walk'],photo:'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1200&q=82'},
+  {id:'ham-art-date',name:'Hamilton Art + Dessert Date',city:'Hamilton, ON',country:'Canada',kind:'Cultural',area:'James Street North',price:'$$',vibe:'Gallery browsing, local dessert and creative conversation starters',bestTime:'Friday · 6 PM',safety:'Public arts district with staffed venues',icon:'🎨',tags:['gallery','dessert','art','shared interest'],photo:'https://images.unsplash.com/photo-1564399579883-451a5d44ec08?auto=format&fit=crop&w=1200&q=82'},
+  {id:'notl-winery',name:'Niagara Winery + Chef Lunch',city:'Niagara-on-the-Lake, ON',country:'Canada',kind:'Activity',area:'Wine Country',price:'$$$$',vibe:'Scenic tasting, chef lunch and countryside views for a special occasion',bestTime:'Saturday · 12 PM',safety:'Ticketed staffed experience; arrange a sober driver',icon:'🍇',tags:['winery','lunch','romantic','experience'],photo:'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1200&q=82'},
+  {id:'niagara-falls-stay',name:'Falls-view Romantic Escape',city:'Niagara Falls, ON',country:'Canada',kind:'Hotel',area:'Fallsview',price:'$$$$',vibe:'One-night stay, falls-view room and dinner package',bestTime:'Friday check-in',safety:'Verified hotel with staffed lobby and secure booking trail',icon:'🏨',tags:['hotel','falls','weekend','romantic'],photo:'https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1200&q=82'},
+  {id:'markham-dinner',name:'Markham Asian Night Market Date',city:'Markham, ON',country:'Canada',kind:'Restaurant',area:'Downtown Markham',price:'$$',vibe:'Shareable food, dessert and lively low-pressure energy',bestTime:'Saturday evening',safety:'Public plaza with multiple staffed venues',icon:'🥟',tags:['food','dessert','casual','public'],photo:'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1200&q=82'},
+  {id:'vaughan-fun',name:'Vaughan Games + Dinner Night',city:'Vaughan, ON',country:'Canada',kind:'Activity',area:'Vaughan Metropolitan Centre',price:'$$$',vibe:'Playful games, easy conversation and dinner nearby',bestTime:'Friday · 7 PM',safety:'Indoor staffed entertainment venue near transit',icon:'🎳',tags:['games','dinner','playful','indoor'],photo:'https://images.unsplash.com/photo-1511882150382-421056c89033?auto=format&fit=crop&w=1200&q=82'},
 ];
 
 const placeSearchText=(place:PlaceItem)=>[place.name,place.city,place.country,place.kind,place.area,place.vibe,place.safety,place.tags.join(' ')].join(' ').toLowerCase();
 const isSafeFirstDatePlace=(place:PlaceItem)=>/public|staffed|busy|daytime|museum|market|transit|active|indoor|partner|main/.test(placeSearchText(place));
-const isReservablePlace=(place:PlaceItem)=>['Restaurant','Cafe','Lounge','Cultural','Dessert'].includes(place.kind);
+const isReservablePlace=(place:PlaceItem)=>['Restaurant','Cafe','Hotel','Wellness','Lounge','Cultural','Dessert','Activity'].includes(place.kind);
 const isPremiumPlace=(place:PlaceItem)=>place.price.includes('$$$')||/premium|upscale|rooftop|dinner|views|lounge|yorkville|tower/.test(placeSearchText(place));
 const isCommunityPlace=(place:PlaceItem)=>/indian|chai|spice|culture|dessert|vegetarian|food|market|tea/.test(placeSearchText(place));
+const fallbackPlacePhotos:Record<PlaceKind,string>={Restaurant:'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',Cafe:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80',Hotel:'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',Wellness:'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80',Tourist:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',Activity:'https://images.unsplash.com/photo-1511882150382-421056c89033?auto=format&fit=crop&w=1200&q=80',Park:'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80',Dessert:'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=1200&q=80',Lounge:'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1200&q=80',Cultural:'https://images.unsplash.com/photo-1564399579883-451a5d44ec08?auto=format&fit=crop&w=1200&q=80'};
+const placePhoto=(place:PlaceItem)=>place.photo??fallbackPlacePhotos[place.kind];
+const distanceMiles=(from:{latitude:number;longitude:number},to:{latitude:number;longitude:number})=>{
+  const radians=(value:number)=>value*Math.PI/180;
+  const latitudeDelta=radians(to.latitude-from.latitude);
+  const longitudeDelta=radians(to.longitude-from.longitude);
+  const a=Math.sin(latitudeDelta/2)**2+Math.cos(radians(from.latitude))*Math.cos(radians(to.latitude))*Math.sin(longitudeDelta/2)**2;
+  return 3958.8*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+};
 const buildMarketplaceSnapshot=()=>buildDateMarketplaceSnapshot({
   venueCount:placeDirectory.length,
   cityCount:placeCities.filter(city=>city!=='All').length,
@@ -1096,11 +1122,12 @@ function RelationshipCoach({match,preferences,onBack,onOpenFilters,onUseInChat}:
   </ScrollView></SafeAreaView></LinearGradient>
 }
 
-function EventsHub({onBack,onOpenDatePlan,navigate}:{onBack:()=>void;onOpenDatePlan:()=>void;navigate:(screen:Screen)=>void}){
+function EventsHub({defaultCity,onBack,onOpenDatePlan,navigate}:{defaultCity:string;onBack:()=>void;onOpenDatePlan:(place?:PlaceItem)=>void;navigate:(screen:Screen)=>void}){
   const [section,setSection]=useState<'places'|'packages'|'events'>('places');
   const [query,setQuery]=useState('');
   const [kind,setKind]=useState<'All'|PlaceKind>('All');
-  const [city,setCity]=useState('All');
+  const [marketCity,setMarketCity]=useState(cityCoordinates[defaultCity]?defaultCity:'Toronto, ON');
+  const [radius,setRadius]=useState(100);
   const [safeOnly,setSafeOnly]=useState(false);
   const [reservableOnly,setReservableOnly]=useState(false);
   const [communityOnly,setCommunityOnly]=useState(false);
@@ -1115,18 +1142,23 @@ function EventsHub({onBack,onOpenDatePlan,navigate}:{onBack:()=>void;onOpenDateP
   const normalized=query.trim().toLowerCase();
   const marketplaceSnapshot=buildMarketplaceSnapshot();
   const liveOpsSnapshot=buildLiveMarketplaceOpsSnapshot();
+  const selectedCoordinates=cityCoordinates[marketCity];
+  const getDistance=(place:PlaceItem)=>{
+    const placeCoordinates=cityCoordinates[place.city];
+    return selectedCoordinates&&placeCoordinates?distanceMiles(selectedCoordinates,placeCoordinates):Number.POSITIVE_INFINITY;
+  };
   const filtered=placeDirectory.filter(place=>{
     const text=placeSearchText(place);
     return (!normalized||text.includes(normalized))
       &&(kind==='All'||place.kind===kind)
-      &&(city==='All'||place.city===city)
+      &&(!marketCity.trim()||!!selectedCoordinates&&getDistance(place)<=radius)
       &&(!safeOnly||isSafeFirstDatePlace(place))
       &&(!reservableOnly||isReservablePlace(place))
       &&(!communityOnly||isCommunityPlace(place))
       &&(!premiumOnly||isPremiumPlace(place));
-  });
+  }).sort((left,right)=>getDistance(left)-getDistance(right));
   const featured=filtered.slice(0,8);
-  const tonightPicks=placeDirectory.filter(place=>isSafeFirstDatePlace(place)&&isReservablePlace(place)).slice(0,3);
+  const tonightPicks=filtered.filter(place=>isSafeFirstDatePlace(place)&&isReservablePlace(place)).slice(0,3);
   const rsvp=(event:typeof eventExperiences[number])=>setRsvpEvent(event);
   const toggleSaved=(id:string)=>setSaved(current=>current.includes(id)?current.filter(item=>item!==id):[...current,id]);
   const updatePartnerRequest=(key:keyof PartnerRequest,value:string)=>setPartnerRequest(current=>({...current,[key]:value}));
@@ -1152,7 +1184,7 @@ function EventsHub({onBack,onOpenDatePlan,navigate}:{onBack:()=>void;onOpenDateP
           <EventStat value="USA + Canada" label="coverage model"/>
           <EventStat value={`${marketplaceBookingTypes.length}`} label="booking types"/>
         </View>
-        <CouplesPlanBuilder onBook={setBundleCheckout}/>
+        <CouplesPlanBuilder city={marketCity} radius={radius} onCityChange={setMarketCity} onRadiusChange={setRadius} onExplore={()=>setSection('places')} onBook={setBundleCheckout}/>
         <View style={styles.segment}>
           <Segment label="Places" active={section==='places'} onPress={()=>setSection('places')}/>
           <Segment label="Date packages" active={section==='packages'} onPress={()=>setSection('packages')}/>
@@ -1172,9 +1204,6 @@ function EventsHub({onBack,onOpenDatePlan,navigate}:{onBack:()=>void;onOpenDateP
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>
             {placeKinds.map(option=><Pressable key={option} onPress={()=>setKind(option)} style={[coachStyles.filterPill,kind===option&&coachStyles.filterPillOn]}><Text style={[coachStyles.filterText,kind===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}
           </ScrollView>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>
-            {placeCities.map(option=><Pressable key={option} onPress={()=>setCity(option)} style={[coachStyles.cityPill,city===option&&coachStyles.cityPillOn]}><Text style={[coachStyles.cityText,city===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}
-          </ScrollView>
         </View>
         <View style={coachStyles.marketFilterGrid}>
           <MarketToggle icon="shield-checkmark" label="First date safe near me" active={safeOnly} onPress={()=>setSafeOnly(value=>!value)}/>
@@ -1189,18 +1218,18 @@ function EventsHub({onBack,onOpenDatePlan,navigate}:{onBack:()=>void;onOpenDateP
             <Text style={styles.helper}>First meetings should be public, easy to leave, and never require sharing home address or private transport. Check-ins are on by default in Date Concierge.</Text>
           </View>
         </View>
-        <TonightSafePicks places={tonightPicks} onDetail={setSelected} onPlan={onOpenDatePlan}/>
+        <TonightSafePicks places={tonightPicks} getDistance={getDistance} onDetail={setSelected} onPlan={onOpenDatePlan}/>
         <View style={{gap:12}}>
           <View style={shared.row}>
-            <Text style={styles.sectionLabel}>{query||kind!=='All'||city!=='All'||safeOnly||reservableOnly||communityOnly||premiumOnly?'SEARCH RESULTS':'FIRST DATE SAFE PLACES'}</Text>
+            <Text style={styles.sectionLabel}>{query||kind!=='All'||safeOnly||reservableOnly||communityOnly||premiumOnly?'SEARCH RESULTS':`BEST WITHIN ${radius} MILES`}</Text>
             <View style={shared.spacer}/>
             <Text style={coachStyles.resultCount}>{filtered.length} found · {saved.length} saved</Text>
           </View>
-          {featured.map(place=><PlaceCard key={place.id} place={place} saved={saved.includes(place.id)} onSave={()=>toggleSaved(place.id)} onDetail={()=>setSelected(place)} onPlan={onOpenDatePlan}/>)}
+          {featured.map(place=><PlaceCard key={place.id} place={place} distance={getDistance(place)} saved={saved.includes(place.id)} onSave={()=>toggleSaved(place.id)} onDetail={()=>setSelected(place)} onPlan={()=>onOpenDatePlan(place)}/>)}
         </View>
         {filtered.length>8&&<View style={{gap:12}}>
           <Text style={styles.sectionLabel}>MORE OPTIONS</Text>
-          {filtered.slice(8,14).map(place=><PlaceCard key={place.id} compact place={place} saved={saved.includes(place.id)} onSave={()=>toggleSaved(place.id)} onDetail={()=>setSelected(place)} onPlan={onOpenDatePlan}/>)}
+          {filtered.slice(8,14).map(place=><PlaceCard key={place.id} compact place={place} distance={getDistance(place)} saved={saved.includes(place.id)} onSave={()=>toggleSaved(place.id)} onDetail={()=>setSelected(place)} onPlan={()=>onOpenDatePlan(place)}/>)}
           {filtered.length>14&&<Text style={[styles.helper,{textAlign:'center'}]}>Use city, category or search to explore all {filtered.length} matching places.</Text>}
         </View>}
         {!filtered.length&&<View style={[shared.card,{alignItems:'center',gap:10}]}>
@@ -1218,12 +1247,12 @@ function EventsHub({onBack,onOpenDatePlan,navigate}:{onBack:()=>void;onOpenDateP
           <View style={shared.row}>
             <Text style={styles.sectionLabel}>DATE PACKAGES</Text>
             <View style={shared.spacer}/>
-            <Pressable onPress={onOpenDatePlan}><Text style={coachStyles.inlineLink}>Open concierge</Text></Pressable>
+            <Pressable onPress={()=>onOpenDatePlan()}><Text style={coachStyles.inlineLink}>Open concierge</Text></Pressable>
           </View>
-          {datePackages.map(item=><DatePackageCard key={item.id} item={item} onPlan={onOpenDatePlan}/>)}
+          {datePackages.map(item=><DatePackageCard key={item.id} item={item} onPlan={()=>onOpenDatePlan()}/>)}
         </View>
         <ReservationOpsCard/>
-        <Button label="Open Date Concierge" icon="calendar" onPress={onOpenDatePlan}/>
+        <Button label="Open Date Concierge" icon="calendar" onPress={()=>onOpenDatePlan()}/>
         </>}
         {section==='events'&&<>
         <View style={coachStyles.boundaryCard}>
@@ -1252,7 +1281,7 @@ function EventsHub({onBack,onOpenDatePlan,navigate}:{onBack:()=>void;onOpenDateP
         </>}
         <Text style={styles.legal}>Places are curated preview suggestions, not live availability. Always verify hours and meet safely in public.</Text>
       </ScrollView>
-      <PlaceDetailModal place={selected} saved={!!selected&&saved.includes(selected.id)} onClose={()=>setSelected(null)} onSave={()=>selected&&toggleSaved(selected.id)} onPlan={onOpenDatePlan}/>
+      <PlaceDetailModal place={selected} distance={selected?getDistance(selected):undefined} saved={!!selected&&saved.includes(selected.id)} onClose={()=>setSelected(null)} onSave={()=>selected&&toggleSaved(selected.id)} onPlan={()=>{if(selected)onOpenDatePlan(selected)}}/>
       <EventRsvpSheet event={rsvpEvent} onClose={()=>setRsvpEvent(null)} onPlan={()=>{setRsvpEvent(null);onOpenDatePlan()}}/>
       <PartnerInterestSheet visible={partnerOpen} request={partnerRequest} onChange={updatePartnerRequest} onClose={()=>setPartnerOpen(false)} onSubmit={submitPartnerRequest}/>
       <MarketplaceCheckoutSheet bundle={bundleCheckout} onClose={()=>setBundleCheckout(null)}/>
@@ -1261,23 +1290,25 @@ function EventsHub({onBack,onOpenDatePlan,navigate}:{onBack:()=>void;onOpenDateP
   </LinearGradient>
 }
 
-function CouplesPlanBuilder({onBook}:{onBook:(bundle:CoupleBundle)=>void}){
-  const [city,setCity]=useState('');
+function CouplesPlanBuilder({city,radius,onCityChange,onRadiusChange,onExplore,onBook}:{city:string;radius:number;onCityChange:(city:string)=>void;onRadiusChange:(radius:number)=>void;onExplore:()=>void;onBook:(bundle:CoupleBundle)=>void}){
   const [mood,setMood]=useState('Cozy');
   const [budget,setBudget]=useState('Under $100');
   const [ready,setReady]=useState(false);
+  const [showCitySuggestions,setShowCitySuggestions]=useState(false);
   const moods=['Cozy','Playful','Romantic','Luxury'];
   const budgets=['Under $100','$100–$400','$400–$900','Luxury'];
   const bundleIndex=Math.max(0,budgets.indexOf(budget));
   const baseBundle=coupleBundles[bundleIndex]??coupleBundles[0]!;
   const bundle:{id:string;title:string;city:string;price:string;priceCents:number;duration:string;mood:string;icon:keyof typeof Ionicons.glyphMap;includes:string[];flexibility:string;safety:string}={...baseBundle,city:city.trim()||baseBundle.city,mood};
+  const cityMatches=citySuggestions.filter(option=>!city.trim()||option.toLowerCase().includes(city.trim().toLowerCase())).slice(0,6);
   return <View style={couplesMarketStyles.builder}>
     <View style={shared.row}><PremiumIcon name="sparkles" tone="gold" size={52} iconSize={24}/><View style={{flex:1,marginLeft:10}}><Text style={styles.kicker}>DESTINYONE COMPLETE PLAN</Text><Text style={styles.cardTitle}>One booking. Your whole date.</Text><Text style={styles.helper}>Stay, dining, experiences, surprises and arrival details in one itinerary.</Text></View></View>
-    <View style={selectorStyles.searchBox}><MiniPremiumIcon name="location" tone="rose" size={32} iconSize={15}/><TextInput value={city} onChangeText={(value)=>{setCity(value);setReady(false)}} placeholder="Any USA or Canada city / postal code" placeholderTextColor="#71626A" style={selectorStyles.searchInput}/>{!!city&&<Pressable onPress={()=>{setCity('');setReady(false)}}><MiniPremiumIcon name="close-circle" tone="dark" size={30} iconSize={14}/></Pressable>}</View>
+    <View style={{gap:8}}><View style={selectorStyles.searchBox}><MiniPremiumIcon name="location" tone="rose" size={32} iconSize={15}/><TextInput value={city} onFocus={()=>setShowCitySuggestions(true)} onChangeText={(value)=>{onCityChange(value);setShowCitySuggestions(true);setReady(false)}} placeholder="Any USA or Canada city / postal code" placeholderTextColor="#71626A" style={selectorStyles.searchInput}/>{!!city&&<Pressable accessibilityRole="button" accessibilityLabel="Clear marketplace city" onPress={()=>{onCityChange('');setShowCitySuggestions(true);setReady(false)}}><MiniPremiumIcon name="close-circle" tone="dark" size={30} iconSize={14}/></Pressable>}</View>{showCitySuggestions&&<View style={selectorStyles.suggestionPanel}>{cityMatches.length?cityMatches.map(option=><Pressable accessibilityRole="button" accessibilityLabel={`Use ${option}`} key={option} onPress={()=>{onCityChange(option);setShowCitySuggestions(false);setReady(false)}} style={selectorStyles.suggestionRow}><MiniPremiumIcon name="location-outline" tone={option===city?'gold':'rose'} size={26} iconSize={12}/><Text style={selectorStyles.suggestionText}>{option}</Text>{option===city&&<MiniPremiumIcon name="checkmark-circle" tone="gold" size={24} iconSize={11}/>}</Pressable>):<View style={selectorStyles.suggestionRow}><Text style={selectorStyles.suggestionText}>Choose a suggested USA or Canada city for accurate radius results.</Text></View>}</View>}</View>
+    <View style={{gap:8}}><View style={shared.row}><Text style={styles.sectionLabel}>NEARBY RANGE</Text><View style={shared.spacer}/><Text style={coachStyles.resultCount}>from {city||'your city'}</Text></View><View style={couplesMarketStyles.choiceRow}>{[25,50,100].map(option=><Pressable accessibilityRole="button" accessibilityLabel={`${option} mile radius`} key={option} onPress={()=>{onRadiusChange(option);setReady(false)}} style={[couplesMarketStyles.choice,radius===option&&couplesMarketStyles.choiceOn]}><Text style={[couplesMarketStyles.choiceText,radius===option&&{color:colors.ivory}]}>{option} miles</Text></Pressable>)}</View></View>
     <View style={{gap:8}}><Text style={styles.sectionLabel}>MOOD</Text><View style={couplesMarketStyles.choiceRow}>{moods.map(option=><Pressable key={option} onPress={()=>{setMood(option);setReady(false)}} style={[couplesMarketStyles.choice,mood===option&&couplesMarketStyles.choiceOn]}><Text style={[couplesMarketStyles.choiceText,mood===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}</View></View>
     <View style={{gap:8}}><Text style={styles.sectionLabel}>TOTAL BUDGET</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>{budgets.map(option=><Pressable key={option} onPress={()=>{setBudget(option);setReady(false)}} style={[couplesMarketStyles.budget,budget===option&&couplesMarketStyles.budgetOn]}><Text style={[couplesMarketStyles.choiceText,budget===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}</ScrollView></View>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:9}}>{marketplaceBookingTypes.map(item=><View key={item.title} style={couplesMarketStyles.bookingType}><MiniPremiumIcon name={item.icon} tone={item.tone} size={32} iconSize={15}/><Text style={couplesMarketStyles.bookingTypeTitle}>{item.title}</Text><Text style={couplesMarketStyles.bookingTypeBody}>{item.body}</Text></View>)}</ScrollView>
-    {!ready?<Button label="Build complete itinerary" icon="sparkles" onPress={()=>setReady(true)}/>:<View style={couplesMarketStyles.generated}>
+    {!ready?<View style={{gap:9}}><Button label={`Show best within ${radius} miles`} icon="location" variant="secondary" onPress={()=>{setShowCitySuggestions(false);onExplore()}}/><Button label="Build complete itinerary" icon="sparkles" onPress={()=>{setShowCitySuggestions(false);setReady(true)}}/></View>:<View style={couplesMarketStyles.generated}>
       <View style={shared.row}><PremiumIcon name={bundle.icon} tone={bundle.mood==='Luxury'?'gold':'ruby'} size={48} iconSize={22}/><View style={{flex:1,marginLeft:9}}><Text style={styles.cardTitle}>{bundle.title}</Text><Text style={coachStyles.eventMeta}>{bundle.city} · {bundle.duration} · {bundle.price}</Text></View><MiniPremiumIcon name="checkmark-circle" tone="gold" size={34} iconSize={16}/></View>
       <View style={couplesMarketStyles.itinerary}>{bundle.includes.map((item,index)=><View key={item} style={couplesMarketStyles.itineraryRow}><View style={couplesMarketStyles.stepNumber}><Text style={couplesMarketStyles.stepNumberText}>{index+1}</Text></View><Text style={couplesMarketStyles.itineraryText}>{item}</Text></View>)}</View>
       <View style={couplesMarketStyles.policyRow}><MiniPremiumIcon name="refresh-circle" tone="gold" size={28} iconSize={13}/><Text style={couplesMarketStyles.policyText}>{bundle.flexibility}</Text></View>
@@ -1410,7 +1441,7 @@ function DatePackageCard({item,onPlan}:{item:DatePackage;onPlan:()=>void}){
   </View>
 }
 
-function TonightSafePicks({places,onDetail,onPlan}:{places:PlaceItem[];onDetail:(place:PlaceItem)=>void;onPlan:()=>void}){
+function TonightSafePicks({places,getDistance,onDetail,onPlan}:{places:PlaceItem[];getDistance:(place:PlaceItem)=>number;onDetail:(place:PlaceItem)=>void;onPlan:(place?:PlaceItem)=>void}){
   return <View style={coachStyles.tonightPanel}>
     <View style={shared.row}>
       <PremiumIcon name="moon-outline" tone="ruby" size={46} iconSize={21}/>
@@ -1421,12 +1452,12 @@ function TonightSafePicks({places,onDetail,onPlan}:{places:PlaceItem[];onDetail:
     </View>
     <View style={coachStyles.tonightGrid}>
       {places.map(place=><Pressable key={place.id} onPress={()=>onDetail(place)} style={coachStyles.tonightCard}>
-        <MiniPremiumIcon name={placeKindIcon(place.kind)} tone="gold" size={32} iconSize={15}/>
+        <Image source={{uri:placePhoto(place)}} style={couplesMarketStyles.tonightImage}/>
         <View style={{flex:1}}>
           <Text style={coachStyles.tonightTitle}>{place.name}</Text>
-          <Text style={coachStyles.tonightBody}>{place.city} · {place.bestTime}</Text>
+          <Text style={coachStyles.tonightBody}>{Math.round(getDistance(place))} mi · {place.bestTime}</Text>
         </View>
-        <Pressable onPress={onPlan} style={coachStyles.tonightPlan}><Text style={coachStyles.tonightPlanText}>Plan</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Plan ${place.name}`} onPress={()=>onPlan(place)} style={coachStyles.tonightPlan}><Text style={coachStyles.tonightPlanText}>Plan</Text></Pressable>
       </Pressable>)}
     </View>
   </View>
@@ -1487,10 +1518,10 @@ function EventRsvpSheet({event,onClose,onPlan}:{event:typeof eventExperiences[nu
 }
 
 function placeKindIcon(kind:PlaceKind):keyof typeof Ionicons.glyphMap{
-  return kind==='Restaurant'?'restaurant':kind==='Cafe'?'cafe':kind==='Tourist'?'camera':kind==='Activity'?'bicycle':kind==='Park'?'leaf':kind==='Dessert'?'ice-cream':kind==='Lounge'?'wine':kind==='Cultural'?'color-palette':'location';
+  return kind==='Restaurant'?'restaurant':kind==='Cafe'?'cafe':kind==='Hotel'?'bed':kind==='Wellness'?'flower':kind==='Tourist'?'camera':kind==='Activity'?'bicycle':kind==='Park'?'leaf':kind==='Dessert'?'ice-cream':kind==='Lounge'?'wine':kind==='Cultural'?'color-palette':'location';
 }
 
-function PlaceCard({place,saved,compact,onSave,onDetail,onPlan}:{place:PlaceItem;saved:boolean;compact?:boolean;onSave:()=>void;onDetail:()=>void;onPlan:()=>void}){
+function PlaceCard({place,distance,saved,compact,onSave,onDetail,onPlan}:{place:PlaceItem;distance?:number;saved:boolean;compact?:boolean;onSave:()=>void;onDetail:()=>void;onPlan:()=>void}){
   const labels=[
     isSafeFirstDatePlace(place)?'Safe first date':null,
     isReservablePlace(place)?'Reservable':null,
@@ -1498,31 +1529,28 @@ function PlaceCard({place,saved,compact,onSave,onDetail,onPlan}:{place:PlaceItem
     isPremiumPlace(place)?'Premium':null,
   ].filter(Boolean) as string[];
   return <View style={[coachStyles.placeCard,compact&&coachStyles.placeCardCompact]}>
-    <PremiumIcon name={placeKindIcon(place.kind)} tone={place.kind==='Cafe'||place.kind==='Dessert'?'gold':'ruby'} size={52} iconSize={24}/>
-    <View style={{flex:1}}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`View ${place.name}`} onPress={onDetail} style={[couplesMarketStyles.placePhotoWrap,compact&&couplesMarketStyles.placePhotoCompact]}><Image source={{uri:placePhoto(place)}} style={couplesMarketStyles.placePhoto}/><LinearGradient colors={['transparent','rgba(12,2,5,.88)']} style={StyleSheet.absoluteFill}/><View style={couplesMarketStyles.photoBadges}><View style={couplesMarketStyles.distanceBadge}><MiniPremiumIcon name={placeKindIcon(place.kind)} tone="gold" size={24} iconSize={11}/><Text style={couplesMarketStyles.distanceText}>{Number.isFinite(distance)?`${Math.round(distance??0)} mi`:'Nearby'}</Text></View><View style={couplesMarketStyles.priceBadge}><Text style={couplesMarketStyles.priceBadgeText}>{place.price}</Text></View></View><Pressable accessibilityRole="button" accessibilityLabel={saved?`Unsave ${place.name}`:`Save ${place.name}`} onPress={onSave} style={couplesMarketStyles.photoSave}><PremiumIcon name={saved?'bookmark':'bookmark-outline'} tone={saved?'gold':'dark'} size={36} iconSize={16}/></Pressable><View style={couplesMarketStyles.photoTitle}><Text style={couplesMarketStyles.photoKind}>{place.kind.toUpperCase()}</Text><Text style={couplesMarketStyles.photoName}>{place.name}</Text><Text style={couplesMarketStyles.photoMeta}>{place.area} · {place.city}</Text></View></Pressable>
+    <View style={couplesMarketStyles.placeContent}>
       <View style={shared.row}>
-        <Text style={styles.cardTitle}>{place.name}</Text>
-        <Pressable onPress={onSave} style={premiumButtonStyles.iconOnly}><PremiumIcon name={saved?'bookmark':'bookmark-outline'} tone={saved?'gold':'dark'} size={34} iconSize={15}/></Pressable>
+        <Text style={[styles.cardTitle,{flex:1}]}>{place.vibe}</Text>
       </View>
-      <Text style={coachStyles.eventMeta}>{place.city} · {place.kind} · {place.price}</Text>
-      <Text style={styles.helper}>{place.vibe}</Text>
       <View style={coachStyles.placeLabelRow}>{labels.slice(0,compact?2:4).map(label=><View key={label} style={coachStyles.placeLabel}><Text style={coachStyles.placeLabelText}>{label}</Text></View>)}</View>
       <View style={coachStyles.eventFooter}>
         <View style={coachStyles.eventTag}><PremiumIcon name="time-outline" tone="gold" size={24} iconSize={11}/><Text style={coachStyles.eventTagText}>{place.bestTime}</Text></View>
-        <Pressable onPress={onDetail} style={coachStyles.detailsButton}><Text style={coachStyles.detailsText}>Details</Text></Pressable>
-        <Pressable onPress={onPlan} style={coachStyles.rsvpButton}><Text style={coachStyles.rsvpText}>Plan</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Details for ${place.name}`} onPress={onDetail} style={coachStyles.detailsButton}><Text style={coachStyles.detailsText}>Details</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Plan ${place.name}`} onPress={onPlan} style={coachStyles.rsvpButton}><Text style={coachStyles.rsvpText}>Plan</Text></Pressable>
       </View>
     </View>
   </View>
 }
 
-function PlaceDetailModal({place,saved,onClose,onSave,onPlan}:{place:PlaceItem|null;saved:boolean;onClose:()=>void;onSave:()=>void;onPlan:()=>void}){
+function PlaceDetailModal({place,distance,saved,onClose,onSave,onPlan}:{place:PlaceItem|null;distance?:number;saved:boolean;onClose:()=>void;onSave:()=>void;onPlan:()=>void}){
   if(!place)return null;
   return <Modal visible transparent animationType="slide" onRequestClose={onClose}>
     <Pressable style={chatStyles.modalBackdrop} onPress={onClose}/>
     <SafeAreaView style={chatStyles.sheet}>
       <SheetHeader title={place.name} subtitle={`${place.city} · ${place.kind}`} onClose={onClose}/>
-      <View style={coachStyles.placeDetailHero}><PremiumIcon name={placeKindIcon(place.kind)} tone="ruby" size={58} iconSize={27}/><View style={{flex:1}}><Text style={styles.cardTitle}>{place.area}</Text><Text style={styles.helper}>{place.vibe}</Text></View></View>
+      <View style={couplesMarketStyles.detailPhotoWrap}><Image source={{uri:placePhoto(place)}} style={couplesMarketStyles.detailPhoto}/><LinearGradient colors={['transparent','rgba(12,2,5,.92)']} style={StyleSheet.absoluteFill}/><View style={couplesMarketStyles.detailPhotoCopy}><Text style={couplesMarketStyles.photoKind}>{place.kind.toUpperCase()} · {Number.isFinite(distance)?`${Math.round(distance??0)} MILES AWAY`:'NEARBY'}</Text><Text style={couplesMarketStyles.detailPhotoTitle}>{place.vibe}</Text></View></View>
       <View style={coachStyles.detailRows}>
         <DetailRow icon="cash-outline" label="Budget" value={place.price}/>
         <DetailRow icon="time-outline" label="Best time" value={place.bestTime}/>
@@ -2688,7 +2716,8 @@ const dateCategories=[
   {name:'Dinner',icon:'restaurant' as const},
   {name:'Activity',icon:'color-palette' as const},
 ];
-const dateVenues=[
+type DateVenue={id:string;name:string;category:string;area:string;price:string;vibe:string;icon:string};
+const dateVenues:DateVenue[]=[
   {id:'cafe-1',name:'Juniper Café',category:'Café',area:'Near the city center',price:'$$',vibe:'Quiet tables · Great conversation',icon:'☕'},
   {id:'cafe-2',name:'The Garden Coffee Room',category:'Café',area:'A lively public neighborhood',price:'$$',vibe:'Bright · Relaxed · Weekend-friendly',icon:'🌿'},
   {id:'walk-1',name:'Riverside Promenade',category:'Walk',area:'Popular waterfront area',price:'Free',vibe:'Scenic · Public · Easygoing',icon:'🌅'},
@@ -2700,9 +2729,12 @@ const dateVenues=[
 ];
 const dateTimes=['Friday · 7:00 PM','Saturday · 11:00 AM','Saturday · 5:00 PM','Sunday · 4:00 PM'];
 
-function DatePlanner({match,onBack,onSend}:{match:Match;onBack:()=>void;onSend:(message:ChatMessage)=>void}){
-  const [category,setCategory]=useState('Café');
-  const [venueId,setVenueId]=useState('');
+function DatePlanner({match,preset,onBack,onSend}:{match:Match;preset?:PlaceItem|null;onBack:()=>void;onSend:(message:ChatMessage)=>void}){
+  const presetCategory=preset?(['Restaurant','Hotel','Lounge'].includes(preset.kind)?'Dinner':preset.kind==='Cafe'||preset.kind==='Dessert'?'Café':preset.kind==='Park'||preset.kind==='Tourist'?'Walk':'Activity'):'Café';
+  const presetVenue:DateVenue|undefined=preset?{id:`market-${preset.id}`,name:preset.name,category:presetCategory,area:`${preset.area} · ${preset.city}`,price:preset.price,vibe:preset.vibe,icon:preset.icon}:undefined;
+  const plannerVenues=presetVenue?[presetVenue,...dateVenues]:dateVenues;
+  const [category,setCategory]=useState(presetCategory);
+  const [venueId,setVenueId]=useState(presetVenue?.id??'');
   const [time,setTime]=useState('');
   const [packageId,setPackageId]=useState(datePackages[0]?.id??'');
   const [useArea,setUseArea]=useState(false);
@@ -2712,8 +2744,8 @@ function DatePlanner({match,onBack,onSend}:{match:Match;onBack:()=>void;onSend:(
   const [reservationStatus,setReservationStatus]=useState<DateReservationStatus>('idle');
   const [paymentError,setPaymentError]=useState('');
   const [applePaySupported,setApplePaySupported]=useState(false);
-  const venues=dateVenues.filter(venue=>venue.category===category);
-  const selectedVenue=dateVenues.find(venue=>venue.id===venueId);
+  const venues=plannerVenues.filter(venue=>venue.category===category);
+  const selectedVenue=plannerVenues.find(venue=>venue.id===venueId);
   const selectedPackage=datePackages.find(item=>item.id===packageId);
   const reservationQuote=selectedVenue?estimateDateReservationQuote({venueId:selectedVenue.id,venueName:selectedVenue.name,amountCents:1000,currency:'usd'}):null;
   const planProgress=(selectedVenue?34:0)+(time?33:0)+(safetyCheckIn?33:20);
@@ -3835,6 +3867,25 @@ const couplesMarketStyles=StyleSheet.create({
   policyText:{flex:1,fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:colors.muted},
   startOver:{alignSelf:'center',paddingHorizontal:12,paddingVertical:8},
   startOverText:{fontFamily:'Poppins_600SemiBold',fontSize:10,color:colors.pinkSoft},
+  tonightImage:{width:48,height:48,borderRadius:6,backgroundColor:colors.surface2},
+  placePhotoWrap:{height:210,width:'100%',position:'relative',justifyContent:'flex-end',backgroundColor:colors.surface2},
+  placePhotoCompact:{height:160},
+  placePhoto:{position:'absolute',left:0,right:0,top:0,bottom:0,width:'100%',height:'100%'},
+  photoBadges:{position:'absolute',left:10,top:10,flexDirection:'row',gap:6},
+  distanceBadge:{minHeight:28,paddingHorizontal:8,borderRadius:14,backgroundColor:'rgba(10,2,5,.82)',borderWidth:1,borderColor:'rgba(255,255,255,.16)',flexDirection:'row',alignItems:'center',gap:4},
+  distanceText:{fontFamily:'Poppins_700Bold',fontSize:8.5,color:colors.ivory},
+  priceBadge:{minHeight:28,paddingHorizontal:10,borderRadius:14,backgroundColor:'rgba(142,15,40,.88)',alignItems:'center',justifyContent:'center'},
+  priceBadgeText:{fontFamily:'Poppins_700Bold',fontSize:9,color:colors.ivory},
+  photoSave:{position:'absolute',right:10,top:9},
+  photoTitle:{padding:13,gap:2},
+  photoKind:{fontFamily:'Poppins_700Bold',fontSize:8,letterSpacing:1.1,color:'#F1D18A'},
+  photoName:{fontFamily:'Poppins_700Bold',fontSize:18,lineHeight:23,color:colors.ivory},
+  photoMeta:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#E6CED4'},
+  placeContent:{padding:13,gap:9},
+  detailPhotoWrap:{height:210,borderRadius:8,overflow:'hidden',position:'relative',justifyContent:'flex-end',backgroundColor:colors.surface2},
+  detailPhoto:{position:'absolute',left:0,right:0,top:0,bottom:0,width:'100%',height:'100%'},
+  detailPhotoCopy:{padding:15,gap:4},
+  detailPhotoTitle:{fontFamily:'Poppins_700Bold',fontSize:17,lineHeight:23,color:colors.ivory},
   checkoutHero:{padding:14,borderRadius:8,backgroundColor:'rgba(212,175,55,.075)',borderWidth:1,borderColor:'rgba(212,175,55,.24)',flexDirection:'row',alignItems:'center',gap:12},
   checkoutItems:{gap:8},
   checkoutItem:{minHeight:58,paddingHorizontal:12,paddingVertical:9,borderRadius:8,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.07)',flexDirection:'row',alignItems:'center',gap:9},
@@ -4302,7 +4353,7 @@ const coachStyles=StyleSheet.create({
   tonightBody:{fontFamily:'Poppins_400Regular',fontSize:9.2,lineHeight:13,color:colors.muted,marginTop:2},
   tonightPlan:{height:32,paddingHorizontal:11,borderRadius:16,backgroundColor:'rgba(212,175,55,.12)',borderWidth:1,borderColor:'rgba(212,175,55,.30)',alignItems:'center',justifyContent:'center'},
   tonightPlanText:{fontFamily:'Poppins_700Bold',fontSize:9,color:colors.gold},
-  placeCard:{padding:14,borderRadius:22,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.line,flexDirection:'row',gap:12},
+  placeCard:{borderRadius:8,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.line,overflow:'hidden'},
   placeCardCompact:{backgroundColor:'#1D090E'},
   placeIcon:{width:50,height:50,borderRadius:25,backgroundColor:'#3D0A15',alignItems:'center',justifyContent:'center'},
   placeIconText:{fontSize:26},
