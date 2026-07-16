@@ -19,7 +19,7 @@ every gate in that category has current evidence.
 | Trust and safety operations | 4/10 | Report, block, unmatch, and live-location writes are now server-owned, idempotent, rate-limited, and audited with severity triage targets; real identity/liveness checks, staffed queues, appeals, and incident drills are pending. |
 | City user density | 2/10 | Controlled launch markets, private waitlist/referral/ambassador contracts, seven liquidity gates, a privacy-safe member city panel, and an honest Admin Audit are source-ready. Hosted metrics and verified live member supply remain absent, so no city pilot or expansion readiness is claimed. |
 | Marketplace operations | 3/10 | A complete local booking lifecycle now covers fresh server-priced quotes, active-match acceptance, payment preparation, provider confirmation, cancellation/refund outcomes, signed idempotent webhooks, reconciliation rules, and a working preview UI. Live inventory, partner contracts, payments, staffed support, deployed migrations, and operational evidence remain pending. |
-| Growth engine | 2/10 | Referral, ambassador, events, notifications, and analytics concepts exist; production event collection, attribution, experiments, cohorts, and repeatable acquisition are pending. |
+| Growth engine | 3/10 | A consent-gated nine-stage funnel, privacy-safe attribution, deterministic guarded experiments, verified-activation referral rewards, immutable reward ledger, cohort contracts, client adapter and honest Admin Audit are source-functional. Live event delivery, dashboards, deployed schema, experiment evidence and a repeatable acquisition channel remain pending. |
 | Monetization readiness | 3/10 | Pricing, entitlements, gifts, and payment boundaries are modeled; live store products, receipt verification, ledger, restore/refunds, webhooks, fraud controls, and unit economics are pending. |
 
 ## Scoring rules
@@ -156,7 +156,7 @@ every gate in that category has current evidence.
 ## Current automated evidence
 
 - TypeScript: passing on 2026-07-15.
-- Domain/service tests: rerun through the full release gate after each phase; marketplace operations brings the suite to 44 test files / 167 tests and the pgTAP contract to 98 assertions.
+- Domain/service tests: rerun through the full release gate after each phase; growth operations adds consent, attribution, experiment and reward coverage while the pgTAP contract reaches 112 assertions.
 - Expo web export: passing on 2026-07-15.
 - These checks prove source health only. They do not prove production providers,
   real-device behavior, operational staffing, city liquidity, or unit economics.

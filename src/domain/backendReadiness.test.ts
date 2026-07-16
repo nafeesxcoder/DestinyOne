@@ -6,7 +6,7 @@ const readyInput: BackendLaunchInput = {
   appEnvironment: 'production',
   requiresRealBackend: true,
   supabaseConfigured: true,
-  migrationCount: 16,
+  migrationCount: 17,
   edgeFunctionCount: 4,
   dataModuleCount: 15,
   backendReadyModuleCount: 15,

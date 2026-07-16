@@ -46,6 +46,13 @@ const objects = [
   ['table', 'marketplace_reservation_orders'],
   ['table', 'marketplace_reservation_events'],
   ['table', 'marketplace_provider_webhook_receipts'],
+  ['table', 'growth_attribution_touches'],
+  ['table', 'growth_events'],
+  ['table', 'growth_experiments'],
+  ['table', 'growth_experiment_assignments'],
+  ['table', 'growth_referral_conversions'],
+  ['table', 'growth_reward_ledger'],
+  ['table', 'growth_daily_cohort_snapshots'],
   ['rpc', 'daily_matches'],
   ['rpc', 'get_current_member_bootstrap'],
   ['rpc', 'send_match_message'],
@@ -66,6 +73,10 @@ const objects = [
   ['rpc', 'respond_marketplace_reservation_order'],
   ['rpc', 'prepare_marketplace_payment'],
   ['rpc', 'cancel_marketplace_reservation_order'],
+  ['rpc', 'record_growth_event'],
+  ['rpc', 'record_growth_attribution_touch'],
+  ['rpc', 'redeem_growth_referral'],
+  ['rpc', 'assign_growth_experiment'],
 ];
 
 const rpcBodies = {

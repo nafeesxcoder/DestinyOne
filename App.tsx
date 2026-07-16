@@ -18,7 +18,7 @@ import { matchReasons, rankMatches } from './src/domain/matching';
 import { canSendGift, spendCoins } from './src/domain/commerce';
 import { isEligibleMemberAge, isValidEmail, isValidPassword, isValidPhone } from './src/domain/validation';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
-import { track } from './src/lib/telemetry';
+import { configureAnalyticsConsent, track } from './src/lib/telemetry';
 import { appEnvironment, isSupabaseConfigured, requiresRealBackend } from './src/lib/supabase';
 import { buildDateReservationSteps, createDateReservationIntent, dateReservationStatusCopy, estimateDateReservationQuote, formatPaymentMoney, paymentsConfigured, stripePublishableKey, type DateReservationQuote, type DateReservationStatus } from './src/services/payments';
 import { ApplePayReservationButton, StripePaymentProvider, checkApplePaySupport, confirmApplePayReservation } from './src/payments/stripe';
@@ -30,6 +30,7 @@ import { buildModerationQueue, summarizeModerationQueue, type ModerationQueueIte
 import { buildHomeGrowthLoop, type GrowthNudge, type HomeGrowthLoop, type ProfileGrowthInput, type RetentionLoop } from './src/domain/growth';
 import { buildNetworkEffectPlan, type NetworkEffectPlan, type NetworkGrowthLoop } from './src/domain/networkEffects';
 import { buildCityDensitySnapshot, resolveLaunchMarket, type CityDensitySnapshot } from './src/domain/cityDensity';
+import { buildGrowthEngineSnapshot, growthFunnelEvents, type GrowthEngineSnapshot } from './src/domain/growthEngine';
 import { annualSavingsLabel, billingPeriodLabel, buildPaymentEntitlementSnapshot, buildRestorePreview, checkoutSteps, executivePlan, formatMoney, membershipEntitlementSummary, membershipPlans, membershipPriceLabel, sparkPacks, type BillingCycle, type PaymentEntitlementGate, type PaymentEntitlementSnapshot, type ProductKind } from './src/domain/monetization';
 import { buildReportActionPlan, buildSafetyChecklist, safetyReadinessScore, scanMessageSafety, type MessageSafetyScan, type SafetyChecklistItem } from './src/domain/safety';
 import { buildProductQualitySnapshot, type ProductQualityItem } from './src/domain/productQuality';
@@ -223,6 +224,7 @@ function DestinyOneApp() {
     },250);
     return()=>clearTimeout(timer);
   },[hydrated,onboardingComplete,authDestination,verified,profileDraft,vibeList,intent,alignment,chatMessages,coinBalance,profilePhotos,selfieUri,voiceIntroUri,vouches,discoverySignals,smartDiscovery,crossedPaths,blockedIds,reports,safeCheckIns,matchFilters,roseLedger,lastSeenVisible,analyticsConsent,chatSettings,relationshipReflections,relationshipReminders]);
+  useEffect(()=>{configureAnalyticsConsent(hydrated&&analyticsConsent)},[hydrated,analyticsConsent]);
   useEffect(()=>{
     if(Platform.OS!=='web')return;
     window.scrollTo({top:0,left:0,behavior:'auto'});
@@ -1966,7 +1968,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     appEnvironment,
     requiresRealBackend,
     supabaseConfigured:isSupabaseConfigured,
-    migrationCount:16,
+    migrationCount:17,
     edgeFunctionCount:4,
     dataModuleCount:dataSnapshot.totalModules,
     backendReadyModuleCount:dataSnapshot.backendReadyModules,
@@ -2196,6 +2198,17 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
   const marketplaceSnapshot=buildMarketplaceSnapshot();
   const networkSnapshot=buildNetworkEffectPlan({matches,selectedCities:[],verified:true,vouchesCount:3});
   const cityDensitySnapshot=buildCityDensitySnapshot({liveMetricsConnected:false,measurements:[]});
+  const growthEngineSnapshot=buildGrowthEngineSnapshot({
+    liveInstrumentationConnected:false,
+    mappedEvents:growthFunnelEvents.length,
+    liveEventCount:0,
+    attributionConnected:false,
+    experimentRegistryConnected:false,
+    cohortDashboardConnected:false,
+    referralVerificationConnected:false,
+    activeExperiments:0,
+    verifiedConversions:0,
+  });
   const p1Snapshot=buildP1OperationsSnapshot({
     hasDateMarketplacePreview:marketplaceSnapshot.ready,
     hasLiveVenueProvider:false,
@@ -2234,7 +2247,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     {tab==='playbooks'&&<View style={ventureStyles.section}><Text style={styles.sectionLabel}>AUTOMATION GUARDS</Text>{automationGuards.map(([title,body],index)=><ChecklistRow key={title} title={title} body={body} done={index<3}/>)}
       <View style={coachStyles.boundaryCard}><PremiumIcon name="warning" tone="gold" size={44} iconSize={19}/><View style={{flex:1}}><Text style={styles.cardTitle}>Human-first safety</Text><Text style={styles.helper}>AI can prioritize and freeze risky surfaces, but permanent bans, sensitive identity decisions and billing-impact actions need human review.</Text></View></View>
     </View>}
-    {tab==='audit'&&<View style={ventureStyles.section}><BackendLaunchGateCard snapshot={backendLaunchSnapshot}/><CityDensityReadinessCard snapshot={cityDensitySnapshot}/><PaymentEntitlementGateCard snapshot={paymentEntitlementSnapshot}/><NotificationReadinessCard snapshot={notificationSnapshot}/><GiftFulfillmentReadinessCard snapshot={giftFulfillmentSnapshot}/><PlacesReservationReadinessCard snapshot={placesReservationSnapshot}/><ObservabilityReadinessCard snapshot={observabilitySnapshot}/><AbuseFraudReadinessCard snapshot={abuseFraudSnapshot}/><TrustOpsSlaCard snapshot={trustOpsSnapshot}/><LegalStoreOpsCard snapshot={legalOpsSnapshot}/><P1OperationsCard snapshot={p1Snapshot}/><ProductQualityCard snapshot={qualitySnapshot}/><InteractionQualityCard snapshot={interactionSnapshot}/><PolicyComplianceCard snapshot={policyComplianceSnapshot}/><StoreReviewCard snapshot={storeReviewSnapshot}/><ReleaseReadinessCard snapshot={releaseSnapshot}/><Text style={styles.sectionLabel}>AUDIT READINESS</Text>{([
+    {tab==='audit'&&<View style={ventureStyles.section}><BackendLaunchGateCard snapshot={backendLaunchSnapshot}/><CityDensityReadinessCard snapshot={cityDensitySnapshot}/><GrowthEngineReadinessCard snapshot={growthEngineSnapshot}/><PaymentEntitlementGateCard snapshot={paymentEntitlementSnapshot}/><NotificationReadinessCard snapshot={notificationSnapshot}/><GiftFulfillmentReadinessCard snapshot={giftFulfillmentSnapshot}/><PlacesReservationReadinessCard snapshot={placesReservationSnapshot}/><ObservabilityReadinessCard snapshot={observabilitySnapshot}/><AbuseFraudReadinessCard snapshot={abuseFraudSnapshot}/><TrustOpsSlaCard snapshot={trustOpsSnapshot}/><LegalStoreOpsCard snapshot={legalOpsSnapshot}/><P1OperationsCard snapshot={p1Snapshot}/><ProductQualityCard snapshot={qualitySnapshot}/><InteractionQualityCard snapshot={interactionSnapshot}/><PolicyComplianceCard snapshot={policyComplianceSnapshot}/><StoreReviewCard snapshot={storeReviewSnapshot}/><ReleaseReadinessCard snapshot={releaseSnapshot}/><Text style={styles.sectionLabel}>AUDIT READINESS</Text>{([
       ['Reviewer notes','Every freeze, escalation and resolution needs reviewer ID + note.'],
       ['Evidence packet','Reports, chat IDs, gift/payment events, profile edits and block graph stay linked.'],
       ['Member notification','Warnings and support outcomes are sent without exposing reporter identity.'],
@@ -2254,6 +2267,16 @@ function CityDensityReadinessCard({snapshot}:{snapshot:CityDensitySnapshot}){
     <View style={adminOpsStyles.qualityTrack}><View style={[adminOpsStyles.qualityFill,{width:`${snapshot.score}%`}]}/></View>
     <View style={adminOpsStyles.areaGrid}><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Markets</Text><Text style={adminOpsStyles.areaScore}>{snapshot.markets.length}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Expansion</Text><Text style={adminOpsStyles.areaScore}>{snapshot.readyMarkets}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Live data</Text><Text style={adminOpsStyles.areaScore}>{snapshot.liveMetricsConnected?'Yes':'No'}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Blockers</Text><Text style={adminOpsStyles.areaScore}>{snapshot.blockers.length}</Text></View></View>
     <View style={cityDensityStyles.marketGrid}>{snapshot.markets.map(market=><View key={market.city} style={cityDensityStyles.marketCard}><View style={shared.row}><Text style={cityDensityStyles.marketName}>{market.city}</Text><Text style={cityDensityStyles.marketScore}>{market.score}%</Text></View><Text style={cityDensityStyles.marketStatus}>{market.status}</Text><Text style={cityDensityStyles.marketBody}>{market.nextAction}</Text></View>)}</View>
+    <View style={adminOpsStyles.nextOpsCard}><MiniPremiumIcon name="arrow-forward-circle" tone="gold" size={30} iconSize={14}/><Text style={adminOpsStyles.nextOpsText}>{snapshot.nextBestStep}</Text></View>
+  </View>
+}
+
+function GrowthEngineReadinessCard({snapshot}:{snapshot:GrowthEngineSnapshot}){
+  return <View style={cityDensityStyles.auditCard}>
+    <View style={shared.row}><PremiumIcon name="trending-up" tone="rose" size={48} iconSize={22}/><View style={{flex:1,marginLeft:10}}><Text style={styles.kicker}>GROWTH ENGINE GATE</Text><Text style={adminOpsStyles.qualityTitle}>{snapshot.status} · {snapshot.score}%</Text><Text style={styles.helper}>Growth is measured from verified profile to retained member and accepted date, with consent and safety guardrails.</Text></View></View>
+    <View style={adminOpsStyles.qualityTrack}><View style={[adminOpsStyles.qualityFill,{width:`${snapshot.score}%`}]}/></View>
+    <View style={adminOpsStyles.areaGrid}><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Funnel map</Text><Text style={adminOpsStyles.areaScore}>{snapshot.funnelCoverage}%</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Live events</Text><Text style={adminOpsStyles.areaScore}>{snapshot.liveEventCount}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Experiments</Text><Text style={adminOpsStyles.areaScore}>{snapshot.activeExperiments}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Conversions</Text><Text style={adminOpsStyles.areaScore}>{snapshot.verifiedConversions}</Text></View></View>
+    <View style={adminOpsStyles.qualityRows}>{snapshot.blockers.map((blocker,index)=><View key={blocker} style={adminOpsStyles.qualityRow}><MiniPremiumIcon name={index===0?'analytics-outline':'lock-closed-outline'} tone="rose" size={28} iconSize={13}/><Text style={[adminOpsStyles.qualityRowBody,{flex:1}]}>{blocker}</Text></View>)}</View>
     <View style={adminOpsStyles.nextOpsCard}><MiniPremiumIcon name="arrow-forward-circle" tone="gold" size={30} iconSize={14}/><Text style={adminOpsStyles.nextOpsText}>{snapshot.nextBestStep}</Text></View>
   </View>
 }

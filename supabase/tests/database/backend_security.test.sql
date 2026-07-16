@@ -1,7 +1,22 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(98);
+select plan(112);
+
+select has_table('public','growth_attribution_touches','private attribution touches exist');
+select has_table('public','growth_events','consented funnel events exist');
+select has_table('public','growth_experiments','controlled experiment registry exists');
+select has_table('public','growth_experiment_assignments','stable experiment assignments exist');
+select has_table('public','growth_referral_conversions','verified referral conversion lifecycle exists');
+select has_table('public','growth_reward_ledger','idempotent reward ledger exists');
+select has_table('public','growth_daily_cohort_snapshots','service-only growth cohort snapshots exist');
+select has_function('public','record_growth_event',array['uuid','uuid','text','jsonb'],'consent-gated growth event RPC exists');
+select has_function('public','record_growth_attribution_touch',array['uuid','text','text','text'],'consent-gated attribution RPC exists');
+select has_function('public','redeem_growth_referral',array['text','text'],'referral redemption RPC exists');
+select has_function('public','assign_growth_experiment',array['text'],'stable experiment assignment RPC exists');
+select function_privs_are('public','process_growth_referral_reward',array['uuid','text'],'service_role',array['EXECUTE'],'referral reward processor is service-only');
+select table_privs_are('public','growth_daily_cohort_snapshots','authenticated',array[]::text[],'members cannot read aggregate operations snapshots directly');
+select table_privs_are('public','growth_events','authenticated',array[]::text[],'members cannot query raw growth events directly');
 
 select has_table('public','marketplace_partners','marketplace partners are modeled privately');
 select has_table('public','marketplace_venues','marketplace venues are modeled privately');

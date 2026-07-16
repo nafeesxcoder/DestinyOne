@@ -356,6 +356,19 @@ export type Database = {
         Args: { p_city_key: string; p_community_reach: string; p_hosting_experience: string; p_safety_commitment: boolean };
         Returns: Json;
       };
+      record_growth_event: {
+        Args: { p_event_id: string; p_session_id: string; p_event_name: string; p_properties?: Json };
+        Returns: boolean;
+      };
+      record_growth_attribution_touch: {
+        Args: { p_touch_id: string; p_channel: string; p_campaign_key?: string | null; p_city_key?: string | null };
+        Returns: boolean;
+      };
+      redeem_growth_referral: {
+        Args: { p_invite_code: string; p_idempotency_key: string };
+        Returns: Json;
+      };
+      assign_growth_experiment: { Args: { p_experiment_key: string }; Returns: Json };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

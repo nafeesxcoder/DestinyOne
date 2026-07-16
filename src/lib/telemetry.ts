@@ -8,6 +8,12 @@ type AnalyticsEvent =
   | { name: 'relationship_learning_consent_changed'; properties: { enabled: boolean } }
   | { name: 'date_reminder_changed'; properties: { enabled: boolean } };
 
+let analyticsConsentEnabled = false;
+
+export function configureAnalyticsConsent(enabled: boolean) {
+  analyticsConsentEnabled = enabled;
+}
+
 /**
  * Privacy-safe analytics boundary. Never pass names, contact details, message
  * contents, precise locations, photos, or profile IDs here. Connect this to a
@@ -17,10 +23,12 @@ export function track<T extends AnalyticsEvent['name']>(
   name: T,
   properties: Extract<AnalyticsEvent, { name: T }>['properties'],
 ) {
-  if (__DEV__) console.info(`[analytics] ${name}`, properties);
+  if (!analyticsConsentEnabled) return false;
+  if (typeof __DEV__ !== 'undefined' && __DEV__) console.info(`[analytics] ${name}`, properties);
+  return true;
 }
 
 /** Connect this adapter to Sentry (or equivalent) after production DSN setup. */
 export function captureException(error: unknown, context?: string) {
-  if (__DEV__) console.error(`[crash]${context ? ` ${context}` : ''}`, error);
+  if (typeof __DEV__ !== 'undefined' && __DEV__) console.error(`[crash]${context ? ` ${context}` : ''}`, error);
 }

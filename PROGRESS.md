@@ -35,4 +35,4 @@ backend secrets, billing products, legal URLs, operational staffing, real-city
 pilot evidence, and physical-device testing documented in
 `docs/RELEASE_CHECKLIST.md`.
 
-Latest phase: City Density & Location Intelligence added — controlled launch markets, secure waitlist/referral/ambassador contracts, private weekly cohort/liquidity snapshots, member city availability, seven expansion gates, Admin Audit visibility, tests, and `docs/PHASE_6_CITY_DENSITY.md`.
+Latest phase: Growth Engine added — consent-gated funnel events, privacy-safe attribution, guarded deterministic experiments, verified-activation referral rewards, immutable reward ledger, service-only cohort reporting, honest Admin Audit visibility, tests, and `docs/PHASE_8_GROWTH_ENGINE.md`.
