@@ -3020,8 +3020,16 @@ function Chat({match,messages,settings,initialDraft,onDraftConsumed,onSettingsCh
   const [faceEmojiOpen,setFaceEmojiOpen]=useState(false);
   const [callMode,setCallMode]=useState<'audio'|'video'|null>(null);
   const [chatError,setChatError]=useState('');
+  const [optionsOpen,setOptionsOpen]=useState(false);
   const [safetyOpen,setSafetyOpen]=useState(false);
   const [settingsOpen,setSettingsOpen]=useState(false);
+  const [searchOpen,setSearchOpen]=useState(false);
+  const [searchQuery,setSearchQuery]=useState('');
+  const [selectedMessageId,setSelectedMessageId]=useState<string|null>(null);
+  const [replyTarget,setReplyTarget]=useState<ChatMessage|null>(null);
+  const [messageReactions,setMessageReactions]=useState<Record<string,string>>({});
+  const [starredMessages,setStarredMessages]=useState<string[]>([]);
+  const [disappearingMessages,setDisappearingMessages]=useState(false);
   const recorder=useAudioRecorder(RecordingPresets.HIGH_QUALITY,(status)=>{
     if(status.hasError)setChatError(status.error??'Voice note failed. Please try again.');
   });
@@ -3034,7 +3042,9 @@ function Chat({match,messages,settings,initialDraft,onDraftConsumed,onSettingsCh
     onDraftConsumed?.();
   },[initialDraft,onDraftConsumed]);
   const createMessage=(message:Omit<ChatMessage,'id'|'createdAt'|'status'>):ChatMessage=>({...message,id:`${Date.now()}-${Math.random().toString(36).slice(2,7)}`,createdAt:Date.now(),status:'read'});
-  const sendText=()=>{const value=text.trim();if(value){onSend(createMessage({type:'text',text:value}));setText('');setShowEmoji(false)}};
+  const messageSummary=(message:ChatMessage)=>message.text?.trim()||message.date?.venue||message.gift?.name||(message.type==='voice'?'Voice message':message.type==='location'?'Live location':message.type==='image'?'Photo':message.type==='gif'?'GIF':message.type==='snap'?'View-once photo':'Message');
+  const sendText=()=>{const value=text.trim();if(value){const replyPrefix=replyTarget?`↩ ${messageSummary(replyTarget).slice(0,64)}\n`:'';onSend(createMessage({type:'text',text:`${replyPrefix}${value}`}));setText('');setReplyTarget(null);setShowEmoji(false)}};
+  const sendQuickShare=(textValue:string)=>{onSend(createMessage({type:'text',text:textValue}));setShowAttachments(false);setAttachmentPage('main')};
   const startVoiceNote=async()=>{
     setChatError('');
     const permission=await requestRecordingPermissionsAsync();
@@ -3094,36 +3104,64 @@ function Chat({match,messages,settings,initialDraft,onDraftConsumed,onSettingsCh
   const activeTheme=coupleThemes.find(theme=>theme.name===settings.theme)??coupleThemes[0]!;
   const displayName=settings.nickname.trim()||match.name;
   const messageSafety=scanMessageSafety(text);
+  const normalizedSearch=searchQuery.trim().toLowerCase();
+  const visibleMessages=normalizedSearch?messages.filter(message=>messageSummary(message).toLowerCase().includes(normalizedSearch)):messages;
+  const selectMessage=(message:ChatMessage)=>setSelectedMessageId(current=>current===message.id?null:message.id);
+  const reactToMessage=(messageId:string,reaction:string)=>{setMessageReactions(current=>({...current,[messageId]:reaction}));setSelectedMessageId(null)};
+  const toggleStar=(messageId:string)=>{setStarredMessages(current=>current.includes(messageId)?current.filter(id=>id!==messageId):[...current,messageId]);setSelectedMessageId(null)};
   return <LinearGradient colors={[activeTheme.bg,colors.black,activeTheme.bg]} style={{flex:1}}><SafeAreaView style={chatPremiumStyles.safeArea}>
-    <View style={[styles.chatHead,chatPremiumStyles.chatHead,{backgroundColor:'rgba(14,3,7,.96)',borderBottomColor:'rgba(255,255,255,.07)'}]}><Pressable accessibilityRole="button" accessibilityLabel="Back to matches" onPress={()=>navigate('home')}><PremiumIcon name="arrow-back" tone="dark" size={35} iconSize={17}/></Pressable><Image source={{uri:match.photo}} style={[styles.chatAvatar,chatPremiumStyles.chatAvatar,{borderWidth:1,borderColor:activeTheme.accent}]}/><View style={{flex:1}}><Text numberOfLines={1} style={shared.label}>{displayName}</Text><View style={chatStyles.onlineRow}><View style={[chatStyles.onlineDot,{backgroundColor:activeTheme.accent}]}/><Text style={styles.onlineText}>{settings.nickname.trim()?`${match.name} · Online`:'Online'}</Text></View></View><Pressable accessibilityRole="button" accessibilityLabel="Audio call" onPress={()=>setCallMode('audio')} style={chatStyles.headerAction}><Ionicons name="call-outline" size={20} color={colors.ivory}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Video call" onPress={()=>setCallMode('video')} style={chatStyles.headerAction}><Ionicons name="videocam-outline" size={21} color={colors.ivory}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Chat options" onPress={()=>setSafetyOpen(true)} style={chatStyles.headerAction}><Ionicons name="ellipsis-vertical" size={20} color={colors.muted}/></Pressable></View>
-    <View style={chatStyles.contextBar}><View style={chatStyles.privateContext}><Ionicons name="lock-closed-outline" size={13} color={colors.gold}/><Text style={chatStyles.privateContextText}>Private chat</Text></View><View style={shared.spacer}/><Pressable accessibilityRole="button" accessibilityLabel="Reply coach" onPress={()=>setShowCoach(value=>!value)} style={[chatStyles.contextAction,showCoach&&chatStyles.contextActionOn]}><Ionicons name="sparkles-outline" size={14} color={showCoach?colors.gold:colors.muted}/><Text style={chatStyles.contextActionText}>Coach</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Chat theme" onPress={()=>setSettingsOpen(true)} style={chatStyles.contextIcon}><Ionicons name="color-palette-outline" size={17} color={colors.muted}/></Pressable></View>
+    <View style={[styles.chatHead,chatPremiumStyles.chatHead,{backgroundColor:'rgba(14,3,7,.96)',borderBottomColor:'rgba(255,255,255,.07)'}]}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Back to matches" onPress={()=>navigate('home')}><PremiumIcon name="arrow-back" tone="dark" size={35} iconSize={17}/></Pressable>
+      <Image source={{uri:match.photo}} style={[styles.chatAvatar,chatPremiumStyles.chatAvatar,{borderWidth:1,borderColor:activeTheme.accent}]}/>
+      <View style={{flex:1}}><Text numberOfLines={1} style={shared.label}>{displayName}</Text><View style={chatStyles.onlineRow}><View style={[chatStyles.onlineDot,{backgroundColor:activeTheme.accent}]}/><Text style={styles.onlineText}>{settings.nickname.trim()?`${match.name} · Online`:'Online'}</Text></View></View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Audio call" onPress={()=>setCallMode('audio')} style={chatStyles.headerAction}><Ionicons name="call-outline" size={20} color={colors.ivory}/></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Video call" onPress={()=>setCallMode('video')} style={chatStyles.headerAction}><Ionicons name="videocam-outline" size={21} color={colors.ivory}/></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Chat options" onPress={()=>setOptionsOpen(true)} style={chatStyles.headerAction}><Ionicons name="ellipsis-vertical" size={20} color={colors.muted}/></Pressable>
+    </View>
+    {searchOpen&&<View style={chatStyles.searchBar}><Ionicons name="search-outline" size={18} color={colors.muted}/><TextInput accessibilityLabel="Search this conversation" autoFocus value={searchQuery} onChangeText={setSearchQuery} placeholder="Search this conversation" placeholderTextColor="#806D7D" style={chatStyles.searchInput}/><Text style={chatStyles.searchCount}>{normalizedSearch?`${visibleMessages.length} found`:''}</Text><Pressable accessibilityRole="button" accessibilityLabel="Close message search" onPress={()=>{setSearchOpen(false);setSearchQuery('')}}><Ionicons name="close" size={20} color={colors.muted}/></Pressable></View>}
+    <View style={chatStyles.contextBar}><View style={chatStyles.privateContext}><Ionicons name="lock-closed-outline" size={13} color={colors.gold}/><Text style={chatStyles.privateContextText}>{disappearingMessages?'24h messages':'Private chat'}</Text></View><View style={shared.spacer}/><Pressable accessibilityRole="button" accessibilityLabel="Open Date Marketplace" onPress={()=>navigate('events')} style={chatStyles.contextAction}><Ionicons name="calendar-outline" size={14} color={colors.gold}/><Text style={chatStyles.contextActionText}>Date</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Reply coach" onPress={()=>setShowCoach(value=>!value)} style={[chatStyles.contextAction,showCoach&&chatStyles.contextActionOn]}><Ionicons name="sparkles-outline" size={14} color={showCoach?colors.gold:colors.muted}/><Text style={chatStyles.contextActionText}>Coach</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Search messages" onPress={()=>{setSearchOpen(value=>!value);setSearchQuery('')}} style={chatStyles.contextIcon}><Ionicons name="search-outline" size={17} color={colors.muted}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Chat theme" onPress={()=>setSettingsOpen(true)} style={chatStyles.contextIcon}><Ionicons name="color-palette-outline" size={17} color={colors.muted}/></Pressable></View>
     {showCoach&&<View style={[coachStyles.chatCoach,chatStyles.coachPanel]}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:7}}>{chatCoachSuggestions.map(item=><Pressable key={item.label} onPress={()=>{setText(item.message(match));setShowCoach(false)}} style={[coachStyles.suggestionChip,{borderColor:'rgba(255,255,255,.10)',backgroundColor:'rgba(255,255,255,.045)'}]}><Text style={coachStyles.suggestionText}>{item.label}</Text></Pressable>)}</ScrollView><Pressable onPress={()=>navigate('coach')} style={chatStyles.coachOpen}><Text style={chatStyles.coachOpenText}>Open coach</Text></Pressable></View>}
     {!!chatError&&<Pressable onPress={()=>setChatError('')} style={chatStyles.errorBanner}><Text style={chatStyles.errorText}>{chatError}</Text><MiniPremiumIcon name="close" tone="dark" size={28} iconSize={13}/></Pressable>}
     <ScrollView contentContainerStyle={[styles.messages,chatPremiumStyles.messages]}>
       <View style={styles.iceReveal}><Text style={styles.kicker}>ICEBREAKER REVEALED</Text><Text style={styles.revealText}>You both chose: <Text style={{color:colors.ivory}}>Road trip 🚗</Text></Text></View>
       <Text style={chatStyles.dayLabel}>TODAY</Text>
       <View style={[styles.theirBubble,chatPremiumStyles.theirBubble]}><Text style={styles.bubbleText}>Okay, excellent choice. Mountains or coast? 😊</Text><Text style={styles.time}>7:42 PM</Text></View>
-      {messages.map(message=><ChatBubble key={message.id} message={message} accent={activeTheme.accent}/>)}
+      {visibleMessages.map(message=><View key={message.id} style={chatStyles.messageGroup}>
+        <ChatBubble message={message} accent={activeTheme.accent} reaction={messageReactions[message.id]} starred={starredMessages.includes(message.id)} onPress={()=>selectMessage(message)}/>
+        {selectedMessageId===message.id&&<View style={chatStyles.messageActions}>
+          {['❤️','👍','😂','😮','🙏'].map(reaction=><Pressable accessibilityRole="button" accessibilityLabel={`React ${reaction}`} key={reaction} onPress={()=>reactToMessage(message.id,reaction)} style={chatStyles.reactionButton}><Text style={chatStyles.reactionText}>{reaction}</Text></Pressable>)}
+          <Pressable accessibilityRole="button" accessibilityLabel="Reply to message" onPress={()=>{setReplyTarget(message);setSelectedMessageId(null)}} style={chatStyles.messageActionIcon}><Ionicons name="arrow-undo-outline" size={17} color={colors.ivory}/></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={starredMessages.includes(message.id)?'Unstar message':'Star message'} onPress={()=>toggleStar(message.id)} style={chatStyles.messageActionIcon}><Ionicons name={starredMessages.includes(message.id)?'star':'star-outline'} size={17} color={colors.gold}/></Pressable>
+        </View>}
+      </View>)}
+      {normalizedSearch&&!visibleMessages.length&&<View style={chatStyles.emptySearch}><Ionicons name="search-outline" size={24} color={colors.muted}/><Text style={chatStyles.emptySearchText}>No messages match “{searchQuery}”.</Text></View>}
       <View style={chatStyles.typingBubble}><View style={chatStyles.typingDot}/><View style={chatStyles.typingDot}/><View style={chatStyles.typingDot}/></View>
     </ScrollView>
     <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={chatStyles.keyboardWrap}>
-      {text.trim()&&messageSafety.signals.length>0&&<SafetyNudge scan={messageSafety} onOpenSafety={()=>navigate('safety')}/>}
+      {text.trim()&&messageSafety.signals.length>0&&(
+        <SafetyNudge scan={messageSafety} onOpenSafety={()=>navigate('safety')}/>
+      )}
       {showAttachments&&<View style={[chatStyles.attachmentTray,chatWidth>=600&&chatStyles.attachmentTrayWide]}>{attachmentPage==='main'?<>
-        <Attachment icon="images" label="Gallery" color="#A71D35" onPress={()=>void sendPhoto()}/>
+        <Attachment icon="document-text" label="Document" color="#7A1FE0" onPress={()=>sendQuickShare('📄 Relationship values.pdf\nDocument · 1.8 MB · Shared securely')}/>
         <Attachment icon="camera" label="Camera" color="#E5092F" onPress={()=>void sendCameraPhoto()}/>
+        <Attachment icon="images" label="Gallery" color="#A71D35" onPress={()=>void sendPhoto()}/>
         <Attachment icon="location" label="Location" color="#D4AF37" onPress={()=>void shareLiveLocation()}/>
-        <Attachment icon="happy" label="GIF" color="#B9293F" onPress={()=>setGifOpen(true)}/>
-        <Attachment icon="gift" label="Gift" color="#D4AF37" onPress={()=>setGiftOpen(true)}/>
-        <Attachment icon="calendar" label="Date" color="#A75A1D" onPress={()=>{setShowAttachments(false);navigate('datePlan')}}/>
-        <Attachment icon="sparkles" label="Spark" color="#D4AF37" onPress={()=>{setShowAttachments(false);onRose()}}/>
+        <Attachment icon="person" label="Contact" color="#399A70" onPress={()=>sendQuickShare(`👤 Trusted contact card\n${match.name} · DestinyOne verified match`)}/>
+        <Attachment icon="stats-chart" label="Poll" color="#D4AF37" onPress={()=>sendQuickShare('📊 Which date feels best?\n☕ Café   🍽️ Dinner   🎨 Activity')}/>
+        <Attachment icon="calendar" label="Date Market" color="#A75A1D" onPress={()=>{setShowAttachments(false);navigate('events')}}/>
         <Attachment icon="ellipsis-horizontal" label="More" color="#7A1FE0" onPress={()=>setAttachmentPage('more')}/>
       </>:<>
+        <Attachment icon="happy" label="GIF" color="#B9293F" onPress={()=>setGifOpen(true)}/>
+        <Attachment icon="gift" label="Gift" color="#D4AF37" onPress={()=>setGiftOpen(true)}/>
         <Attachment icon="game-controller" label="Games" color="#7A1FE0" onPress={()=>setGamesOpen(true)}/>
         <Attachment icon="aperture" label="Snap" color="#B9293F" onPress={()=>setSnapOpen(true)}/>
         <Attachment icon="person-circle" label="Face" color="#89162C" onPress={()=>setFaceEmojiOpen(true)}/>
+        <Attachment icon="sparkles" label="Spark" color="#D4AF37" onPress={()=>{setShowAttachments(false);onRose()}}/>
+        <Attachment icon="timer" label={disappearingMessages?'24h On':'24h Off'} color="#D4AF37" onPress={()=>{setDisappearingMessages(value=>!value);setShowAttachments(false)}}/>
         <Attachment icon="arrow-back" label="Back" color="#7A1FE0" onPress={()=>setAttachmentPage('main')}/>
       </>}</View>}
       {showEmoji&&<View style={chatStyles.emojiPanel}><View style={chatStyles.emojiHeader}><Text style={chatStyles.emojiTitle}>Emojis</Text><Text style={chatStyles.emojiCount}>{quickEmojis.length} daily-use</Text></View><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={chatStyles.emojiTray}>{quickEmojis.map((emoji,index)=><Pressable key={`${emoji}-${index}`} style={chatStyles.emojiButton} onPress={()=>setText(value=>value+emoji)}><Text style={chatStyles.emoji}>{emoji}</Text></Pressable>)}</ScrollView></View>}
+      {replyTarget&&<View style={chatStyles.replyPreview}><View style={chatStyles.replyAccent}/><View style={{flex:1}}><Text style={chatStyles.replyTitle}>Replying to your message</Text><Text numberOfLines={1} style={chatStyles.replyText}>{messageSummary(replyTarget)}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Cancel reply" onPress={()=>setReplyTarget(null)}><Ionicons name="close" size={20} color={colors.muted}/></Pressable></View>}
       <View style={[styles.composer,chatPremiumStyles.composer]}><Pressable accessibilityRole="button" accessibilityLabel={showAttachments?'Close attachments':'Add attachment'} onPress={()=>{setShowAttachments(value=>{if(!value)setAttachmentPage('main');return !value});setShowEmoji(false)}}><PremiumIcon name={showAttachments?'close':'add-circle-outline'} tone={showAttachments?'ruby':'dark'} size={36} iconSize={17}/></Pressable><View style={[chatStyles.inputWrap,{backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:recorderState.isRecording?colors.gold:'rgba(255,255,255,.10)'}]}><TextInput value={text} onChangeText={setText} onSubmitEditing={sendText} returnKeyType="send" placeholder={recorderState.isRecording?'Recording voice note…':'Message…'} placeholderTextColor="#8C7888" editable={!recorderState.isRecording} style={[styles.chatInput,chatPremiumStyles.chatInput]}/><Pressable accessibilityRole="button" accessibilityLabel={showEmoji?'Close emoji picker':'Open emoji picker'} onPress={()=>{setShowEmoji(value=>!value);setShowAttachments(false)}}><Ionicons name={showEmoji?'close':'happy-outline'} size={21} color={showEmoji?colors.gold:'#B59DA4'}/></Pressable></View><Pressable accessibilityRole="button" accessibilityLabel={text.trim()?'Send message':recorderState.isRecording?'Stop recording':'Record voice note'} onPress={sendOrRecord} style={chatStyles.sendButton}><Ionicons name={text.trim()?'send':recorderState.isRecording?'stop':'mic'} size={20} color={colors.ivory}/></Pressable></View>
     </KeyboardAvoidingView>
     <BottomNav active="chat" navigate={navigate}/>
@@ -3134,6 +3172,7 @@ function Chat({match,messages,settings,initialDraft,onDraftConsumed,onSettingsCh
     <FaceEmojiStudio visible={faceEmojiOpen} onClose={()=>setFaceEmojiOpen(false)} onSend={sendFaceEmoji}/>
     <CallModal mode={callMode} match={match} onClose={()=>setCallMode(null)}/>
     <CoupleSettingsSheet visible={settingsOpen} match={match} settings={settings} onChange={onSettingsChange} onClose={()=>setSettingsOpen(false)}/>
+    <ChatOptionsSheet visible={optionsOpen} disappearing={disappearingMessages} onClose={()=>setOptionsOpen(false)} onSearch={()=>{setOptionsOpen(false);setSearchOpen(true);setSearchQuery('')}} onDate={()=>{setOptionsOpen(false);navigate('events')}} onTheme={()=>{setOptionsOpen(false);setSettingsOpen(true)}} onDisappearing={()=>{setDisappearingMessages(value=>!value);setOptionsOpen(false)}} onSafety={()=>{setOptionsOpen(false);setSafetyOpen(true)}}/>
     <SafetyActions visible={safetyOpen} match={match} onClose={()=>setSafetyOpen(false)} onSafetyCenter={()=>{setSafetyOpen(false);navigate('safety')}} onReport={(reason,details)=>{onReport(reason,details);setSafetyOpen(false)}} onBlock={()=>{setSafetyOpen(false);onBlock()}} onUnmatch={()=>{setSafetyOpen(false);onUnmatch()}}/>
   </SafeAreaView></LinearGradient>
 }
@@ -3154,7 +3193,7 @@ function giftStatusLabel(status?: NonNullable<ChatMessage['gift']>['deliveryStat
   return labels[status??'recipient_pending']??'GIFT ORDER UPDATED';
 }
 
-function ChatBubble({message,accent}:{message:ChatMessage;accent?:string}){return <View style={[styles.myBubble,message.type==='text'&&accent?{backgroundColor:'rgba(145,12,35,.94)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',maxWidth:'74%',padding:12}:null,(message.type==='image'||message.type==='gif'||message.type==='snap')&&chatStyles.mediaBubble,message.type==='gift'&&chatStyles.giftBubble,message.type==='sticker'&&chatStyles.stickerBubble,message.type==='date'&&dateStyles.dateBubble,message.type==='voice'&&chatStyles.voiceBubble,message.type==='location'&&chatStyles.locationBubble]}>
+function ChatBubble({message,accent,reaction,starred,onPress}:{message:ChatMessage;accent?:string;reaction?:string;starred?:boolean;onPress?:()=>void}){return <Pressable accessibilityRole="button" accessibilityLabel={`Message: ${message.text?.slice(0,50)||message.date?.venue||message.gift?.name||message.type}`} onPress={onPress} style={[styles.myBubble,message.type==='text'&&accent?{backgroundColor:'rgba(145,12,35,.94)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',maxWidth:'74%',padding:12}:null,(message.type==='image'||message.type==='gif'||message.type==='snap')&&chatStyles.mediaBubble,message.type==='gift'&&chatStyles.giftBubble,message.type==='sticker'&&chatStyles.stickerBubble,message.type==='date'&&dateStyles.dateBubble,message.type==='voice'&&chatStyles.voiceBubble,message.type==='location'&&chatStyles.locationBubble]}>
   {message.type==='text'&&<Text style={styles.bubbleText}>{message.text}</Text>}
   {(message.type==='image'||message.type==='gif'||message.type==='snap')&&message.uri&&<Image source={{uri:message.uri}} style={chatStyles.messageMedia}/>} 
   {message.type==='gif'&&<View style={chatStyles.gifBadge}><Text style={chatStyles.gifBadgeText}>GIF</Text></View>}
@@ -3165,8 +3204,9 @@ function ChatBubble({message,accent}:{message:ChatMessage;accent?:string}){retur
   {message.type==='date'&&message.date&&<><View style={dateStyles.messageDateHeader}><PremiumIcon name="calendar" tone="gold" size={42} iconSize={19}/><View><Text style={dateStyles.messageEyebrow}>{message.date.packageTitle??'DATE IDEA'}</Text><Text style={dateStyles.messageVenue}>{message.date.venue}</Text>{message.date.packageTier&&<Text style={dateStyles.messagePackageTier}>{message.date.packageTier}</Text>}</View></View><View style={dateStyles.messageDivider}/><View style={dateStyles.messageLine}><MiniPremiumIcon name="location-outline" tone="rose" size={28} iconSize={13}/><Text style={dateStyles.messageLineText}>{message.date.area}</Text></View><View style={dateStyles.messageLine}><MiniPremiumIcon name="time-outline" tone="rose" size={28} iconSize={13}/><Text style={dateStyles.messageLineText}>{message.date.time}</Text></View>{message.date.safetyCheckIn&&<View style={dateStyles.safePill}><MiniPremiumIcon name="shield-checkmark" tone="gold" size={24} iconSize={11}/><Text style={dateStyles.safePillText}>Safety check-in enabled</Text></View>}<DatePlanStatusMini safetyCheckIn={!!message.date.safetyCheckIn}/><Text style={dateStyles.waitingText}>Waiting for a response</Text></>}
   {message.type==='voice'&&message.uri&&<VoiceNote uri={message.uri} durationMs={message.voice?.durationMs??0}/>}
   {message.type==='location'&&message.location&&<LiveLocationCard location={message.location}/>}
-  <View style={chatStyles.messageMeta}><Text style={styles.time}>Now</Text><MiniPremiumIcon name="checkmark-done" tone="dark" size={24} iconSize={11}/></View>
-</View>}
+  <View style={chatStyles.messageMeta}>{starred&&<Ionicons name="star" size={10} color={colors.gold}/>}<Text style={styles.time}>Now</Text><Ionicons name="checkmark-done" size={14} color="#75B9FF"/></View>
+  {!!reaction&&<View style={chatStyles.reactionPill}><Text style={chatStyles.reactionText}>{reaction}</Text></View>}
+</Pressable>}
 
 function DatePlanStatusMini({safetyCheckIn}:{safetyCheckIn:boolean}){
   const steps=[['sent','Suggested'],['pending','Accept'],['reserve','Reserve'],[safetyCheckIn?'safe':'meet',safetyCheckIn?'Check-in':'Meet']] as const;
@@ -3209,8 +3249,19 @@ function SafetyNudge({scan,onOpenSafety}:{scan:MessageSafetyScan;onOpenSafety:()
 }
 
 function Attachment({icon,label,color,onPress}:{icon:keyof typeof Ionicons.glyphMap;label:string;color:string;onPress:()=>void}){
-  const tone:PremiumIconTone=color==='#D4AF37'||['Gift','Spark','Location'].includes(label)?'gold':['Games','More','Back'].includes(label)?'plum':label==='GIF'?'rose':'ruby';
+  const tone:PremiumIconTone=color==='#D4AF37'||['Gift','Spark','Location','Date Market','Poll'].includes(label)?'gold':['Games','More','Back','Document'].includes(label)?'plum':label==='GIF'?'rose':'ruby';
   return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={chatStyles.attachment}><PremiumIcon name={icon} tone={tone} size={44} iconSize={19}/><Text style={chatStyles.attachmentLabel}>{label}</Text></Pressable>
+}
+
+function ChatOptionsSheet({visible,disappearing,onClose,onSearch,onDate,onTheme,onDisappearing,onSafety}:{visible:boolean;disappearing:boolean;onClose:()=>void;onSearch:()=>void;onDate:()=>void;onTheme:()=>void;onDisappearing:()=>void;onSafety:()=>void}){
+  const options=[
+    {label:'Search conversation',body:'Find messages, dates and shared items.',icon:'search-outline' as const,onPress:onSearch},
+    {label:'Date Marketplace',body:'Browse nearby places, packages and events.',icon:'calendar-outline' as const,onPress:onDate},
+    {label:'Chat theme',body:'Choose a private DestinyOne couple theme.',icon:'color-palette-outline' as const,onPress:onTheme},
+    {label:disappearing?'Turn off 24h messages':'Disappearing messages',body:disappearing?'New messages currently disappear after 24 hours.':'Turn on a 24-hour privacy timer for new messages.',icon:'timer-outline' as const,onPress:onDisappearing},
+    {label:'Safety and privacy',body:'Report, block, unmatch or open the Safety Center.',icon:'shield-checkmark-outline' as const,onPress:onSafety},
+  ];
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={chatStyles.sheet}><SheetHeader title="Chat options" subtitle="Conversation tools and privacy" onClose={onClose}/><View style={chatStyles.optionList}>{options.map(option=><Pressable accessibilityRole="button" accessibilityLabel={option.label} key={option.label} onPress={option.onPress} style={chatStyles.optionRow}><MiniPremiumIcon name={option.icon} tone={option.label.includes('Date')||option.label.includes('24h')?'gold':'rose'} size={36} iconSize={16}/><View style={{flex:1}}><Text style={chatStyles.optionTitle}>{option.label}</Text><Text style={chatStyles.optionBody}>{option.body}</Text></View><Ionicons name="chevron-forward" size={17} color={colors.muted}/></Pressable>)}</View></SafeAreaView></Modal>
 }
 
 function RoseComposer({visible,recipientName,availability,onClose,onSend}:{visible:boolean;recipientName:string;availability:RoseAvailability;onClose:()=>void;onSend:(note:string)=>void}){
@@ -4707,6 +4758,9 @@ const chatStyles=StyleSheet.create({
   onlineRow:{flexDirection:'row',alignItems:'center',gap:5,marginTop:2},
   onlineDot:{width:6,height:6,borderRadius:3,backgroundColor:'#58C980'},
   headerAction:{width:33,height:33,borderRadius:17,backgroundColor:'rgba(255,255,255,.035)',alignItems:'center',justifyContent:'center'},
+  searchBar:{minHeight:48,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'rgba(18,4,8,.98)',borderBottomWidth:1,borderBottomColor:'rgba(255,255,255,.07)'},
+  searchInput:{flex:1,height:40,color:colors.ivory,fontFamily:'Poppins_400Regular',fontSize:12},
+  searchCount:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:colors.gold},
   contextBar:{minHeight:38,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:8,backgroundColor:'rgba(12,2,5,.94)',borderBottomWidth:1,borderBottomColor:'rgba(255,255,255,.06)'},
   privateContext:{flexDirection:'row',alignItems:'center',gap:5},
   privateContextText:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#CDB5BB'},
@@ -4720,6 +4774,14 @@ const chatStyles=StyleSheet.create({
   dayLabel:{alignSelf:'center',fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:1.2,color:'#BDA5AB',backgroundColor:'rgba(255,255,255,.045)',paddingHorizontal:10,paddingVertical:5,borderRadius:10},
   typingBubble:{alignSelf:'flex-start',flexDirection:'row',gap:4,paddingHorizontal:13,paddingVertical:10,borderRadius:18,borderBottomLeftRadius:6,backgroundColor:'rgba(255,255,255,.055)'},
   typingDot:{width:6,height:6,borderRadius:3,backgroundColor:colors.muted},
+  messageGroup:{width:'100%',alignItems:'flex-end'},
+  messageActions:{alignSelf:'flex-end',minHeight:40,marginTop:4,paddingHorizontal:6,flexDirection:'row',alignItems:'center',gap:3,backgroundColor:'rgba(28,8,13,.98)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',borderRadius:8},
+  reactionButton:{width:33,height:33,alignItems:'center',justifyContent:'center'},
+  reactionText:{fontSize:18},
+  reactionPill:{position:'absolute',left:-7,bottom:-12,minWidth:30,height:25,paddingHorizontal:5,borderRadius:13,backgroundColor:'#251217',borderWidth:1,borderColor:'rgba(255,255,255,.13)',alignItems:'center',justifyContent:'center'},
+  messageActionIcon:{width:33,height:33,borderRadius:17,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,.05)'},
+  emptySearch:{alignSelf:'center',alignItems:'center',gap:8,padding:18},
+  emptySearchText:{fontFamily:'Poppins_400Regular',fontSize:11,color:colors.muted,textAlign:'center'},
   keyboardWrap:{marginBottom:78,backgroundColor:'rgba(9,0,3,.98)',position:'relative',zIndex:12},
   inputWrap:{flex:1,height:43,borderRadius:22,backgroundColor:colors.surface,flexDirection:'row',alignItems:'center',paddingRight:10},
   safetyNudge:{marginHorizontal:10,marginBottom:8,padding:11,borderRadius:18,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.22)',flexDirection:'row',alignItems:'flex-start',gap:9},
@@ -4735,6 +4797,14 @@ const chatStyles=StyleSheet.create({
   attachment:{width:'23%',minWidth:60,alignItems:'center',gap:4},
   attachmentIcon:{width:42,height:42,borderRadius:21,alignItems:'center',justifyContent:'center'},
   attachmentLabel:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:colors.muted},
+  replyPreview:{minHeight:52,marginHorizontal:10,marginTop:7,padding:8,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'rgba(255,255,255,.05)',borderRadius:8,borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
+  replyAccent:{width:3,alignSelf:'stretch',borderRadius:2,backgroundColor:colors.gold},
+  replyTitle:{fontFamily:'Poppins_700Bold',fontSize:9.5,color:colors.gold},
+  replyText:{fontFamily:'Poppins_400Regular',fontSize:10,color:'#D7C4C9',marginTop:2},
+  optionList:{gap:7},
+  optionRow:{minHeight:64,padding:10,flexDirection:'row',alignItems:'center',gap:10,borderRadius:8,backgroundColor:'rgba(255,255,255,.04)',borderWidth:1,borderColor:'rgba(255,255,255,.07)'},
+  optionTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
+  optionBody:{fontFamily:'Poppins_400Regular',fontSize:9,lineHeight:13,color:colors.muted,marginTop:2},
   sendButton:{width:42,height:42,borderRadius:21,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center',shadowColor:colors.pink,shadowOpacity:.3,shadowRadius:10},
   emojiPanel:{maxHeight:250,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.07)',backgroundColor:'rgba(13,3,7,.98)',paddingTop:10},
   emojiHeader:{paddingHorizontal:18,marginBottom:8,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
