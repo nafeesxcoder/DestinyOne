@@ -53,6 +53,13 @@ const objects = [
   ['table', 'growth_referral_conversions'],
   ['table', 'growth_reward_ledger'],
   ['table', 'growth_daily_cohort_snapshots'],
+  ['table', 'billing_products'],
+  ['table', 'billing_purchase_receipts'],
+  ['table', 'billing_entitlement_ledger'],
+  ['table', 'billing_entitlement_snapshots'],
+  ['table', 'billing_webhook_receipts'],
+  ['table', 'billing_refund_cases'],
+  ['table', 'billing_daily_finance_snapshots'],
   ['rpc', 'daily_matches'],
   ['rpc', 'get_current_member_bootstrap'],
   ['rpc', 'send_match_message'],
@@ -77,6 +84,9 @@ const objects = [
   ['rpc', 'record_growth_attribution_touch'],
   ['rpc', 'redeem_growth_referral'],
   ['rpc', 'assign_growth_experiment'],
+  ['rpc', 'get_current_entitlements'],
+  ['rpc', 'restore_store_purchases'],
+  ['rpc', 'request_billing_refund'],
 ];
 
 const rpcBodies = {
@@ -141,6 +151,11 @@ const rpcBodies = {
     p_community_reach: 'deployment probe community reach',
     p_hosting_experience: 'deployment probe hosting experience',
     p_safety_commitment: true,
+  },
+  request_billing_refund: {
+    p_receipt_id: '00000000-0000-4000-8000-000000000000',
+    p_reason: 'deployment probe request',
+    p_idempotency_key: 'deployment-probe',
   },
 };
 

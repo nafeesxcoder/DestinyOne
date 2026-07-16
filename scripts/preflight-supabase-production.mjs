@@ -16,7 +16,7 @@ const migrationFiles = readdirSync(migrationDir)
   .sort();
 const versions = migrationFiles.map((name) => Number(name.match(/^(\d{3})_[a-z0-9_]+\.sql$/)?.[1] ?? -1));
 
-requireCondition(migrationFiles.length >= 17, 'Expected at least 17 ordered migrations.');
+requireCondition(migrationFiles.length >= 18, 'Expected at least 18 ordered migrations.');
 requireCondition(versions.every((version) => version > 0), 'Migration names must use NNN_snake_case.sql.');
 requireCondition(versions.every((version, index) => version === index + 1), 'Migration versions must be contiguous from 001.');
 
@@ -45,6 +45,12 @@ const requiredContracts = [
   'create table if not exists public.growth_experiments',
   'create table if not exists public.growth_referral_conversions',
   'create table if not exists public.growth_daily_cohort_snapshots',
+  'create table if not exists public.billing_purchase_receipts',
+  'create table if not exists public.billing_entitlement_ledger',
+  'create table if not exists public.billing_entitlement_snapshots',
+  'create table if not exists public.billing_webhook_receipts',
+  'create table if not exists public.billing_refund_cases',
+  'create table if not exists public.billing_daily_finance_snapshots',
   'create or replace function public.get_current_member_bootstrap',
   'create or replace function public.send_match_message',
   'create or replace function public.submit_member_report',
@@ -60,6 +66,10 @@ const requiredContracts = [
   'create or replace function public.redeem_growth_referral',
   'create or replace function public.assign_growth_experiment',
   'create or replace function public.process_growth_referral_reward',
+  'create or replace function public.get_current_entitlements',
+  'create or replace function public.restore_store_purchases',
+  'create or replace function public.request_billing_refund',
+  'create or replace function public.process_billing_webhook',
   'alter default privileges in schema public revoke all on tables from anon',
   'alter default privileges in schema public revoke execute on functions from public',
 ];
@@ -67,7 +77,7 @@ for (const contract of requiredContracts) {
   requireCondition(migrationSql.toLowerCase().includes(contract.toLowerCase()), `Missing database contract: ${contract}`);
 }
 
-const edgeFunctions = ['create-date-reservation-intent', 'create-gift-order', 'relationship-reminders', 'marketplace-booking-webhook'];
+const edgeFunctions = ['create-date-reservation-intent', 'create-gift-order', 'relationship-reminders', 'marketplace-booking-webhook', 'store-billing-webhook'];
 for (const functionName of edgeFunctions) {
   requireCondition(existsSync(`supabase/functions/${functionName}/index.ts`), `Missing Edge Function: ${functionName}`);
 }
@@ -75,7 +85,7 @@ for (const functionName of edgeFunctions) {
 const databaseTest = readFileSync(testFile, 'utf8');
 const assertionPattern = /\bselect\s+(?:ok|is|isnt|like|unlike|throws_ok|lives_ok|has_[a-z_]+|hasnt_[a-z_]+|col_[a-z_]+|function_[a-z_]+|table_[a-z_]+|results_eq|set_eq|bag_eq|is_empty|isnt_empty)\s*\(/gi;
 const assertionCount = databaseTest.match(assertionPattern)?.length ?? 0;
-requireCondition(assertionCount >= 112, `Expected at least 112 pgTAP assertions, found ${assertionCount}.`);
+requireCondition(assertionCount >= 128, `Expected at least 128 pgTAP assertions, found ${assertionCount}.`);
 
 const publicFiles = ['.env.example', 'src/config/supabase.ts', 'src/lib/supabase.ts'];
 for (const file of publicFiles) {

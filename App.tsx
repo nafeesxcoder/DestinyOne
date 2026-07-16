@@ -32,6 +32,8 @@ import { buildNetworkEffectPlan, type NetworkEffectPlan, type NetworkGrowthLoop 
 import { buildCityDensitySnapshot, resolveLaunchMarket, type CityDensitySnapshot } from './src/domain/cityDensity';
 import { buildGrowthEngineSnapshot, growthFunnelEvents, type GrowthEngineSnapshot } from './src/domain/growthEngine';
 import { annualSavingsLabel, billingPeriodLabel, buildPaymentEntitlementSnapshot, buildRestorePreview, checkoutSteps, executivePlan, formatMoney, membershipEntitlementSummary, membershipPlans, membershipPriceLabel, sparkPacks, type BillingCycle, type PaymentEntitlementGate, type PaymentEntitlementSnapshot, type ProductKind } from './src/domain/monetization';
+import { buildMonetizationOperationsSnapshot, previewEntitlementAllowed, type MonetizationOperationsSnapshot } from './src/domain/monetizationOps';
+import { restoreStorePurchases } from './src/services/billing';
 import { buildReportActionPlan, buildSafetyChecklist, safetyReadinessScore, scanMessageSafety, type MessageSafetyScan, type SafetyChecklistItem } from './src/domain/safety';
 import { buildProductQualitySnapshot, type ProductQualityItem } from './src/domain/productQuality';
 import { buildInteractionAuditSnapshot, type InteractionAuditSnapshot } from './src/domain/interactionQuality';
@@ -1968,8 +1970,8 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     appEnvironment,
     requiresRealBackend,
     supabaseConfigured:isSupabaseConfigured,
-    migrationCount:17,
-    edgeFunctionCount:4,
+    migrationCount:18,
+    edgeFunctionCount:5,
     dataModuleCount:dataSnapshot.totalModules,
     backendReadyModuleCount:dataSnapshot.backendReadyModules,
     realtimeModuleCount:dataSnapshot.realtimeModules,
@@ -2009,6 +2011,26 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     refundSupportReady:true,
     abuseControlsReady:true,
     productionBillingLocked:appEnvironment==='production'&&paymentsConfigured,
+  });
+  const monetizationOperationsSnapshot=buildMonetizationOperationsSnapshot({
+    environment:appEnvironment,
+    liveReceiptCount:0,
+    verifiedReceiptCount:0,
+    activeEntitlementCount:0,
+    unresolvedRefundCount:0,
+    unresolvedChargebackCount:0,
+    appleProviderConnected:false,
+    googleProviderConnected:false,
+    realWorldProcessorConnected:false,
+    webhookSignatureVerificationReady:true,
+    immutableLedgerReady:true,
+    restoreReady:true,
+    gracePeriodReady:true,
+    refundWorkflowReady:true,
+    taxConfigurationReady:false,
+    fraudReviewReady:true,
+    financeReconciliationReady:false,
+    unitEconomics:{grossRevenueCents:0,storeAndProcessorFeesCents:0,taxesCents:0,refundsCents:0,chargebacksCents:0,marketplaceCostCents:0,supportCostCents:0,acquisitionCostCents:0},
   });
   const notificationSnapshot=buildNotificationReadinessSnapshot({
     appEnvironment,
@@ -2247,7 +2269,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     {tab==='playbooks'&&<View style={ventureStyles.section}><Text style={styles.sectionLabel}>AUTOMATION GUARDS</Text>{automationGuards.map(([title,body],index)=><ChecklistRow key={title} title={title} body={body} done={index<3}/>)}
       <View style={coachStyles.boundaryCard}><PremiumIcon name="warning" tone="gold" size={44} iconSize={19}/><View style={{flex:1}}><Text style={styles.cardTitle}>Human-first safety</Text><Text style={styles.helper}>AI can prioritize and freeze risky surfaces, but permanent bans, sensitive identity decisions and billing-impact actions need human review.</Text></View></View>
     </View>}
-    {tab==='audit'&&<View style={ventureStyles.section}><BackendLaunchGateCard snapshot={backendLaunchSnapshot}/><CityDensityReadinessCard snapshot={cityDensitySnapshot}/><GrowthEngineReadinessCard snapshot={growthEngineSnapshot}/><PaymentEntitlementGateCard snapshot={paymentEntitlementSnapshot}/><NotificationReadinessCard snapshot={notificationSnapshot}/><GiftFulfillmentReadinessCard snapshot={giftFulfillmentSnapshot}/><PlacesReservationReadinessCard snapshot={placesReservationSnapshot}/><ObservabilityReadinessCard snapshot={observabilitySnapshot}/><AbuseFraudReadinessCard snapshot={abuseFraudSnapshot}/><TrustOpsSlaCard snapshot={trustOpsSnapshot}/><LegalStoreOpsCard snapshot={legalOpsSnapshot}/><P1OperationsCard snapshot={p1Snapshot}/><ProductQualityCard snapshot={qualitySnapshot}/><InteractionQualityCard snapshot={interactionSnapshot}/><PolicyComplianceCard snapshot={policyComplianceSnapshot}/><StoreReviewCard snapshot={storeReviewSnapshot}/><ReleaseReadinessCard snapshot={releaseSnapshot}/><Text style={styles.sectionLabel}>AUDIT READINESS</Text>{([
+    {tab==='audit'&&<View style={ventureStyles.section}><BackendLaunchGateCard snapshot={backendLaunchSnapshot}/><CityDensityReadinessCard snapshot={cityDensitySnapshot}/><GrowthEngineReadinessCard snapshot={growthEngineSnapshot}/><MonetizationOperationsCard snapshot={monetizationOperationsSnapshot}/><PaymentEntitlementGateCard snapshot={paymentEntitlementSnapshot}/><NotificationReadinessCard snapshot={notificationSnapshot}/><GiftFulfillmentReadinessCard snapshot={giftFulfillmentSnapshot}/><PlacesReservationReadinessCard snapshot={placesReservationSnapshot}/><ObservabilityReadinessCard snapshot={observabilitySnapshot}/><AbuseFraudReadinessCard snapshot={abuseFraudSnapshot}/><TrustOpsSlaCard snapshot={trustOpsSnapshot}/><LegalStoreOpsCard snapshot={legalOpsSnapshot}/><P1OperationsCard snapshot={p1Snapshot}/><ProductQualityCard snapshot={qualitySnapshot}/><InteractionQualityCard snapshot={interactionSnapshot}/><PolicyComplianceCard snapshot={policyComplianceSnapshot}/><StoreReviewCard snapshot={storeReviewSnapshot}/><ReleaseReadinessCard snapshot={releaseSnapshot}/><Text style={styles.sectionLabel}>AUDIT READINESS</Text>{([
       ['Reviewer notes','Every freeze, escalation and resolution needs reviewer ID + note.'],
       ['Evidence packet','Reports, chat IDs, gift/payment events, profile edits and block graph stay linked.'],
       ['Member notification','Warnings and support outcomes are sent without exposing reporter identity.'],
@@ -2347,6 +2369,31 @@ function paymentEntitlementGateIcon(id: PaymentEntitlementGate['id']): keyof typ
     production_lock: 'lock-closed-outline',
   };
   return icons[id];
+}
+
+function MonetizationOperationsCard({snapshot}:{snapshot:MonetizationOperationsSnapshot}){
+  const ready=snapshot.status==='Ready for controlled billing pilot';
+  return <View style={adminOpsStyles.paymentEntitlementCard}>
+    <View style={shared.row}>
+      <PremiumIcon name={ready?'cash':'analytics-outline'} tone={ready?'gold':'ruby'} size={54} iconSize={25}/>
+      <View style={{flex:1,marginLeft:10}}>
+        <Text style={styles.kicker}>MONETIZATION OPERATIONS GATE</Text>
+        <Text style={adminOpsStyles.qualityTitle}>{snapshot.status} · {snapshot.evidencePercent}%</Text>
+        <Text style={styles.helper}>Live receipts, provider reconciliation and finance evidence stay at zero until real sandbox/store transactions are verified.</Text>
+      </View>
+    </View>
+    <View style={adminOpsStyles.qualityTrack}><View style={[adminOpsStyles.qualityFill,{width:`${snapshot.evidencePercent}%`}]}/></View>
+    <View style={adminOpsStyles.areaGrid}>
+      <View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Receipts</Text><Text style={adminOpsStyles.areaScore}>{snapshot.liveReceiptCount}</Text></View>
+      <View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Verified</Text><Text style={adminOpsStyles.areaScore}>{snapshot.verifiedReceiptRate}%</Text></View>
+      <View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Margin</Text><Text style={adminOpsStyles.areaScore}>{snapshot.contributionMarginPercent}%</Text></View>
+      <View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Blockers</Text><Text style={adminOpsStyles.areaScore}>{snapshot.blockers.length}</Text></View>
+    </View>
+    <View style={adminOpsStyles.nextOpsCard}><MiniPremiumIcon name="navigate-circle-outline" tone="gold" size={30} iconSize={14}/><Text style={adminOpsStyles.nextOpsText}>{snapshot.nextBestStep}</Text></View>
+    <View style={adminOpsStyles.qualityRows}>
+      {['Apple/Google digital billing','Signed idempotent webhooks','Immutable entitlement ledger','Grace, refund and chargeback reversal','Tax, support and contribution margin'].map((item,index)=><View key={item} style={adminOpsStyles.qualityRow}><MiniPremiumIcon name={index>1?'checkmark-circle':'ellipse-outline'} tone={index>1?'gold':'ruby'} size={28} iconSize={13}/><View style={{flex:1}}><Text style={adminOpsStyles.qualityRowTitle}>{item}</Text><Text style={adminOpsStyles.qualityRowBody}>{index>1?'Source contract implemented; live operational evidence is still required.':'Provider account, credentials and end-to-end transaction evidence are pending.'}</Text></View></View>)}
+    </View>
+  </View>
 }
 
 function PaymentEntitlementGateCard({snapshot}:{snapshot:PaymentEntitlementSnapshot}){
@@ -4097,31 +4144,50 @@ function SupportInfoSheet({info,onClose,onEmail}:{info:SupportInfo|null;onClose:
 function Pricing({back,onBuyRoses}:{back:()=>void;onBuyRoses:(amount?:number)=>void}){
   const [billing,setBilling]=useState<BillingCycle>('monthly');
   const [restoreStatus,setRestoreStatus]=useState(buildRestorePreview([]));
+  const [restoring,setRestoring]=useState(false);
+  const [billingHelp,setBillingHelp]=useState(false);
   const [checkout,setCheckout]=useState<{name:string;price:string;period:string;tag:string;features:string[];kind:ProductKind;executive?:boolean;sparkAmount?:number}|null>(null);
   const planAccent:Record<string,string>={Base:'#B43A4B',Plus:colors.gold,Elite:'#FF6E80'};
-  const restorePurchases=()=>setRestoreStatus(buildRestorePreview(['DestinyOne Plus','Social Weekend Pack']));
+  const restorePurchases=async()=>{
+    setRestoring(true);
+    try{
+      const result=await restoreStorePurchases();
+      const restored=(result?.restored??[]).map(item=>item.key);
+      setRestoreStatus(restored.length?buildRestorePreview(restored):'No active store-verified purchases were found for this account.');
+    }catch(error){
+      setRestoreStatus(error instanceof Error?error.message:'Secure restore is unavailable. No entitlement was changed.');
+    }finally{setRestoring(false)}
+  };
   return <LinearGradient colors={['#260620',colors.black,colors.black]} style={{flex:1}}><SafeAreaView style={shared.safe}><Pressable accessibilityRole="button" accessibilityLabel="Close pricing" onPress={back} style={{paddingVertical:10}}><PremiumIcon name="close" tone="dark" size={42} iconSize={20}/></Pressable><ScrollView contentContainerStyle={{gap:20,paddingBottom:30}} showsVerticalScrollIndicator={false}>
     <View style={pricingStyles.hero}><PremiumIcon name="diamond" tone="gold" size={62} iconSize={29}/><Text style={launchStyles.scriptHero}>Memberships</Text><Text style={[shared.h1,{textAlign:'center'}]}>Pay for quality,{`\n`}not for noise.</Text><Text style={[shared.body,{textAlign:'center'}]}>Clear plans for serious dating with privacy, safety and real curation built in.</Text></View>
     <View style={pricingStyles.billingToggle}><Pressable onPress={()=>setBilling('monthly')} style={[pricingStyles.billingOption,billing==='monthly'&&pricingStyles.billingOptionOn]}><Text style={[pricingStyles.billingText,billing==='monthly'&&{color:colors.ivory}]}>Monthly</Text></Pressable><Pressable onPress={()=>setBilling('annual')} style={[pricingStyles.billingOption,billing==='annual'&&pricingStyles.billingOptionOn]}><Text style={[pricingStyles.billingText,billing==='annual'&&{color:colors.ivory}]}>Annual</Text><View style={pricingStyles.saveBadge}><Text style={pricingStyles.saveText}>Save</Text></View></Pressable></View>
     <View style={pricingStyles.promiseGrid}><PricingPromise icon="shield-checkmark" title="Verified-first" body="Profiles, reports and blocks stay safety-led."/><PricingPromise icon="card" title="Store billing" body="Restore purchase and cancel through app stores."/><PricingPromise icon="heart" title="No fake scores" body="Matches use labels and explanations only."/></View>
     <View style={pricingStyles.entitlementPanel}><View style={shared.row}><PremiumIcon name="layers-outline" tone="gold" size={44} iconSize={20}/><View style={{flex:1,marginLeft:10}}><Text style={styles.cardTitle}>Entitlement logic is ready</Text><Text style={styles.helper}>Every paid product maps to daily matches, filters, Spark wallet, likes access, restore purchase and cancellation states.</Text></View></View></View>
+    <View style={pricingStyles.billingRailCard}><Text style={styles.sectionLabel}>SECURE BILLING BOUNDARIES</Text><View style={pricingStyles.billingRailRow}><MiniPremiumIcon name="phone-portrait-outline" tone="gold" size={32} iconSize={15}/><View style={{flex:1}}><Text style={styles.cardTitle}>Digital access</Text><Text style={styles.helper}>Memberships, Executive access and Spark packs use Apple App Store or Google Play billing.</Text></View></View><View style={pricingStyles.billingRailRow}><MiniPremiumIcon name="restaurant-outline" tone="rose" size={32} iconSize={15}/><View style={{flex:1}}><Text style={styles.cardTitle}>Dates and delivered gifts</Text><Text style={styles.helper}>Real-world bookings use server-owned prices and payment processing only after consent or confirmation.</Text></View></View><View style={pricingStyles.billingRailRow}><MiniPremiumIcon name="shield-checkmark-outline" tone="ruby" size={32} iconSize={15}/><View style={{flex:1}}><Text style={styles.cardTitle}>Unlock rule</Text><Text style={styles.helper}>A signed provider event must be verified on the server before any production entitlement changes.</Text></View></View></View>
     {membershipPlans.map(plan=>{const price=membershipPriceLabel(plan,billing);const period=billingPeriodLabel(billing);const accent=planAccent[plan.name];return <View key={plan.id} style={[pricingStyles.planCard,{borderColor:accent,backgroundColor:plan.recommended?'#19160F':'#20070D'}]}><View style={shared.row}><PremiumIcon name={plan.name==='Base'?'heart':plan.name==='Plus'?'sparkles':'diamond'} tone={plan.recommended?'gold':'ruby'} size={46} iconSize={22}/><View style={{flex:1,marginLeft:11}}><Text style={styles.kicker}>DESTINYONE {plan.name.toUpperCase()}</Text><Text style={pricingStyles.planFor}>{plan.forLabel}</Text></View><View style={[styles.popular,{backgroundColor:accent}]}><Text style={[styles.popularText,plan.recommended&&{color:'#2A1205'}]}>{plan.tag.toUpperCase()}</Text></View></View><View style={pricingStyles.priceRow}><Text style={styles.price}>{price}</Text><Text style={styles.per}>{period}</Text>{billing==='annual'&&<Text style={pricingStyles.annualNote}>{annualSavingsLabel(plan)}</Text>}</View><View style={pricingStyles.entitlementRow}>{membershipEntitlementSummary(plan).map(item=><View key={item} style={pricingStyles.entitlementPill}><Text style={pricingStyles.entitlementText}>{item}</Text></View>)}</View>{plan.features.map(x=><View key={x} style={pricingStyles.featureRow}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={30} iconSize={14}/><Text style={[shared.body,{color:colors.ivory,marginLeft:10,flex:1}]}>{x}</Text></View>)}<Button label={plan.cta} variant={plan.recommended?'gold':'secondary'} icon={Platform.OS==='ios'?'logo-apple':'card-outline'} onPress={()=>setCheckout({name:`DestinyOne ${plan.name}`,price,period,tag:plan.tag,features:plan.features,kind:'membership'})}/><View style={launchStyles.secureRow}><MiniPremiumIcon name="lock-closed" tone="gold" size={24} iconSize={11}/><Text style={launchStyles.secureText}>One tap · Restore anytime · Cancel in store settings</Text></View></View>})}
     <View style={pricingStyles.executiveCard}><LinearGradient colors={['rgba(245,212,106,.20)','rgba(229,9,47,.08)']} style={StyleSheet.absoluteFill}/><View style={shared.row}><PremiumIcon name="briefcase" tone="gold" size={54} iconSize={25}/><View style={{flex:1,marginLeft:12}}><Text style={styles.kicker}>{executivePlan.tag.toUpperCase()}</Text><Text style={pricingStyles.executiveTitle}>{executivePlan.name}</Text><Text style={pricingStyles.planFor}>{executivePlan.forLabel}</Text></View></View><View style={pricingStyles.priceRow}><Text style={styles.price}>{formatMoney(executivePlan.priceCents)}</Text><Text style={styles.per}>{executivePlan.period}</Text></View>{executivePlan.features.map(x=><View key={x} style={pricingStyles.featureRow}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={30} iconSize={14}/><Text style={[shared.body,{color:colors.ivory,marginLeft:10,flex:1}]}>{x}</Text></View>)}<Button label={executivePlan.cta} variant="gold" icon="briefcase" onPress={()=>setCheckout({name:executivePlan.name,price:formatMoney(executivePlan.priceCents),period:executivePlan.period,tag:executivePlan.tag,features:executivePlan.features,executive:true,kind:'executive_application'})}/><Text style={styles.helper}>Application approval is required before annual billing. Sensitive verification is private.</Text></View>
     <View style={[aiStyles.roseWallet,{alignItems:'flex-start'}]}><View style={aiStyles.roseIcon}><PremiumIcon name="sparkles" tone="gold" size={42} iconSize={19}/></View><View style={{flex:1,gap:7}}><Text style={aiStyles.roseTitle}>Golden Spark packs</Text><Text style={aiStyles.roseBody}>After the daily free Spark, users can buy extra Spark packs through official store billing.</Text><View style={pricingStyles.sparkGrid}>{sparkPacks.map(pack=><Pressable key={pack.id} onPress={()=>setCheckout({name:pack.name,price:formatMoney(pack.priceCents),period:' one-time',tag:pack.tag,features:[`${pack.sparks} Golden Sparks`,'Romantic Spark animation','Restorable store purchase','Abuse and spam limits still apply'],kind:'spark_pack',sparkAmount:pack.sparks})} style={[pricingStyles.sparkCard,pack.bestValue&&pricingStyles.sparkCardBest]}><Text style={pricingStyles.sparkCount}>{pack.sparks}</Text><Text style={pricingStyles.sparkLabel}>Sparks</Text><Text style={pricingStyles.sparkPrice}>{formatMoney(pack.priceCents)}</Text>{pack.bestValue&&<Text style={pricingStyles.sparkBest}>Popular</Text>}</Pressable>)}</View></View></View>
-    <View style={pricingStyles.restoreCard}><PremiumIcon name="refresh-circle" tone="gold" size={44} iconSize={21}/><View style={{flex:1}}><Text style={styles.cardTitle}>Restore purchases</Text><Text style={styles.helper}>{restoreStatus}</Text></View><Pressable onPress={restorePurchases} style={pricingStyles.restoreButton}><Text style={pricingStyles.restoreText}>Restore</Text></Pressable></View>
+    <View style={pricingStyles.restoreCard}><PremiumIcon name="refresh-circle" tone="gold" size={44} iconSize={21}/><View style={{flex:1}}><Text style={styles.cardTitle}>Restore purchases</Text><Text style={styles.helper}>{restoreStatus}</Text></View><Pressable disabled={restoring} onPress={()=>void restorePurchases()} style={pricingStyles.restoreButton}><Text style={pricingStyles.restoreText}>{restoring?'Checking…':'Restore'}</Text></Pressable></View>
+    <View style={pricingStyles.manageCard}><View style={shared.row}><PremiumIcon name="receipt-outline" tone="rose" size={44} iconSize={21}/><View style={{flex:1,marginLeft:10}}><Text style={styles.cardTitle}>Membership & billing help</Text><Text style={styles.helper}>Manage renewal in your app-store account. Refunds, duplicate charges and chargebacks open a traceable support case.</Text></View></View><Button label={billingHelp?'Hide billing paths':'View billing paths'} variant="secondary" icon="help-circle-outline" onPress={()=>setBillingHelp(value=>!value)}/>{billingHelp&&<View style={pricingStyles.billingHelpBox}>{['Cancel or change renewal in Apple/Google settings','Restore only server-verified purchases','Request refund review with receipt reference','Grace period preserves access while the store retries','Refund or chargeback reverses the entitlement ledger'].map(item=><View key={item} style={pricingStyles.featureRow}><MiniPremiumIcon name="checkmark-circle-outline" tone="gold" size={27} iconSize={13}/><Text style={[shared.body,{flex:1,marginLeft:8,color:colors.ivory}]}>{item}</Text></View>)}</View>}</View>
     <View style={launchStyles.billingPromise}><PremiumIcon name="shield-checkmark" tone="gold" size={44} iconSize={21}/><View style={{flex:1}}><Text style={styles.cardTitle}>Clear payments, no surprises</Text><Text style={styles.helper}>Subscriptions, coins and Spark packs use official in-app billing. Apple Pay is reserved for optional real-world date venue holds.</Text></View></View><Text style={[styles.legal,{paddingBottom:10}]}>Cancel anytime. Your subscription renews through your app store account.</Text></ScrollView><MembershipCheckoutSheet plan={checkout} onClose={()=>setCheckout(null)} onComplete={(sparkAmount)=>sparkAmount?onBuyRoses(sparkAmount):undefined}/></SafeAreaView></LinearGradient>
 }
 
 function MembershipCheckoutSheet({plan,onClose,onComplete}:{plan:{name:string;price:string;period:string;tag:string;features:string[];kind:ProductKind;executive?:boolean;sparkAmount?:number}|null;onClose:()=>void;onComplete?:(sparkAmount?:number)=>void}){
-  const [stage,setStage]=useState<'idle'|'prepared'|'confirmed'>('idle');
-  useEffect(()=>{if(plan)setStage('idle')},[plan]);
+  const [stage,setStage]=useState<'review'|'store'|'verifying'|'complete'>('review');
+  useEffect(()=>{if(plan)setStage('review')},[plan]);
   if(!plan)return null;
   const steps=checkoutSteps(plan.kind,plan.executive);
-  const activeStep=stage==='confirmed'?steps.length-1:stage==='prepared'?1:0;
-  const advance=()=>{if(stage==='idle'){setStage('prepared');return}setStage('confirmed');if(plan.kind==='spark_pack')onComplete?.(plan.sparkAmount)};
-  const buttonLabel=stage==='idle'?(plan.executive?'Prepare executive application':'Prepare secure checkout'):(plan.executive?'Submit application request':plan.kind==='spark_pack'?'Confirm Spark preview':'Confirm preview unlock');
-  const successCopy=plan.executive?'Executive application request is ready. Approval must happen before billing.':plan.kind==='spark_pack'?`${plan.sparkAmount??0} Golden Sparks added in preview. Production validates the store receipt before unlocking.`:'Membership preview unlocked. Production will open Apple/Google billing here.';
-  return <Modal visible transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,pricingStyles.checkoutSheet]}><SheetHeader title="Secure checkout preview" subtitle={`${plan.name} · ${plan.price}${plan.period}`} onClose={onClose}/><ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={pricingStyles.checkoutScroll}><LinearGradient colors={plan.executive?['#3B2D09','#1D070B']:plan.kind==='spark_pack'?['#3B2208','#1D070B']:['#3A0710','#1D070B']} style={pricingStyles.checkoutHero}><PremiumIcon name={plan.executive?'briefcase':plan.kind==='spark_pack'?'sparkles':'card'} tone="gold" size={56} iconSize={26}/><View style={{flex:1}}><Text style={styles.kicker}>{plan.tag.toUpperCase()}</Text><Text style={pricingStyles.checkoutTitle}>{plan.name}</Text><Text style={styles.helper}>{plan.price}{plan.period} · official app-store billing flow</Text></View></LinearGradient><View style={pricingStyles.checkoutSteps}>{steps.map((step,index)=><View key={step} style={pricingStyles.checkoutStep}><View style={[pricingStyles.checkoutStepDot,index<=activeStep&&pricingStyles.checkoutStepDotOn]}><Text style={pricingStyles.checkoutStepNumber}>{index+1}</Text></View><Text style={[pricingStyles.checkoutStepText,index<=activeStep&&pricingStyles.checkoutStepTextOn]}>{step}</Text></View>)}</View><View style={pricingStyles.checkoutFeatureBox}>{plan.features.slice(0,4).map(feature=><View key={feature} style={pricingStyles.featureRow}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><Text style={[shared.body,{color:colors.ivory,marginLeft:9,flex:1}]}>{feature}</Text></View>)}</View>{stage==='confirmed'?<><View style={pricingStyles.checkoutReady}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={34} iconSize={16}/><Text style={pricingStyles.checkoutReadyText}>{successCopy}</Text></View><Button label="Done" variant="secondary" onPress={onClose}/></>:<Button label={buttonLabel} icon={stage==='idle'?(plan.executive?'briefcase':'lock-closed'):'checkmark-circle'} variant="gold" onPress={advance}/>}<Text style={styles.legal}>No real charge in this preview. Production connects app-store subscriptions, restore purchase, cancellation and receipts.</Text></ScrollView></SafeAreaView></Modal>
+  const activeStep=stage==='complete'?steps.length-1:stage==='verifying'?2:stage==='store'?1:0;
+  const advance=()=>{
+    if(stage==='review'){setStage('store');return}
+    if(stage==='store'){setStage('verifying');return}
+    setStage('complete');
+    if(previewEntitlementAllowed(appEnvironment)&&plan.kind==='spark_pack')onComplete?.(plan.sparkAmount);
+  };
+  const buttonLabel=stage==='review'?(plan.executive?'Prepare executive application':'Review store checkout'):stage==='store'?(plan.executive?'Submit application preview':'Simulate store response'):'Show server verification result';
+  const buttonIcon=stage==='review'?(plan.executive?'briefcase':'lock-closed'):stage==='store'?'storefront-outline':'shield-checkmark-outline';
+  const successCopy=plan.executive?'Executive application preview is complete. Approval and server billing must happen before access.':plan.kind==='spark_pack'?`${plan.sparkAmount??0} Golden Sparks were added only to this local preview. Production stays locked until the store receipt is server-verified.`:'Membership was demonstrated only in local preview. No production entitlement or real charge was created.';
+  return <Modal visible transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,pricingStyles.checkoutSheet]}><SheetHeader title="Secure checkout preview" subtitle={`${plan.name} · ${plan.price}${plan.period}`} onClose={onClose}/><ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={pricingStyles.checkoutScroll}><LinearGradient colors={plan.executive?['#3B2D09','#1D070B']:plan.kind==='spark_pack'?['#3B2208','#1D070B']:['#3A0710','#1D070B']} style={pricingStyles.checkoutHero}><PremiumIcon name={plan.executive?'briefcase':plan.kind==='spark_pack'?'sparkles':'card'} tone="gold" size={56} iconSize={26}/><View style={{flex:1}}><Text style={styles.kicker}>{plan.tag.toUpperCase()}</Text><Text style={pricingStyles.checkoutTitle}>{plan.name}</Text><Text style={styles.helper}>{plan.price}{plan.period} · official app-store billing flow</Text></View></LinearGradient><View style={pricingStyles.checkoutSteps}>{steps.map((step,index)=><View key={step} style={pricingStyles.checkoutStep}><View style={[pricingStyles.checkoutStepDot,index<=activeStep&&pricingStyles.checkoutStepDotOn]}><Text style={pricingStyles.checkoutStepNumber}>{index+1}</Text></View><Text style={[pricingStyles.checkoutStepText,index<=activeStep&&pricingStyles.checkoutStepTextOn]}>{step}</Text></View>)}</View><View style={pricingStyles.checkoutFeatureBox}>{plan.features.slice(0,4).map(feature=><View key={feature} style={pricingStyles.featureRow}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><Text style={[shared.body,{color:colors.ivory,marginLeft:9,flex:1}]}>{feature}</Text></View>)}</View>{stage==='complete'?<><View style={pricingStyles.checkoutReady}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={34} iconSize={16}/><Text style={pricingStyles.checkoutReadyText}>{successCopy}</Text></View><Button label="Done" variant="secondary" onPress={onClose}/></>:<Button label={buttonLabel} icon={buttonIcon} variant="gold" onPress={advance}/>}<Text style={styles.legal}>No real charge in this preview. A production unlock requires store approval, signed webhook verification and an immutable server entitlement entry.</Text></ScrollView></SafeAreaView></Modal>
 }
 
 function PricingPromise({icon,title,body}:{icon:keyof typeof Ionicons.glyphMap;title:string;body:string}){
@@ -4935,6 +5001,8 @@ const pricingStyles=StyleSheet.create({
   promiseTitle:{fontFamily:'Poppins_700Bold',fontSize:10.5,color:colors.ivory},
   promiseBody:{fontFamily:'Poppins_400Regular',fontSize:8.5,lineHeight:12.5,color:colors.muted},
   entitlementPanel:{padding:14,borderRadius:22,backgroundColor:'rgba(212,175,55,.075)',borderWidth:1,borderColor:'rgba(212,175,55,.24)'},
+  billingRailCard:{gap:12,padding:15,borderRadius:22,backgroundColor:'#18090E',borderWidth:1,borderColor:'rgba(255,255,255,.09)'},
+  billingRailRow:{flexDirection:'row',alignItems:'flex-start',gap:10,paddingTop:10,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.06)'},
   entitlementRow:{flexDirection:'row',flexWrap:'wrap',gap:7},
   entitlementPill:{paddingHorizontal:9,paddingVertical:6,borderRadius:14,backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.10)'},
   entitlementText:{fontFamily:'Poppins_700Bold',fontSize:8.8,color:'#EED8AC'},
@@ -4957,6 +5025,8 @@ const pricingStyles=StyleSheet.create({
   restoreCard:{padding:14,borderRadius:22,backgroundColor:'#1E0A0F',borderWidth:1,borderColor:'rgba(255,255,255,.09)',flexDirection:'row',alignItems:'center',gap:11},
   restoreButton:{height:38,paddingHorizontal:13,borderRadius:19,backgroundColor:'rgba(212,175,55,.12)',borderWidth:1,borderColor:'rgba(212,175,55,.32)',alignItems:'center',justifyContent:'center'},
   restoreText:{fontFamily:'Poppins_700Bold',fontSize:10,color:'#EED8AC'},
+  manageCard:{gap:13,padding:15,borderRadius:22,backgroundColor:'#1B080E',borderWidth:1,borderColor:'rgba(229,9,47,.22)'},
+  billingHelpBox:{gap:10,padding:12,borderRadius:17,backgroundColor:'rgba(255,255,255,.04)',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
   checkoutHero:{minHeight:96,borderRadius:24,padding:14,flexDirection:'row',alignItems:'center',gap:12,borderWidth:1,borderColor:'rgba(255,255,255,.12)',overflow:'hidden'},
   checkoutTitle:{fontFamily:'Poppins_700Bold',fontSize:18,color:colors.ivory},
   checkoutSteps:{flexDirection:'row',gap:7},

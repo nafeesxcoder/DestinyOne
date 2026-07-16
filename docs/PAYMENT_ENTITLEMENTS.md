@@ -20,14 +20,16 @@ The app can preview pricing, Spark packs, Executive Circle and restore-purchase 
 
 The app-side catalog, pricing UI, restore preview, feature-limit model, Spark wallet preview and billing support copy are represented.
 
+The source now includes hashed provider receipts, a signed idempotent billing webhook, an immutable entitlement ledger, current entitlement snapshots, restore RPC, grace/retry states, refund support cases and finance snapshots.
+
 Final live release still needs:
 
 - App Store / Google Play product IDs
-- Server receipt verification
+- Apple App Store Server API and Google Play Developer API receipt adapters
 - Store purchase / restore testing on physical iOS and Android builds
 - Stripe webhook reconciliation for date holds and physical gifts
-- Refund, cancellation and chargeback workflows
-- Production lock that blocks all client-only paid unlocks
+- Executed refund, cancellation and chargeback drills with staffed support
+- Store sandbox evidence proving the production lock and ledger reversal paths
 
 ## Production rule
 

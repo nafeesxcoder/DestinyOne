@@ -17,10 +17,12 @@
 supabase secrets set STRIPE_SECRET_KEY=sk_live_...
 supabase functions deploy create-date-reservation-intent
 supabase functions deploy create-gift-order
+supabase functions deploy store-billing-webhook
 ```
 
 4. Create an EAS development build. Apple Pay and Google Pay are unavailable in Expo Go.
-5. Replace sample venue and gift catalogs with server-owned inventory and pricing, connect a contracted fulfillment provider, and add recipient-consent expiry, webhook-based refunds/cancellations, idempotency keys, receipts, and operational reconciliation.
+5. Configure `STORE_BILLING_WEBHOOK_SECRET`, Apple App Store Server API and Google Play Developer API adapters. The current signed webhook accepts normalized provider events only; it does not replace provider-side receipt validation.
+6. Replace sample venue and gift catalogs with server-owned inventory and pricing, connect a contracted fulfillment provider, and complete recipient-consent expiry, refunds/cancellations and operational reconciliation.
 
 The client falls back to an explicitly labelled demo reservation when Stripe credentials are absent, so previewing the app can never charge a real payment method.
 
