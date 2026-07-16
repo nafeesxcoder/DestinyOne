@@ -741,3 +741,44 @@ export async function requestAccountDeletion() {
   await supabase.auth.signOut();
   return data;
 }
+
+export async function joinCityWaitlist(input: {
+  cityKey: string;
+  locality: string;
+  region: string;
+  countryCode: 'US' | 'CA';
+  source?: 'member' | 'referral' | 'ambassador' | 'event';
+}) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('join_city_waitlist', {
+    p_city_key: input.cityKey,
+    p_locality: input.locality,
+    p_region: input.region,
+    p_country_code: input.countryCode,
+    p_source: input.source ?? 'member',
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function createCityReferral(cityKey: string) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('create_city_referral', { p_city_key: cityKey });
+  if (error) throw error;
+  return data;
+}
+
+export async function applyCityAmbassador(input: { cityKey: string; communityReach: string; hostingExperience: string }) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('apply_city_ambassador', {
+    p_city_key: input.cityKey,
+    p_community_reach: input.communityReach,
+    p_hosting_experience: input.hostingExperience,
+    p_safety_commitment: true,
+  });
+  if (error) throw error;
+  return data;
+}

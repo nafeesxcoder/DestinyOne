@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(75);
+select plan(86);
 
 select has_function('public', 'get_current_member_bootstrap', array[]::text[], 'member bootstrap RPC exists');
 select has_function('public', 'block_member', array['uuid'], 'server-owned block RPC exists');
@@ -20,6 +20,23 @@ select has_table('public','profile_match_attributes','private reciprocal match a
 select has_table('public','matching_preferences','private detailed matching preferences exist');
 select has_table('public','daily_match_recommendations','versioned recommendation impressions exist');
 select has_table('public','match_feedback','private outcome feedback exists');
+select has_function('public','join_city_waitlist',array['text','text','text','text','text'],'validated city waitlist RPC exists');
+select has_function('public','create_city_referral',array['text'],'rate-limited city referral RPC exists');
+select has_function('public','apply_city_ambassador',array['text','text','text','boolean'],'verified ambassador application RPC exists');
+select has_table('public','city_launch_markets','controlled launch markets exist');
+select has_table('public','city_waitlist_entries','private city waitlist entries exist');
+select has_table('public','city_referral_invites','auditable referral invites exist');
+select has_table('public','city_ambassador_applications','reviewed ambassador applications exist');
+select has_table('public','city_liquidity_snapshots','weekly city liquidity snapshots exist');
+select has_table('public','city_cohort_snapshots','privacy-suppressed cohort snapshots exist');
+select ok(
+  not has_table_privilege('authenticated','public.city_liquidity_snapshots','SELECT'),
+  'members cannot read operational city liquidity metrics'
+);
+select ok(
+  not has_table_privilege('authenticated','public.city_cohort_snapshots','SELECT'),
+  'members cannot read sensitive cohort metrics'
+);
 select ok(
   not has_table_privilege('authenticated','public.discovery_signals','INSERT'),
   'authenticated clients cannot forge discovery learning rows directly'

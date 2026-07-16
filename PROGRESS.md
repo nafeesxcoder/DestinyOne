@@ -35,4 +35,4 @@ backend secrets, billing products, legal URLs, operational staffing, real-city
 pilot evidence, and physical-device testing documented in
 `docs/RELEASE_CHECKLIST.md`.
 
-Latest polish: P1 Abuse / Fraud Protection Gate added — romance scam rules, in-chat safety scanner, report/block graph, paid-action abuse limits, account integrity, fraud-provider checks, freeze/evidence/appeal workflows, member education, Admin Audit UI, release readiness connection, tests, and `docs/ABUSE_FRAUD_PROTECTION.md`.
+Latest phase: City Density & Location Intelligence added — controlled launch markets, secure waitlist/referral/ambassador contracts, private weekly cohort/liquidity snapshots, member city availability, seven expansion gates, Admin Audit visibility, tests, and `docs/PHASE_6_CITY_DENSITY.md`.

@@ -16,7 +16,7 @@ const migrationFiles = readdirSync(migrationDir)
   .sort();
 const versions = migrationFiles.map((name) => Number(name.match(/^(\d{3})_[a-z0-9_]+\.sql$/)?.[1] ?? -1));
 
-requireCondition(migrationFiles.length >= 14, 'Expected at least 14 ordered migrations.');
+requireCondition(migrationFiles.length >= 15, 'Expected at least 15 ordered migrations.');
 requireCondition(versions.every((version) => version > 0), 'Migration names must use NNN_snake_case.sql.');
 requireCondition(versions.every((version, index) => version === index + 1), 'Migration versions must be contiguous from 001.');
 
@@ -36,11 +36,17 @@ const requiredContracts = [
   'create table if not exists public.profile_match_attributes',
   'create table if not exists public.matching_preferences',
   'create table if not exists public.daily_match_recommendations',
+  'create table if not exists public.city_waitlist_entries',
+  'create table if not exists public.city_liquidity_snapshots',
+  'create table if not exists public.city_cohort_snapshots',
   'create or replace function public.get_current_member_bootstrap',
   'create or replace function public.send_match_message',
   'create or replace function public.submit_member_report',
   'create or replace function public.save_matching_preferences',
   'create or replace function public.submit_match_feedback',
+  'create or replace function public.join_city_waitlist',
+  'create or replace function public.create_city_referral',
+  'create or replace function public.apply_city_ambassador',
   'alter default privileges in schema public revoke all on tables from anon',
   'alter default privileges in schema public revoke execute on functions from public',
 ];

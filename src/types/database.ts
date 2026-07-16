@@ -237,6 +237,26 @@ export type Database = {
         created_at: string;
         updated_at: string;
       }, { user_id: string; platform: 'ios' | 'android' | 'web'; token: string; device_label?: string | null; revoked_at?: string | null; updated_at?: string }>;
+      city_launch_markets: Table<{
+        city_key: 'nyc' | 'bay_area' | 'dallas' | 'toronto' | 'chicago'; display_name: string; country_code: 'US' | 'CA';
+        discovery_state: 'waitlist_only' | 'controlled_pilot' | 'healthy_pilot' | 'open'; verified_active_goal: number;
+        adjacent_market: string | null; updated_at: string;
+      }>;
+      city_waitlist_entries: Table<{
+        id: string; user_id: string; city_key: string; locality: string; region: string; country_code: 'US' | 'CA';
+        source: 'member' | 'referral' | 'ambassador' | 'event'; status: 'waiting' | 'invited' | 'activated' | 'paused' | 'declined';
+        consented_at: string; invited_at: string | null; activated_at: string | null; created_at: string; updated_at: string;
+      }>;
+      city_referral_invites: Table<{
+        id: string; inviter_id: string; city_key: string; invite_code: string;
+        status: 'created' | 'opened' | 'joined' | 'verified' | 'expired' | 'revoked';
+        reward_status: 'locked' | 'eligible' | 'granted' | 'reversed'; expires_at: string; created_at: string; redeemed_by: string | null;
+      }>;
+      city_ambassador_applications: Table<{
+        id: string; user_id: string; city_key: string; community_reach: string; hosting_experience: string; safety_commitment: boolean;
+        status: 'submitted' | 'interview' | 'approved' | 'declined' | 'paused'; reviewer_id: string | null; reviewer_note: string | null;
+        created_at: string; updated_at: string;
+      }>;
     };
     Views: Record<never, never>;
     Functions: {
@@ -325,6 +345,15 @@ export type Database = {
           p_media_path?: string | null;
           p_metadata?: Json;
         };
+        Returns: Json;
+      };
+      join_city_waitlist: {
+        Args: { p_city_key: string; p_locality: string; p_region: string; p_country_code: 'US' | 'CA'; p_source?: 'member' | 'referral' | 'ambassador' | 'event' };
+        Returns: Json;
+      };
+      create_city_referral: { Args: { p_city_key: string }; Returns: Json };
+      apply_city_ambassador: {
+        Args: { p_city_key: string; p_community_reach: string; p_hosting_experience: string; p_safety_commitment: boolean };
         Returns: Json;
       };
     };

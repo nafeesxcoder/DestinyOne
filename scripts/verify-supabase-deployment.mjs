@@ -32,6 +32,12 @@ const objects = [
   ['table', 'match_feedback'],
   ['table', 'matching_model_versions'],
   ['table', 'matching_model_events'],
+  ['table', 'city_launch_markets'],
+  ['table', 'city_waitlist_entries'],
+  ['table', 'city_referral_invites'],
+  ['table', 'city_ambassador_applications'],
+  ['table', 'city_liquidity_snapshots'],
+  ['table', 'city_cohort_snapshots'],
   ['rpc', 'daily_matches'],
   ['rpc', 'get_current_member_bootstrap'],
   ['rpc', 'send_match_message'],
@@ -44,6 +50,9 @@ const objects = [
   ['rpc', 'submit_match_feedback'],
   ['rpc', 'clear_matching_learning'],
   ['rpc', 'submit_match_decision'],
+  ['rpc', 'join_city_waitlist'],
+  ['rpc', 'create_city_referral'],
+  ['rpc', 'apply_city_ambassador'],
 ];
 
 const rpcBodies = {
@@ -94,6 +103,20 @@ const rpcBodies = {
   submit_match_decision: {
     recipient_id: '00000000-0000-4000-8000-000000000000',
     decision: 'pass',
+  },
+  join_city_waitlist: {
+    p_city_key: 'toronto',
+    p_locality: 'Toronto',
+    p_region: 'Ontario',
+    p_country_code: 'CA',
+    p_source: 'member',
+  },
+  create_city_referral: { p_city_key: 'toronto' },
+  apply_city_ambassador: {
+    p_city_key: 'toronto',
+    p_community_reach: 'deployment probe community reach',
+    p_hosting_experience: 'deployment probe hosting experience',
+    p_safety_commitment: true,
   },
 };
 

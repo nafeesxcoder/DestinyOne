@@ -29,6 +29,7 @@ import { getLaunchReadinessSnapshot, productionDataModules, type AppDataModule }
 import { buildModerationQueue, summarizeModerationQueue, type ModerationQueueItem, type ModerationStatus } from './src/domain/moderation';
 import { buildHomeGrowthLoop, type GrowthNudge, type HomeGrowthLoop, type ProfileGrowthInput, type RetentionLoop } from './src/domain/growth';
 import { buildNetworkEffectPlan, type NetworkEffectPlan, type NetworkGrowthLoop } from './src/domain/networkEffects';
+import { buildCityDensitySnapshot, resolveLaunchMarket, type CityDensitySnapshot } from './src/domain/cityDensity';
 import { annualSavingsLabel, billingPeriodLabel, buildPaymentEntitlementSnapshot, buildRestorePreview, checkoutSteps, executivePlan, formatMoney, membershipEntitlementSummary, membershipPlans, membershipPriceLabel, sparkPacks, type BillingCycle, type PaymentEntitlementGate, type PaymentEntitlementSnapshot, type ProductKind } from './src/domain/monetization';
 import { buildReportActionPlan, buildSafetyChecklist, safetyReadinessScore, scanMessageSafety, type MessageSafetyScan, type SafetyChecklistItem } from './src/domain/safety';
 import { buildProductQualitySnapshot, type ProductQualityItem } from './src/domain/productQuality';
@@ -1055,6 +1056,7 @@ function DiscoveryCenter({filters,onFiltersChange,signals,smartDiscovery,crossed
   const update=(patch:Partial<MatchFilters>)=>onFiltersChange({...filters,...patch});
   const toggleArray=(key:'intents'|'mustHaveVibes'|'cities',value:string)=>{const current=filters[key];update({[key]:current.includes(value)?current.filter(item=>item!==value):[...current,value]} as Partial<MatchFilters>)};
   const cityOptions=(citySearch?profileCities.filter(city=>city.toLowerCase().includes(citySearch.toLowerCase())):profileCities).slice(0,42);
+  const selectedLaunchMarkets=[...new Map(filters.cities.map(city=>resolveLaunchMarket(city)).filter(Boolean).map(market=>[market!.name,market!])).values()];
   const toggleCrossed=async()=>{
     if(crossedPaths){onCrossedChange(false);return}
     setLocationError('');
@@ -1076,6 +1078,7 @@ function DiscoveryCenter({filters,onFiltersChange,signals,smartDiscovery,crossed
       <FilterSection title="Location preference"><FilterChip label="Anywhere" active={filters.distancePreference==='anywhere'} onPress={()=>update({distancePreference:'anywhere'})}/><FilterChip label="Selected cities only" active={filters.distancePreference==='selected_cities'} onPress={()=>update({distancePreference:'selected_cities'})}/><FilterChip label="Same state/province" active={filters.distancePreference==='same_state'} onPress={()=>update({distancePreference:'same_state'})}/><FilterChip label="Open to relocate" active={filters.distancePreference==='open_to_relocate'} onPress={()=>update({distancePreference:'open_to_relocate'})}/></FilterSection>
       <FilterSection title="Relocation"><FilterChip label="Any" active={filters.relocation==='any'} onPress={()=>update({relocation:'any'})}/><FilterChip label="Open to relocate" active={filters.relocation==='open'} onPress={()=>update({relocation:'open'})}/><FilterChip label="Prefers same city" active={filters.relocation==='same_city'} onPress={()=>update({relocation:'same_city'})}/></FilterSection>
     </View>
+    <CityCoverageCard selectedCities={filters.cities} launchMarkets={selectedLaunchMarkets}/>
     <View style={discoveryStyles.neverTrack}><PremiumIcon name="eye-off-outline" tone="ruby" size={50} iconSize={23}/><View style={{flex:1}}><Text style={styles.cardTitle}>What we never read</Text><Text style={styles.helper}>Browser or Google searches, messages outside DestinyOne, contacts, photos you don’t select, microphone activity, or usage in other apps.</Text></View></View>
     <DiscoveryToggle icon="sparkles" title="Smart Discovery" body="Reorders daily matches using your stated preferences, profile views, interests and skips." value={smartDiscovery} onPress={()=>onSmartChange(!smartDiscovery)}/>
     <DiscoveryToggle icon="walk" title="Crossed Paths" body="Shows opted-in members whose approximate area overlapped with yours. Exact place and time stay hidden." value={crossedPaths} onPress={()=>void toggleCrossed()}/>
@@ -1084,6 +1087,16 @@ function DiscoveryCenter({filters,onFiltersChange,signals,smartDiscovery,crossed
     <View style={aiStyles.privacyPolicyCard}><PremiumIcon name="lock-closed" tone="gold" size={46} iconSize={20}/><View style={{flex:1}}><Text style={styles.cardTitle}>AI Privacy Policy</Text><Text style={styles.helper}>Your filters and in-app signals improve ranking. Exact scores stay internal, and you can reset learning anytime.</Text></View></View>
     <View style={discoveryStyles.privacyGrid}><PrivacyPoint icon="location-outline" title="Approximate only" body="Location filters are preference-based; Crossed Paths uses low-accuracy foreground location only."/><PrivacyPoint icon="people-outline" title="Both must opt in" body="You appear in Crossed Paths only when both members enable it."/><PrivacyPoint icon="time-outline" title="Delayed display" body="Profiles appear later, never as a live location tracker."/><PrivacyPoint icon="shield-checkmark-outline" title="Block always wins" body="Blocked or reported members never appear in discovery."/></View>
   </ScrollView></SafeAreaView></LinearGradient>
+}
+
+function CityCoverageCard({selectedCities,launchMarkets}:{selectedCities:string[];launchMarkets:ReturnType<typeof resolveLaunchMarket>[]}){
+  const validMarkets=launchMarkets.filter((market):market is NonNullable<typeof market>=>Boolean(market));
+  return <View style={cityDensityStyles.memberCard}>
+    <View style={shared.row}><PremiumIcon name="location" tone="gold" size={46} iconSize={21}/><View style={{flex:1,marginLeft:10}}><Text style={styles.kicker}>CITY AVAILABILITY</Text><Text style={styles.cardTitle}>{selectedCities.length?'Your selected communities':'Choose where you want to build'}</Text></View></View>
+    <Text style={styles.helper}>{selectedCities.length?`${selectedCities.length} location${selectedCities.length===1?'':'s'} selected. Reciprocal matches are prioritized within your choices and relocation preference.`:'Search any USA or Canada city above. Launch communities open gradually when verified supply is balanced.'}</Text>
+    {!!validMarkets.length&&<View style={cityDensityStyles.memberMarketList}>{validMarkets.map(market=><View key={market.name} style={cityDensityStyles.memberMarketRow}><MiniPremiumIcon name="people-outline" tone="rose" size={28} iconSize={13}/><View style={{flex:1}}><Text style={cityDensityStyles.memberMarketName}>{market.market}</Text><Text style={cityDensityStyles.memberMarketMeta}>Founding community · verified members first</Text></View></View>)}</View>}
+    <View style={cityDensityStyles.privacyRow}><MiniPremiumIcon name="shield-checkmark-outline" tone="gold" size={26} iconSize={12}/><Text style={cityDensityStyles.privacyText}>No exact coordinates are used for city filters. Crossed Paths stays separately opt-in and approximate.</Text></View>
+  </View>
 }
 
 function DiscoveryToggle({icon,title,body,value,onPress}:{icon:keyof typeof Ionicons.glyphMap;title:string;body:string;value:boolean;onPress:()=>void}){return <Pressable onPress={onPress} style={discoveryStyles.toggleCard}><PremiumIcon name={icon} tone={value?'gold':'ruby'} size={52} iconSize={23}/><View style={{flex:1}}><Text style={styles.cardTitle}>{title}</Text><Text style={styles.helper}>{body}</Text></View><View style={[discoveryStyles.switch,value&&discoveryStyles.switchOn]}><View style={[discoveryStyles.switchThumb,value&&discoveryStyles.switchThumbOn]}/></View></Pressable>}
@@ -2169,6 +2182,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
   });
   const marketplaceSnapshot=buildMarketplaceSnapshot();
   const networkSnapshot=buildNetworkEffectPlan({matches,selectedCities:[],verified:true,vouchesCount:3});
+  const cityDensitySnapshot=buildCityDensitySnapshot({liveMetricsConnected:false,measurements:[]});
   const p1Snapshot=buildP1OperationsSnapshot({
     hasDateMarketplacePreview:marketplaceSnapshot.ready,
     hasLiveVenueProvider:false,
@@ -2207,7 +2221,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     {tab==='playbooks'&&<View style={ventureStyles.section}><Text style={styles.sectionLabel}>AUTOMATION GUARDS</Text>{automationGuards.map(([title,body],index)=><ChecklistRow key={title} title={title} body={body} done={index<3}/>)}
       <View style={coachStyles.boundaryCard}><PremiumIcon name="warning" tone="gold" size={44} iconSize={19}/><View style={{flex:1}}><Text style={styles.cardTitle}>Human-first safety</Text><Text style={styles.helper}>AI can prioritize and freeze risky surfaces, but permanent bans, sensitive identity decisions and billing-impact actions need human review.</Text></View></View>
     </View>}
-    {tab==='audit'&&<View style={ventureStyles.section}><BackendLaunchGateCard snapshot={backendLaunchSnapshot}/><PaymentEntitlementGateCard snapshot={paymentEntitlementSnapshot}/><NotificationReadinessCard snapshot={notificationSnapshot}/><GiftFulfillmentReadinessCard snapshot={giftFulfillmentSnapshot}/><PlacesReservationReadinessCard snapshot={placesReservationSnapshot}/><ObservabilityReadinessCard snapshot={observabilitySnapshot}/><AbuseFraudReadinessCard snapshot={abuseFraudSnapshot}/><TrustOpsSlaCard snapshot={trustOpsSnapshot}/><LegalStoreOpsCard snapshot={legalOpsSnapshot}/><P1OperationsCard snapshot={p1Snapshot}/><ProductQualityCard snapshot={qualitySnapshot}/><InteractionQualityCard snapshot={interactionSnapshot}/><PolicyComplianceCard snapshot={policyComplianceSnapshot}/><StoreReviewCard snapshot={storeReviewSnapshot}/><ReleaseReadinessCard snapshot={releaseSnapshot}/><Text style={styles.sectionLabel}>AUDIT READINESS</Text>{([
+    {tab==='audit'&&<View style={ventureStyles.section}><BackendLaunchGateCard snapshot={backendLaunchSnapshot}/><CityDensityReadinessCard snapshot={cityDensitySnapshot}/><PaymentEntitlementGateCard snapshot={paymentEntitlementSnapshot}/><NotificationReadinessCard snapshot={notificationSnapshot}/><GiftFulfillmentReadinessCard snapshot={giftFulfillmentSnapshot}/><PlacesReservationReadinessCard snapshot={placesReservationSnapshot}/><ObservabilityReadinessCard snapshot={observabilitySnapshot}/><AbuseFraudReadinessCard snapshot={abuseFraudSnapshot}/><TrustOpsSlaCard snapshot={trustOpsSnapshot}/><LegalStoreOpsCard snapshot={legalOpsSnapshot}/><P1OperationsCard snapshot={p1Snapshot}/><ProductQualityCard snapshot={qualitySnapshot}/><InteractionQualityCard snapshot={interactionSnapshot}/><PolicyComplianceCard snapshot={policyComplianceSnapshot}/><StoreReviewCard snapshot={storeReviewSnapshot}/><ReleaseReadinessCard snapshot={releaseSnapshot}/><Text style={styles.sectionLabel}>AUDIT READINESS</Text>{([
       ['Reviewer notes','Every freeze, escalation and resolution needs reviewer ID + note.'],
       ['Evidence packet','Reports, chat IDs, gift/payment events, profile edits and block graph stay linked.'],
       ['Member notification','Warnings and support outcomes are sent without exposing reporter identity.'],
@@ -2219,6 +2233,16 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
 
 function AdminOpsStat({value,label}:{value:string;label:string}){
   return <View style={adminOpsStyles.stat}><Text style={adminOpsStyles.statValue}>{value}</Text><Text style={adminOpsStyles.statLabel}>{label}</Text></View>
+}
+
+function CityDensityReadinessCard({snapshot}:{snapshot:CityDensitySnapshot}){
+  return <View style={cityDensityStyles.auditCard}>
+    <View style={shared.row}><PremiumIcon name="map" tone="gold" size={48} iconSize={22}/><View style={{flex:1,marginLeft:10}}><Text style={styles.kicker}>CITY DENSITY GATE</Text><Text style={adminOpsStyles.qualityTitle}>{snapshot.status} · {snapshot.score}%</Text><Text style={styles.helper}>Liquidity is measured by reciprocal candidates and healthy outcomes, never waitlist size alone.</Text></View></View>
+    <View style={adminOpsStyles.qualityTrack}><View style={[adminOpsStyles.qualityFill,{width:`${snapshot.score}%`}]}/></View>
+    <View style={adminOpsStyles.areaGrid}><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Markets</Text><Text style={adminOpsStyles.areaScore}>{snapshot.markets.length}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Expansion</Text><Text style={adminOpsStyles.areaScore}>{snapshot.readyMarkets}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Live data</Text><Text style={adminOpsStyles.areaScore}>{snapshot.liveMetricsConnected?'Yes':'No'}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Blockers</Text><Text style={adminOpsStyles.areaScore}>{snapshot.blockers.length}</Text></View></View>
+    <View style={cityDensityStyles.marketGrid}>{snapshot.markets.map(market=><View key={market.city} style={cityDensityStyles.marketCard}><View style={shared.row}><Text style={cityDensityStyles.marketName}>{market.city}</Text><Text style={cityDensityStyles.marketScore}>{market.score}%</Text></View><Text style={cityDensityStyles.marketStatus}>{market.status}</Text><Text style={cityDensityStyles.marketBody}>{market.nextAction}</Text></View>)}</View>
+    <View style={adminOpsStyles.nextOpsCard}><MiniPremiumIcon name="arrow-forward-circle" tone="gold" size={30} iconSize={14}/><Text style={adminOpsStyles.nextOpsText}>{snapshot.nextBestStep}</Text></View>
+  </View>
 }
 
 function backendLaunchGateIcon(id: BackendLaunchGate['id']): keyof typeof Ionicons.glyphMap {
@@ -5422,6 +5446,23 @@ const safetyStyles=StyleSheet.create({
   exportReady:{padding:13,borderRadius:18,backgroundColor:'rgba(88,201,128,.10)',borderWidth:1,borderColor:'rgba(88,201,128,.28)',flexDirection:'row',alignItems:'center',gap:9},
   exportReadyText:{flex:1,fontFamily:'Poppins_700Bold',fontSize:11.5,lineHeight:16,color:'#A7E6BA'},
   disclaimer:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:15,color:colors.muted,textAlign:'center'},
+});
+
+const cityDensityStyles=StyleSheet.create({
+  memberCard:{gap:12,padding:15,borderRadius:20,backgroundColor:'rgba(212,175,55,.065)',borderWidth:1,borderColor:'rgba(212,175,55,.22)'},
+  memberMarketList:{gap:8},
+  memberMarketRow:{flexDirection:'row',alignItems:'center',gap:9,padding:10,borderRadius:14,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.07)'},
+  memberMarketName:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
+  memberMarketMeta:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:colors.muted,marginTop:1},
+  privacyRow:{flexDirection:'row',alignItems:'flex-start',gap:8,paddingTop:9,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.08)'},
+  privacyText:{flex:1,fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:'#D8C7CC'},
+  auditCard:{gap:12,padding:15,borderRadius:20,backgroundColor:'rgba(212,175,55,.055)',borderWidth:1,borderColor:'rgba(212,175,55,.22)'},
+  marketGrid:{flexDirection:'row',flexWrap:'wrap',gap:8},
+  marketCard:{flexGrow:1,flexBasis:145,minHeight:112,gap:4,padding:11,borderRadius:15,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
+  marketName:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
+  marketScore:{fontFamily:'Poppins_700Bold',fontSize:11,color:colors.gold},
+  marketStatus:{fontFamily:'Poppins_700Bold',fontSize:8.5,color:colors.pinkSoft,textTransform:'uppercase'},
+  marketBody:{fontFamily:'Poppins_400Regular',fontSize:9,lineHeight:13,color:colors.muted},
 });
 
 const noticeStyles=StyleSheet.create({
