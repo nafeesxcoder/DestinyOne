@@ -81,7 +81,7 @@ export function buildBackendLaunchSnapshot(input: BackendLaunchInput): BackendLa
     );
   const authReady = backendConnected && input.authAdapterReady && input.emailOtpReady && input.phoneOtpProviderReady;
   const schemaCoverage = percent(input.backendReadyModuleCount, input.dataModuleCount);
-  const schemaReady = input.migrationCount >= 15 &&
+  const schemaReady = input.migrationCount >= 16 &&
     input.databaseTypesReady &&
     input.hostedSchemaVerified &&
     input.migrationHistoryAligned &&
@@ -89,7 +89,7 @@ export function buildBackendLaunchSnapshot(input: BackendLaunchInput): BackendLa
     schemaCoverage >= 95;
   const rlsReady = schemaReady && input.rlsPoliciesReady;
   const realtimeReady = input.realtimePersistenceReady && input.realtimeModuleCount >= 7;
-  const edgeReady = input.edgeFunctionCount >= 3 && input.edgeFunctionsReady;
+  const edgeReady = input.edgeFunctionCount >= 4 && input.edgeFunctionsReady;
   const secretsReady = input.serverSecretsReady && input.productionEnvLocked && (input.requiresRealBackend || input.appEnvironment === 'production');
 
   const gates: BackendLaunchGate[] = [

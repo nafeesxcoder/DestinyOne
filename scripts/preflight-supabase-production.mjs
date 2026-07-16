@@ -16,7 +16,7 @@ const migrationFiles = readdirSync(migrationDir)
   .sort();
 const versions = migrationFiles.map((name) => Number(name.match(/^(\d{3})_[a-z0-9_]+\.sql$/)?.[1] ?? -1));
 
-requireCondition(migrationFiles.length >= 15, 'Expected at least 15 ordered migrations.');
+requireCondition(migrationFiles.length >= 16, 'Expected at least 16 ordered migrations.');
 requireCondition(versions.every((version) => version > 0), 'Migration names must use NNN_snake_case.sql.');
 requireCondition(versions.every((version, index) => version === index + 1), 'Migration versions must be contiguous from 001.');
 
@@ -39,6 +39,8 @@ const requiredContracts = [
   'create table if not exists public.city_waitlist_entries',
   'create table if not exists public.city_liquidity_snapshots',
   'create table if not exists public.city_cohort_snapshots',
+  'create table if not exists public.marketplace_reservation_orders',
+  'create table if not exists public.marketplace_provider_webhook_receipts',
   'create or replace function public.get_current_member_bootstrap',
   'create or replace function public.send_match_message',
   'create or replace function public.submit_member_report',
@@ -47,6 +49,9 @@ const requiredContracts = [
   'create or replace function public.join_city_waitlist',
   'create or replace function public.create_city_referral',
   'create or replace function public.apply_city_ambassador',
+  'create or replace function public.create_marketplace_quote',
+  'create or replace function public.prepare_marketplace_payment',
+  'create or replace function public.process_marketplace_booking_webhook',
   'alter default privileges in schema public revoke all on tables from anon',
   'alter default privileges in schema public revoke execute on functions from public',
 ];
@@ -54,7 +59,7 @@ for (const contract of requiredContracts) {
   requireCondition(migrationSql.toLowerCase().includes(contract.toLowerCase()), `Missing database contract: ${contract}`);
 }
 
-const edgeFunctions = ['create-date-reservation-intent', 'create-gift-order', 'relationship-reminders'];
+const edgeFunctions = ['create-date-reservation-intent', 'create-gift-order', 'relationship-reminders', 'marketplace-booking-webhook'];
 for (const functionName of edgeFunctions) {
   requireCondition(existsSync(`supabase/functions/${functionName}/index.ts`), `Missing Edge Function: ${functionName}`);
 }
@@ -62,7 +67,7 @@ for (const functionName of edgeFunctions) {
 const databaseTest = readFileSync(testFile, 'utf8');
 const assertionPattern = /\bselect\s+(?:ok|is|isnt|like|unlike|throws_ok|lives_ok|has_[a-z_]+|hasnt_[a-z_]+|col_[a-z_]+|function_[a-z_]+|results_eq|set_eq|bag_eq|is_empty|isnt_empty)\s*\(/gi;
 const assertionCount = databaseTest.match(assertionPattern)?.length ?? 0;
-requireCondition(assertionCount >= 75, `Expected at least 75 pgTAP assertions, found ${assertionCount}.`);
+requireCondition(assertionCount >= 98, `Expected at least 98 pgTAP assertions, found ${assertionCount}.`);
 
 const publicFiles = ['.env.example', 'src/config/supabase.ts', 'src/lib/supabase.ts'];
 for (const file of publicFiles) {

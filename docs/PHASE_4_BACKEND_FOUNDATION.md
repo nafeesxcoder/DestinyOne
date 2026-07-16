@@ -81,11 +81,11 @@ Last verified locally: 2026-07-16
 ## Required deployment sequence
 
 1. Create separate Supabase development, staging, and production projects.
-2. Link development first and apply migrations 001-015 in order.
+2. Link development first and apply migrations 001-016 in order.
 3. Regenerate `src/types/database.ts` from the linked schema and review the diff.
 4. Run positive and negative RLS tests with two members plus one unrelated and
    one blocked account.
-5. Deploy the three Edge Functions and set secrets only in Supabase.
+5. Deploy the four Edge Functions and set secrets only in Supabase.
 6. Configure email OTP, an SMS provider, rate limits, redirect/deep links, and
    abuse controls.
 7. Repeat migration and security validation in staging, then run physical iOS

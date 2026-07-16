@@ -3,7 +3,10 @@ export type MarketplaceOpsStatus = 'Ready for live ops' | 'Provider connections 
 export type MarketplaceOpsPillarId =
   | 'partner_crm'
   | 'provider_adapter'
+  | 'booking_lifecycle'
+  | 'inventory_freshness'
   | 'checkout_refunds'
+  | 'webhook_reconciliation'
   | 'safety_sla'
   | 'event_capacity'
   | 'city_coverage';
@@ -25,7 +28,10 @@ export type MarketplaceOpsInput = {
   signedPartnerCount: number;
   livePlacesProviderConnected: boolean;
   reservationProviderConnected: boolean;
+  bookingLifecycleReady: boolean;
+  inventoryFreshnessReady: boolean;
   paymentWebhookConnected: boolean;
+  webhookReconciliationReady: boolean;
   refundPolicyReady: boolean;
   supportSlaHours: number;
   safetyStaffingReady: boolean;
@@ -66,7 +72,10 @@ export function buildMarketplaceOpsSnapshot(input: MarketplaceOpsInput): Marketp
   const signedDensityReady = input.cityCoverage.every((city) => city.signedPartners >= 1);
   const partnerCrmReady = input.partnerLeadCount >= 25 && input.signedPartnerCount >= 5 && input.datePackageCount >= 5;
   const providerReady = input.livePlacesProviderConnected && input.reservationProviderConnected;
+  const bookingLifecycleReady = input.bookingLifecycleReady;
+  const inventoryFreshnessReady = input.inventoryFreshnessReady && input.livePlacesProviderConnected && input.reservationProviderConnected;
   const checkoutReady = input.paymentWebhookConnected && input.refundPolicyReady;
+  const reconciliationReady = input.webhookReconciliationReady && input.paymentWebhookConnected && input.reservationProviderConnected;
   const safetyReady = input.safetyStaffingReady && input.supportSlaHours <= 24;
   const eventReady = input.eventHostCount >= 5 && input.eventConceptCount >= 6;
   const cityReady = launchCitiesCovered && signedDensityReady;
@@ -89,6 +98,20 @@ export function buildMarketplaceOpsSnapshot(input: MarketplaceOpsInput): Marketp
       nextStep: 'Pick Google Places/Yelp-style places provider and OpenTable/SevenRooms/Resy-style reservation provider.',
     },
     {
+      id: 'booking_lifecycle',
+      title: 'Booking lifecycle',
+      body: bookingLifecycleReady ? 'Quote, both-member acceptance, payment preparation, confirmation, cancellation and refund states are modeled.' : 'A complete server-owned booking state machine is required.',
+      ready: bookingLifecycleReady,
+      nextStep: 'Implement and test every allowed booking transition and exception path.',
+    },
+    {
+      id: 'inventory_freshness',
+      title: 'Inventory freshness',
+      body: inventoryFreshnessReady ? 'Provider-synced availability and expiring server-priced quotes are enforced.' : 'Source freshness rules exist; live provider availability is not connected.',
+      ready: inventoryFreshnessReady,
+      nextStep: 'Connect provider inventory and reject slots not synced within 15 minutes.',
+    },
+    {
       id: 'checkout_refunds',
       title: 'Payment webhooks and refunds',
       body: input.paymentWebhookConnected && input.refundPolicyReady
@@ -96,6 +119,13 @@ export function buildMarketplaceOpsSnapshot(input: MarketplaceOpsInput): Marketp
         : 'Date holds need server-side payment webhooks, refund rules and cancellation copy.',
       ready: checkoutReady,
       nextStep: 'Connect Stripe/Apple Pay reservation webhook and publish refund/cancellation policy.',
+    },
+    {
+      id: 'webhook_reconciliation',
+      title: 'Webhook reconciliation',
+      body: reconciliationReady ? 'Signed idempotent webhooks and provider/payment reconciliation are operational.' : 'Signed webhook contracts exist; live delivery, alerts and reconciliation evidence are pending.',
+      ready: reconciliationReady,
+      nextStep: 'Deploy signed webhooks, schedule reconciliation and alert on amount or status mismatch.',
     },
     {
       id: 'safety_sla',
@@ -125,12 +155,15 @@ export function buildMarketplaceOpsSnapshot(input: MarketplaceOpsInput): Marketp
   const score = Math.round((
     readinessScore(partnerCrmReady, input.partnerLeadCount > 0) +
     readinessScore(providerReady, input.venueCount > 0 && input.curatedCityCount > 0) +
+    readinessScore(bookingLifecycleReady, bookingLifecycleReady) +
+    readinessScore(inventoryFreshnessReady, input.inventoryFreshnessReady) +
     readinessScore(checkoutReady, input.paymentWebhookConnected || input.refundPolicyReady) +
+    readinessScore(reconciliationReady, input.webhookReconciliationReady) +
     readinessScore(safetyReady, input.supportSlaHours <= 48 || input.safetyStaffingReady) +
     readinessScore(eventReady, input.eventConceptCount > 0) +
     readinessScore(cityReady, launchCitiesCovered)
   ) / pillars.length);
-  const providerBlockersOnly = blockers.every((pillar) => ['provider_adapter', 'checkout_refunds', 'safety_sla'].includes(pillar.id));
+  const providerBlockersOnly = blockers.every((pillar) => ['provider_adapter', 'inventory_freshness', 'checkout_refunds', 'webhook_reconciliation', 'safety_sla'].includes(pillar.id));
 
   return {
     status: blockers.length === 0 ? 'Ready for live ops' : providerBlockersOnly ? 'Provider connections pending' : 'Ops setup needed',

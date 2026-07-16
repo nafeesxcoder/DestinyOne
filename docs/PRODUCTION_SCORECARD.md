@@ -18,7 +18,7 @@ every gate in that category has current evidence.
 | Matching intelligence | 4/10 | Server-side reciprocal eligibility, explainable versioned ranking, consented outcome learning, exposure-aware ordering, rollback controls, and automated contracts are source-ready. Hosted deployment, executed RLS tests, calibration, cohort fairness audits, and real outcome evidence remain pending. |
 | Trust and safety operations | 4/10 | Report, block, unmatch, and live-location writes are now server-owned, idempotent, rate-limited, and audited with severity triage targets; real identity/liveness checks, staffed queues, appeals, and incident drills are pending. |
 | City user density | 2/10 | Controlled launch markets, private waitlist/referral/ambassador contracts, seven liquidity gates, a privacy-safe member city panel, and an honest Admin Audit are source-ready. Hosted metrics and verified live member supply remain absent, so no city pilot or expansion readiness is claimed. |
-| Marketplace operations | 2/10 | Attractive mock venue/event/date planning and reservation-intent flows exist; live inventory, contracts, bookings, payments, refunds, and support operations are pending. |
+| Marketplace operations | 3/10 | A complete local booking lifecycle now covers fresh server-priced quotes, active-match acceptance, payment preparation, provider confirmation, cancellation/refund outcomes, signed idempotent webhooks, reconciliation rules, and a working preview UI. Live inventory, partner contracts, payments, staffed support, deployed migrations, and operational evidence remain pending. |
 | Growth engine | 2/10 | Referral, ambassador, events, notifications, and analytics concepts exist; production event collection, attribution, experiments, cohorts, and repeatable acquisition are pending. |
 | Monetization readiness | 3/10 | Pricing, entitlements, gifts, and payment boundaries are modeled; live store products, receipt verification, ledger, restore/refunds, webhooks, fraud controls, and unit economics are pending. |
 
@@ -156,7 +156,7 @@ every gate in that category has current evidence.
 ## Current automated evidence
 
 - TypeScript: passing on 2026-07-15.
-- Domain/service tests: rerun through the full release gate after each phase; city density adds 7 focused domain/security tests and an 86-assertion pgTAP contract.
+- Domain/service tests: rerun through the full release gate after each phase; marketplace operations brings the suite to 44 test files / 167 tests and the pgTAP contract to 98 assertions.
 - Expo web export: passing on 2026-07-15.
 - These checks prove source health only. They do not prove production providers,
   real-device behavior, operational staffing, city liquidity, or unit economics.

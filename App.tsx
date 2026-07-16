@@ -46,6 +46,7 @@ import { buildBackendLaunchSnapshot, type BackendLaunchGate, type BackendLaunchS
 import { buildNotificationReadinessSnapshot, type NotificationGate, type NotificationReadinessSnapshot } from './src/domain/notificationReadiness';
 import { buildGiftFulfillmentReadinessSnapshot, type GiftFulfillmentGate, type GiftFulfillmentReadinessSnapshot } from './src/domain/giftFulfillmentReadiness';
 import { buildPlacesReservationReadinessSnapshot, type PlacesReservationGate, type PlacesReservationReadinessSnapshot } from './src/domain/placesReservationReadiness';
+import { buildMarketplaceBookingTimeline, calculateMarketplaceRefund, type MarketplaceBookingStatus } from './src/domain/marketplaceBooking';
 import { buildObservabilityReadinessSnapshot, type ObservabilityGate, type ObservabilityReadinessSnapshot } from './src/domain/observabilityReadiness';
 import { buildAbuseFraudReadinessSnapshot, type AbuseFraudGate, type AbuseFraudReadinessSnapshot } from './src/domain/abuseFraudReadiness';
 import { buildRelationshipJourney, type RelationshipReflection } from './src/domain/relationshipJourney';
@@ -1285,7 +1286,10 @@ const buildLiveMarketplaceOpsSnapshot=()=>buildMarketplaceOpsSnapshot({
   signedPartnerCount:launchMarketplaceCoverage.reduce((sum,city)=>sum+city.signedPartners,0),
   livePlacesProviderConnected:false,
   reservationProviderConnected:false,
+  bookingLifecycleReady:true,
+  inventoryFreshnessReady:true,
   paymentWebhookConnected:paymentsConfigured,
+  webhookReconciliationReady:false,
   refundPolicyReady:false,
   supportSlaHours:48,
   safetyStaffingReady:false,
@@ -1517,16 +1521,25 @@ function CouplesPlanBuilder({city,radius,onCityChange,onRadiusChange,onExplore,o
 
 function MarketplaceCheckoutSheet({bundle,onClose}:{bundle:CoupleBundle|null;onClose:()=>void}){
   const [payment,setPayment]=useState('Card');
-  const [confirmed,setConfirmed]=useState(false);
-  useEffect(()=>{setConfirmed(false);setPayment('Card')},[bundle?.id,bundle?.city]);
+  const [status,setStatus]=useState<MarketplaceBookingStatus>('quote_ready');
+  const [cancelled,setCancelled]=useState(false);
+  useEffect(()=>{setStatus('quote_ready');setCancelled(false);setPayment('Card')},[bundle?.id,bundle?.city]);
   if(!bundle)return null;
   const confirmation=`DO-${bundle.id.toUpperCase().slice(0,6)}-2026`;
-  return <Modal visible transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={chatStyles.sheet}><SheetHeader title={confirmed?'Itinerary reserved':'Complete your booking'} subtitle={`${bundle.city} · ${bundle.duration}`} onClose={onClose}/><ScrollView contentContainerStyle={{gap:12,paddingBottom:10}} showsVerticalScrollIndicator={false}>
-    <View style={couplesMarketStyles.checkoutHero}><PremiumIcon name={confirmed?'checkmark-circle':'wallet'} tone="gold" size={56} iconSize={26}/><View style={{flex:1}}><Text style={styles.cardTitle}>{confirmed?'Your complete plan is ready':bundle.title}</Text><Text style={styles.helper}>{confirmed?`Confirmation ${confirmation}`:'One checkout and one support contact for the full itinerary.'}</Text></View></View>
+  const confirmed=status==='confirmed';
+  const timeline=buildMarketplaceBookingTimeline(status);
+  const advance=()=>setStatus(current=>current==='quote_ready'?'awaiting_match_acceptance':current==='awaiting_match_acceptance'?'awaiting_payment':current==='awaiting_payment'?'provider_confirming':'confirmed');
+  const actionLabel=status==='quote_ready'?'Share plan for acceptance':status==='awaiting_match_acceptance'?'Preview both accepted':status==='awaiting_payment'?`Prepare ${payment} securely`:status==='provider_confirming'?'Preview provider confirmation':'Manage booking';
+  const refund=calculateMarketplaceRefund({amountCents:bundle.priceCents,cancellationCutoffAt:new Date(Date.now()+24*60*60*1000).toISOString(),cancelledAt:new Date().toISOString()});
+  return <Modal visible transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={chatStyles.sheet}><SheetHeader title={cancelled?'Booking cancelled':confirmed?'Itinerary reserved':'Complete your booking'} subtitle={`${bundle.city} · ${bundle.duration}`} onClose={onClose}/><ScrollView contentContainerStyle={{gap:12,paddingBottom:10}} showsVerticalScrollIndicator={false}>
+    <View style={couplesMarketStyles.checkoutHero}><PremiumIcon name={cancelled?'refresh-circle':confirmed?'checkmark-circle':'wallet'} tone="gold" size={56} iconSize={26}/><View style={{flex:1}}><Text style={styles.cardTitle}>{cancelled?'Cancellation complete':confirmed?'Your complete plan is ready':bundle.title}</Text><Text style={styles.helper}>{cancelled?`${formatPaymentMoney(refund.amountCents)} preview refund · no real charge made`:confirmed?`Confirmation ${confirmation}`:'One checkout and one support contact for the full itinerary.'}</Text></View></View>
     <View style={coachStyles.detailRows}><DetailRow icon="location-outline" label="Destination" value={bundle.city}/><DetailRow icon="time-outline" label="Duration" value={bundle.duration}/><DetailRow icon="receipt-outline" label="Estimated total" value={bundle.price}/><DetailRow icon="refresh-circle-outline" label="Changes" value={bundle.flexibility}/></View>
-    <View style={couplesMarketStyles.checkoutItems}>{bundle.includes.map((item,index)=><View key={item} style={couplesMarketStyles.checkoutItem}><MiniPremiumIcon name={index===0?'bed':index===1?'restaurant':index===2?'ticket':'sparkles'} tone={index%2?'ruby':'gold'} size={32} iconSize={15}/><View style={{flex:1}}><Text style={couplesMarketStyles.checkoutItemTitle}>{item}</Text><Text style={couplesMarketStyles.checkoutItemMeta}>{confirmed?'Reserved in preview itinerary':'Availability checked at confirmation'}</Text></View>{confirmed&&<MiniPremiumIcon name="checkmark-circle" tone="gold" size={26} iconSize={12}/>}</View>)}</View>
-    {!confirmed&&<><Text style={styles.sectionLabel}>PAYMENT</Text><View style={couplesMarketStyles.paymentRow}>{['Card','Apple Pay','Google Pay'].map(option=><Pressable key={option} onPress={()=>setPayment(option)} style={[couplesMarketStyles.paymentChoice,payment===option&&couplesMarketStyles.paymentChoiceOn]}><MiniPremiumIcon name={option==='Card'?'card':option==='Apple Pay'?'logo-apple':'logo-google'} tone={payment===option?'gold':'dark'} size={28} iconSize={13}/><Text style={[couplesMarketStyles.paymentText,payment===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}</View><View style={couplesMarketStyles.totalRow}><Text style={styles.cardTitle}>Estimated total</Text><Text style={couplesMarketStyles.totalPrice}>{bundle.price}</Text></View><Button label="Confirm preview booking" icon="lock-closed" onPress={()=>setConfirmed(true)}/></>}
-    {confirmed&&<><View style={coachStyles.savedNote}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><Text style={coachStyles.savedNoteText}>Stay, dining, activity and add-ons are grouped into one DestinyOne itinerary.</Text></View><Button label="Done" icon="checkmark" onPress={onClose}/></>}
+    {!cancelled&&<View style={coachStyles.marketPillarGrid}>{timeline.map(item=>{const current=item.status===status;const complete=timeline.findIndex(step=>step.status===item.status)<timeline.findIndex(step=>step.status===status)||confirmed;return <View key={item.status} style={[coachStyles.marketPillar,(current||complete)&&coachStyles.marketPillarOn]}><MiniPremiumIcon name={complete?'checkmark-circle':current?'radio-button-on':'ellipse-outline'} tone={complete?'gold':current?'rose':'dark'} size={24} iconSize={11}/><View style={{flex:1}}><Text style={coachStyles.marketPillarTitle}>{item.title}</Text><Text style={coachStyles.marketPillarBody}>{item.body}</Text></View></View>})}</View>}
+    <View style={couplesMarketStyles.checkoutItems}>{bundle.includes.map((item,index)=><View key={item} style={couplesMarketStyles.checkoutItem}><MiniPremiumIcon name={index===0?'bed':index===1?'restaurant':index===2?'ticket':'sparkles'} tone={index%2?'ruby':'gold'} size={32} iconSize={15}/><View style={{flex:1}}><Text style={couplesMarketStyles.checkoutItemTitle}>{item}</Text><Text style={couplesMarketStyles.checkoutItemMeta}>{cancelled?'Released in preview':confirmed?'Grouped under one confirmation':'Freshness rechecked before payment'}</Text></View>{confirmed&&!cancelled&&<MiniPremiumIcon name="checkmark-circle" tone="gold" size={26} iconSize={12}/>}</View>)}</View>
+    {!confirmed&&!cancelled&&status==='awaiting_payment'&&<><Text style={styles.sectionLabel}>PAYMENT</Text><View style={couplesMarketStyles.paymentRow}>{['Card','Apple Pay','Google Pay'].map(option=><Pressable key={option} onPress={()=>setPayment(option)} style={[couplesMarketStyles.paymentChoice,payment===option&&couplesMarketStyles.paymentChoiceOn]}><MiniPremiumIcon name={option==='Card'?'card':option==='Apple Pay'?'logo-apple':'logo-google'} tone={payment===option?'gold':'dark'} size={28} iconSize={13}/><Text style={[couplesMarketStyles.paymentText,payment===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}</View></>}
+    {!confirmed&&!cancelled&&<><View style={couplesMarketStyles.totalRow}><Text style={styles.cardTitle}>Estimated total</Text><Text style={couplesMarketStyles.totalPrice}>{bundle.price}</Text></View><Button label={actionLabel} icon={status==='quote_ready'?'share-outline':status==='awaiting_match_acceptance'?'people':status==='awaiting_payment'?'lock-closed':'business'} onPress={advance}/></>}
+    {confirmed&&!cancelled&&<><View style={coachStyles.savedNote}><MiniPremiumIcon name="shield-checkmark" tone="gold" size={28} iconSize={13}/><Text style={coachStyles.savedNoteText}>Receipt, provider confirmation, change policy and one support contact stay with this itinerary.</Text></View><Button label="Request cancellation" icon="refresh-circle" variant="secondary" onPress={()=>setCancelled(true)}/><Button label="Done" icon="checkmark" onPress={onClose}/></>}
+    {cancelled&&<><View style={coachStyles.savedNote}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><Text style={coachStyles.savedNoteText}>{refund.reason} Production waits for the payment webhook before showing refund complete.</Text></View><Button label="Done" icon="checkmark" onPress={onClose}/></>}
     <Text style={styles.legal}>Preview mode does not charge a card or reserve live inventory. Production booking activates only after provider contracts, server-side price checks, payment webhooks and cancellation support are connected.</Text>
   </ScrollView></SafeAreaView></Modal>
 }
@@ -1953,8 +1966,8 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     appEnvironment,
     requiresRealBackend,
     supabaseConfigured:isSupabaseConfigured,
-    migrationCount:15,
-    edgeFunctionCount:3,
+    migrationCount:16,
+    edgeFunctionCount:4,
     dataModuleCount:dataSnapshot.totalModules,
     backendReadyModuleCount:dataSnapshot.backendReadyModules,
     realtimeModuleCount:dataSnapshot.realtimeModules,

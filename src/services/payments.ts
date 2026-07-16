@@ -1,6 +1,7 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 export type DateReservationIntent = {
+  orderId?: string;
   venueId: string;
   venueName: string;
   amountCents: number;
@@ -94,7 +95,7 @@ export async function createDateReservationIntent(input: DateReservationIntent):
   const response=await fetch(`${paymentsApiUrl}/create-date-reservation-intent`,{
     method:'POST',
     headers:{'Content-Type':'application/json',Authorization:`Bearer ${accessToken}`},
-    body:JSON.stringify({venueId:input.venueId}),
+    body:JSON.stringify({orderId:input.orderId}),
   });
   if(!response.ok)throw new Error('Secure checkout is temporarily unavailable.');
   const payload=await response.json() as {clientSecret?:string;reservationId?:string};

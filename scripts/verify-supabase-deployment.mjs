@@ -38,6 +38,14 @@ const objects = [
   ['table', 'city_ambassador_applications'],
   ['table', 'city_liquidity_snapshots'],
   ['table', 'city_cohort_snapshots'],
+  ['table', 'marketplace_partners'],
+  ['table', 'marketplace_venues'],
+  ['table', 'marketplace_offerings'],
+  ['table', 'marketplace_availability_slots'],
+  ['table', 'marketplace_reservation_quotes'],
+  ['table', 'marketplace_reservation_orders'],
+  ['table', 'marketplace_reservation_events'],
+  ['table', 'marketplace_provider_webhook_receipts'],
   ['rpc', 'daily_matches'],
   ['rpc', 'get_current_member_bootstrap'],
   ['rpc', 'send_match_message'],
@@ -53,6 +61,11 @@ const objects = [
   ['rpc', 'join_city_waitlist'],
   ['rpc', 'create_city_referral'],
   ['rpc', 'apply_city_ambassador'],
+  ['rpc', 'create_marketplace_quote'],
+  ['rpc', 'create_marketplace_reservation_order'],
+  ['rpc', 'respond_marketplace_reservation_order'],
+  ['rpc', 'prepare_marketplace_payment'],
+  ['rpc', 'cancel_marketplace_reservation_order'],
 ];
 
 const rpcBodies = {

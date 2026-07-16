@@ -1,7 +1,20 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(86);
+select plan(98);
+
+select has_table('public','marketplace_partners','marketplace partners are modeled privately');
+select has_table('public','marketplace_venues','marketplace venues are modeled privately');
+select has_table('public','marketplace_offerings','server-owned offerings exist');
+select has_table('public','marketplace_availability_slots','fresh availability slots exist');
+select has_table('public','marketplace_reservation_quotes','immutable member quotes exist');
+select has_table('public','marketplace_reservation_orders','reservation orders exist');
+select has_table('public','marketplace_reservation_events','append-only booking events exist');
+select has_table('public','marketplace_provider_webhook_receipts','idempotent webhook receipts exist');
+select has_function('public','create_marketplace_quote',array['uuid','uuid','integer','text'],'secure quote RPC exists');
+select has_function('public','prepare_marketplace_payment',array['uuid'],'server-owned payment preparation RPC exists');
+select has_function('public','cancel_marketplace_reservation_order',array['uuid','text','text'],'cancellation RPC exists');
+select function_privs_are('public','process_marketplace_booking_webhook',array['text','text','uuid','text','text','text'],'service_role',array['EXECUTE'],'provider webhook processor is service-only');
 
 select has_function('public', 'get_current_member_bootstrap', array[]::text[], 'member bootstrap RPC exists');
 select has_function('public', 'block_member', array['uuid'], 'server-owned block RPC exists');

@@ -17,7 +17,10 @@ const readyInput: MarketplaceOpsInput = {
   signedPartnerCount: 5,
   livePlacesProviderConnected: true,
   reservationProviderConnected: true,
+  bookingLifecycleReady: true,
+  inventoryFreshnessReady: true,
   paymentWebhookConnected: true,
+  webhookReconciliationReady: true,
   refundPolicyReady: true,
   supportSlaHours: 12,
   safetyStaffingReady: true,
@@ -39,7 +42,7 @@ describe('marketplace operations', () => {
     });
 
     expect(snapshot.status).toBe('Provider connections pending');
-    expect(snapshot.blockers.map((pillar) => pillar.id)).toEqual(['provider_adapter', 'checkout_refunds', 'safety_sla']);
+    expect(snapshot.blockers.map((pillar) => pillar.id)).toEqual(['provider_adapter', 'inventory_freshness', 'checkout_refunds', 'webhook_reconciliation', 'safety_sla']);
     expect(snapshot.nextBestStep).toContain('places provider');
   });
 
