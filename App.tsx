@@ -57,7 +57,7 @@ import { buildRelationshipJourney, type RelationshipReflection } from './src/dom
 import { buildRelationshipLearningState, type RelationshipJourneyEventName } from './src/domain/relationshipLearning';
 import { primaryNavigation } from './src/domain/featureFocus';
 import { memberNeedsOnboarding } from './src/domain/memberBootstrap';
-import { evaluateMemberDataRuntime } from './src/domain/memberDataRuntime';
+import { canCommitMemberMutation, evaluateMemberDataRuntime, memberMutationFailureMessage, type MemberMutationResult } from './src/domain/memberDataRuntime';
 
 type Screen = 'splash'|'welcome'|'auth'|'otp'|'verify'|'profileSetup'|'vibes'|'intent'|'alignment'|'home'|'explore'|'circle'|'discovery'|'detail'|'mutual'|'icebreaker'|'chat'|'datePlan'|'safety'|'likes'|'profile'|'pricing'|'support'|'coach'|'events'|'executive'|'verifyHub'|'admin';
 
@@ -97,6 +97,10 @@ function isChatMessage(value: unknown): value is ChatMessage {
 
 function isIcebreakerWaitingForOtherAnswer(data: unknown) {
   return !!data && typeof data === 'object' && !Array.isArray(data) && (data as { unlocked?: unknown }).unlocked === false;
+}
+
+function isMutualMatchDecision(data: unknown) {
+  return !!data && typeof data === 'object' && !Array.isArray(data) && (data as { matched?: unknown }).matched === true;
 }
 
 function backendDateStatus(value: unknown): DatePlanStatus {
@@ -290,25 +294,35 @@ function DestinyOneApp() {
     track(name,properties as never);
     if(analyticsConsent)void persistRelationshipJourneyEvent(name,properties);
   };
+  const confirmMemberMutation=(result:MemberMutationResult,title:string,fallback:string)=>{
+    if(canCommitMemberMutation(memberDataRuntime,result))return true;
+    setAppNotice({title,body:memberMutationFailureMessage(result,fallback),icon:'cloud-offline-outline',tone:'ruby'});
+    return false;
+  };
   const trackDiscovery=(type:DiscoverySignal['type'],match:Match)=>{
     track('discovery_signal',{type});
     setDiscoverySignals(current=>[...current.slice(-49),{id:`${Date.now()}-${Math.random()}`,type,matchId:match.id,createdAt:Date.now()}]);
     if(type==='view')void persistDiscoverySignal(profileIdFor(match),'view');
   };
   const openDetail=(m:Match)=>{trackDiscovery('view',m);setSelected(m);setScreen('detail')};
-  const chooseInterested=(match:Match)=>{
+  const chooseInterested=async(match:Match)=>{
+    const result=await persistMatchDecision(profileIdFor(match),'interested');
+    if(!confirmMemberMutation(result,'Interest not sent','Your interest could not be confirmed. Please try again.'))return;
     setSelected(match);
     trackDiscovery('interested',match);
-    void persistMatchDecision(profileIdFor(match),'interested');
-    setScreen('mutual');
+    if(memberDataRuntime.source==='preview'||isMutualMatchDecision(result.data)){setScreen('mutual');return}
+    setDismissedIds(current=>[...new Set([...current,match.id])]);
+    setAppNotice({title:'Interest sent privately',body:`If ${match.name} chooses you too, DestinyOne will open a mutual match and icebreaker.`,icon:'heart-outline',tone:'gold'});
   };
-  const passMatch=(match:Match)=>{
+  const passMatch=async(match:Match)=>{
+    const result=await persistMatchDecision(profileIdFor(match),'pass');
+    if(!confirmMemberMutation(result,'Pass not saved','This profile could not be removed securely. Please try again.'))return;
     trackDiscovery('skip',match);
     setDismissedIds(current=>[...new Set([...current,match.id])]);
-    void persistMatchDecision(profileIdFor(match),'pass');
   };
   const answerIcebreaker=async(answer:string)=>{
     const result=await persistIcebreakerAnswer(conversationIdFor(selected),icebreakerQuestion,answer);
+    if(!confirmMemberMutation(result,'Answer not saved','Your icebreaker answer could not be confirmed. Please try again.'))return;
     if(result.saved&&isIcebreakerWaitingForOtherAnswer(result.data)){
       setAppNotice({title:'Answer saved',body:`Chat unlocks as soon as ${selected.name} answers the same icebreaker. We’ll keep it pressure-free.`,icon:'sparkles',tone:'gold'});
       setScreen('home');
@@ -316,57 +330,63 @@ function DestinyOneApp() {
     }
     setScreen('chat');
   };
-  const notifyProfileView=(match:Match)=>setProfileViewNotifiedIds(current=>{
-    if(current.includes(match.id))return current;
-    void persistProfileView(profileIdFor(match),5);
+  const notifyProfileView=async(match:Match)=>{
+    if(profileViewNotifiedIds.includes(match.id))return;
+    const result=await persistProfileView(profileIdFor(match),5);
+    if(!confirmMemberMutation(result,'Profile view not recorded','The profile-view notification could not be confirmed.'))return;
+    setProfileViewNotifiedIds(current=>current.includes(match.id)?current:[...current,match.id]);
     setAppNotice({title:'Profile view notification sent',body:`${match.name} gets a tasteful notification because you spent 5+ seconds on the full profile. Swipe previews stay private.`,icon:'eye-outline',tone:'gold'});
-    return [...current,match.id];
-  });
+  };
   const localRankedMatches=rankMatches(matches,{intent,vibes:vibeList,filters:matchFilters},discoverySignals,blockedIds,smartDiscovery);
   const rankedMatches=serverMatches===null?localRankedMatches:serverMatches.filter(match=>!blockedIds.includes(match.id));
   const visibleMatches=rankedMatches.filter(match=>!dismissedIds.includes(match.id));
   const roseAvailability=getRoseAvailability(roseLedger);
   const openRose=(match:Match)=>setRoseTarget(match);
   const createRoseMessage=(note:string):ChatMessage=>({id:`spark-${Date.now()}`,type:'gift',text:note,gift:{name:'Golden Spark',emoji:'✨'},createdAt:Date.now(),status:'sent'});
-  const appendChatMessage=(match:Match,message:ChatMessage)=>{
+  const appendChatMessage=async(match:Match,message:ChatMessage)=>{
     const matchId=match.id;
-    setChatMessages(current=>({...current,[matchId]:[...(current[matchId]??[]),message]}));
-    const saveMessage=(nextMessage:ChatMessage)=>persistChatMessage(conversationIdFor(match),nextMessage).then(result=>{
-      if(!result.saved||!isChatMessage(result.data))return;
-      setChatMessages(current=>({...current,[matchId]:(current[matchId]??[]).map(existing=>existing.id===message.id?result.data as ChatMessage:existing)}));
-    });
-    if(message.type==='date'&&message.date){
-      void persistDateProposal(conversationIdFor(match),message.date).then(result=>{
-        const data=result.data as {id?:unknown;status?:unknown}|undefined;
-        const enriched:ChatMessage=typeof data?.id==='string'?{...message,date:{...message.date!,proposalId:data.id,planStatus:data.status==='accepted'?'accepted':'proposed'}}:message;
-        if(enriched!==message)setChatMessages(current=>({...current,[matchId]:(current[matchId]??[]).map(existing=>existing.id===message.id?enriched:existing)}));
-        return saveMessage(enriched);
-      });
-      return;
+    if(memberDataRuntime.source==='preview'){
+      setChatMessages(current=>({...current,[matchId]:[...(current[matchId]??[]),message]}));
+      return true;
     }
-    void saveMessage(message);
+    let nextMessage=message;
+    if(message.type==='date'&&message.date){
+      const proposalResult=await persistDateProposal(conversationIdFor(match),message.date);
+      if(!confirmMemberMutation(proposalResult,'Date plan not sent','Your date proposal could not be confirmed. Please try again.'))return false;
+      const data=proposalResult.data as {id?:unknown;status?:unknown}|undefined;
+      if(typeof data?.id==='string')nextMessage={...message,date:{...message.date,proposalId:data.id,planStatus:data.status==='accepted'?'accepted':'proposed'}};
+    }
+    if(message.type==='location'&&message.location?.live){
+      const locationResult=await persistLiveLocationShare(conversationIdFor(match),message.location,message.id);
+      if(!confirmMemberMutation(locationResult,'Location not shared','Your live location could not be activated securely.'))return false;
+    }
+    const result=await persistChatMessage(conversationIdFor(match),nextMessage);
+    if(!confirmMemberMutation(result,'Message not sent','Your message could not be delivered securely. Please try again.'))return false;
+    if(!isChatMessage(result.data)){
+      setAppNotice({title:'Message not sent',body:'The secure server returned an invalid message acknowledgement.',icon:'cloud-offline-outline',tone:'ruby'});
+      return false;
+    }
+    setChatMessages(current=>({...current,[matchId]:mergeChatMessageList(current[matchId]??[],[result.data as ChatMessage])}));
+    return true;
   };
   const updateDatePlanStatus=async(matchId:string,messageId:string,status:DatePlanStatus)=>{
     const message=(chatMessages[matchId]??[]).find(item=>item.id===messageId);
     if(!message?.date)return;
     const previousStatus=message.date.planStatus??'proposed';
     const result=await persistDatePlanStatus(message.date.proposalId,status);
-    if(result.reason==='error'){
-      setAppNotice({title:'Date status not updated',body:result.error??'Please try again.',icon:'alert-circle-outline',tone:'ruby'});
-      return;
-    }
+    if(!confirmMemberMutation(result,'Date status not updated','The date response could not be confirmed. Please try again.'))return;
     setChatMessages(current=>({...current,[matchId]:(current[matchId]??[]).map(item=>item.id===messageId&&item.date?{...item,date:{...item.date,planStatus:status}}:item)}));
     recordJourneyEvent('date_plan_status_changed',{from_status:previousStatus,to_status:status});
   };
   const saveReflection=async(matchId:string,messageId:string,choice:RelationshipReflectionChoice|null)=>{
-    if(!choice){setRelationshipReflections(current=>{const next={...current};delete next[matchId];return next});return}
+    if(!choice){
+      if(memberDataRuntime.source==='server'){setAppNotice({title:'Reflection unchanged',body:'Secure reflection replacement is not available yet. Your saved private answer was kept.',icon:'lock-closed-outline',tone:'gold'});return}
+      setRelationshipReflections(current=>{const next={...current};delete next[matchId];return next});return;
+    }
     const message=(chatMessages[matchId]??[]).find(item=>item.id===messageId);
     const useForMatching=relationshipReflections[matchId]?.useForMatching??false;
     const result=await persistRelationshipReflection(message?.date?.proposalId,choice,useForMatching);
-    if(result.reason==='error'){
-      setAppNotice({title:'Reflection not saved',body:result.error??'Please try again.',icon:'alert-circle-outline',tone:'ruby'});
-      return;
-    }
+    if(!confirmMemberMutation(result,'Reflection not saved','Your private reflection could not be confirmed.'))return;
     const now=Date.now();
     setRelationshipReflections(current=>({...current,[matchId]:{choice,dateMessageId:messageId,dateProposalId:message?.date?.proposalId,useForMatching,createdAt:current[matchId]?.createdAt??now,updatedAt:now}}));
     recordJourneyEvent('private_reflection_saved',{choice});
@@ -375,10 +395,7 @@ function DestinyOneApp() {
     const reflection=relationshipReflections[matchId];
     if(!reflection)return;
     const result=await persistRelationshipReflection(reflection.dateProposalId,reflection.choice,enabled);
-    if(result.reason==='error'){
-      setAppNotice({title:'Matching preference not updated',body:result.error??'Please try again.',icon:'alert-circle-outline',tone:'ruby'});
-      return;
-    }
+    if(!confirmMemberMutation(result,'Matching preference not updated','Your consent setting could not be confirmed.'))return;
     setRelationshipReflections(current=>({...current,[matchId]:{...reflection,useForMatching:enabled,updatedAt:Date.now()}}));
     recordJourneyEvent('relationship_learning_consent_changed',{enabled});
   };
@@ -386,34 +403,32 @@ function DestinyOneApp() {
     const message=(chatMessages[matchId]??[]).find(item=>item.id===messageId);
     if(!message?.date)return;
     const result=await persistRelationshipReminder(message.date.proposalId,enabled);
-    if(result.reason==='error'){
-      setAppNotice({title:'Reminder not updated',body:result.error??'Please try again.',icon:'alert-circle-outline',tone:'ruby'});
-      return;
-    }
+    if(!confirmMemberMutation(result,'Reminder not updated','Your private reminder could not be confirmed.'))return;
     const data=result.data as {reminder_at?:unknown}|undefined;
     setRelationshipReminders(current=>({...current,[matchId]:{enabled,dateMessageId:messageId,dateProposalId:message.date?.proposalId,scheduledFor:typeof data?.reminder_at==='string'?data.reminder_at:current[matchId]?.scheduledFor,updatedAt:Date.now()}}));
     recordJourneyEvent('date_reminder_changed',{enabled});
   };
-  const updateLastSeenPrivacy=(value:boolean)=>{
+  const updateLastSeenPrivacy=async(value:boolean)=>{
+    const result=await persistPrivacySettings({lastSeenVisible:value,onlineStatusVisible:value});
+    if(!confirmMemberMutation(result,'Privacy setting not saved','Your visibility setting could not be confirmed.'))return;
     setLastSeenVisible(value);
-    void persistPrivacySettings({lastSeenVisible:value,onlineStatusVisible:value});
   };
-  const updateAnalyticsPrivacy=(value:boolean)=>{
+  const updateAnalyticsPrivacy=async(value:boolean)=>{
+    const result=await persistPrivacySettings({analyticsConsent:value});
+    if(!confirmMemberMutation(result,'Privacy setting not saved','Your analytics choice could not be confirmed.'))return;
     setAnalyticsConsent(value);
-    void persistPrivacySettings({analyticsConsent:value});
   };
-  const updateSelectedChatSettings=(settings:CoupleChatSettings)=>{
+  const updateSelectedChatSettings=async(settings:CoupleChatSettings)=>{
+    const result=await persistChatSettings(conversationIdFor(selected),settings);
+    if(!confirmMemberMutation(result,'Chat settings not saved','Your conversation settings could not be confirmed.'))return;
     setChatSettings(current=>({...current,[selected.id]:settings}));
-    void persistChatSettings(conversationIdFor(selected),settings);
   };
   const useCoachDraftInChat=(draft:string)=>{
     setChatDrafts(current=>({...current,[selected.id]:draft}));
     setScreen('chat');
   };
-  const completeOnboarding=()=>{
-    setOnboardingComplete(true);
-    setScreen('home');
-    void persistOnboardingProfile({
+  const completeOnboarding=async()=>{
+    const result=await persistOnboardingProfile({
       profile: profileDraft,
       photos: profilePhotos,
       selfieUri,
@@ -426,37 +441,60 @@ function DestinyOneApp() {
       lastSeenVisible,
       matchFilters,
     });
+    if(!confirmMemberMutation(result,'Profile not completed','Your profile could not be saved securely. Please try again.'))return;
+    setOnboardingComplete(true);
+    setScreen('home');
+    if(memberDataRuntime.source==='server')await refreshServerMatches();
   };
-  const updateMatchFilters=(next:MatchFilters)=>{
+  const updateMatchFilters=async(next:MatchFilters)=>{
+    const result=await persistMatchingPreferences({filters:next,profile:profileDraft,alignment,smartDiscovery});
+    if(!confirmMemberMutation(result,'Preferences not saved','Your match preferences could not be confirmed.'))return;
     setMatchFilters(next);
-    void persistMatchingPreferences({filters:next,profile:profileDraft,alignment,smartDiscovery});
   };
-  const updateSmartDiscovery=(enabled:boolean)=>{
+  const updateSmartDiscovery=async(enabled:boolean)=>{
+    const result=await persistMatchingPreferences({filters:matchFilters,profile:profileDraft,alignment,smartDiscovery:enabled});
+    if(!confirmMemberMutation(result,'Discovery setting not saved','Smart Discovery could not be updated securely.'))return;
     setSmartDiscovery(enabled);
-    void persistMatchingPreferences({filters:matchFilters,profile:profileDraft,alignment,smartDiscovery:enabled});
   };
-  const clearMatchingActivity=()=>{
+  const clearMatchingActivity=async()=>{
+    const result=await persistClearMatchingLearning();
+    if(!confirmMemberMutation(result,'Activity not cleared','Your matching activity could not be cleared securely.'))return;
     setDiscoverySignals([]);
-    void persistClearMatchingLearning();
   };
-  const reportSelected=(reason:string,details?:string)=>{
+  const recordSafeCheckIn=(id:string)=>{
+    if(memberDataRuntime.source==='preview'){
+      setSafeCheckIns(current=>[...new Set([...current,id])]);
+      return;
+    }
+    setAppNotice({title:'Check-in not recorded',body:'Secure date check-ins are unavailable until the live safety endpoint is connected. No check-in was created.',icon:'shield-outline',tone:'ruby'});
+  };
+  const reportSelected=async(reason:string,details?:string)=>{
     const reportId=`report-${Date.now()}`;
+    const result=await persistReport(profileIdFor(selected),reason,details,reportId);
+    if(!confirmMemberMutation(result,'Report not submitted','Your safety report could not be confirmed. Please try again.'))return false;
     setReports(current=>[...current,{id:reportId,matchId:selected.id,reason,details,createdAt:Date.now()}]);
-    void persistReport(profileIdFor(selected),reason,details,reportId);
+    setAppNotice({title:'Report submitted privately',body:'Your report is saved for safety review. The other member is not notified.',icon:'flag-outline',tone:'gold'});
+    return true;
   };
-  const blockMatch=(match:Match)=>{
+  const blockMatch=async(match:Match)=>{
+    const result=await persistBlock(profileIdFor(match));
+    if(!confirmMemberMutation(result,'Member not blocked','The private block could not be confirmed. Please try again.'))return false;
     setBlockedIds(current=>[...new Set([...current,match.id])]);
     setDismissedIds(current=>[...new Set([...current,match.id])]);
-    void persistBlock(profileIdFor(match));
+    setAppNotice({title:'Blocked privately',body:`${match.name} is hidden from your matches, likes and chats. They will not be notified.`,icon:'ban-outline',tone:'ruby'});
+    return true;
   };
-  const unmatchMatch=(match:Match)=>{
+  const unmatchMatch=async(match:Match)=>{
+    const result=await persistUnmatch(conversationIdFor(match),`unmatch-${Date.now()}`);
+    if(!confirmMemberMutation(result,'Could not unmatch','The relationship could not be closed securely. Please try again.'))return false;
     setDismissedIds(current=>[...new Set([...current,match.id])]);
-    void persistUnmatch(conversationIdFor(match),`unmatch-${Date.now()}`);
+    setAppNotice({title:'Unmatched',body:`${match.name} has been removed from your introductions and conversation flow.`,icon:'person-remove-outline',tone:'rose'});
+    return true;
   };
   const sendRose=async(match:Match,note:string)=>{
     const today=todayKey();
     const available=getRoseAvailability(roseLedger);
-    if(appEnvironment==='production'){
+    if(memberDataRuntime.source==='server'){
       const actionId=`golden-spark-${Date.now()}`;
       try{
         const result=await sendGoldenSpark(profileIdFor(match),note,actionId);
@@ -505,16 +543,16 @@ function DestinyOneApp() {
     {screen==='detail'&&<Detail match={selected} preferences={{intent,vibes:vibeList,filters:matchFilters}} back={()=>setScreen('home')} interested={()=>chooseInterested(selected)} onRose={()=>openRose(selected)} onProfileView={()=>notifyProfileView(selected)} onPrivateBlock={()=>setDetailSafetyOpen(true)}/>} 
     {screen==='mutual'&&<Mutual match={selected} next={()=>setScreen('icebreaker')} back={()=>setScreen('home')}/>} 
     {screen==='icebreaker'&&<Icebreaker match={selected} question={icebreakerQuestion} onSubmit={answerIcebreaker}/>} 
-    {screen==='chat'&&<Chat match={selected} messages={chatMessages[selected.id]??[]} reflection={relationshipReflections[selected.id]} reminder={relationshipReminders[selected.id]} settings={chatSettings[selected.id]??{nickname:'',theme:'Ruby Velvet'}} initialDraft={chatDrafts[selected.id]??''} onDraftConsumed={()=>setChatDrafts(current=>{const next={...current};delete next[selected.id];return next})} onSettingsChange={updateSelectedChatSettings} onDateStatus={(messageId,status)=>updateDatePlanStatus(selected.id,messageId,status)} onReflection={(messageId,choice)=>saveReflection(selected.id,messageId,choice)} onLearningConsent={(enabled)=>updateRelationshipLearningConsent(selected.id,enabled)} onReminder={(messageId,enabled)=>updateRelationshipReminder(selected.id,messageId,enabled)} onJourneyEvent={recordJourneyEvent} coinBalance={coinBalance} roseAvailability={roseAvailability} onRose={()=>openRose(selected)} onSend={(message)=>appendChatMessage(selected,message)} onSpendCoins={(coins)=>setCoinBalance(balance=>spendCoins(balance,coins))} onReport={reportSelected} onBlock={()=>{blockMatch(selected);setScreen('home')}} onUnmatch={()=>{unmatchMatch(selected);setScreen('home')}} navigate={setScreen}/>} 
-    {screen==='datePlan'&&<DatePlanner match={selected} preset={datePlanPreset} onBack={()=>setScreen('events')} onSend={(message)=>{appendChatMessage(selected,message);setScreen('chat')}}/>}
-    {screen==='safety'&&<SafetyCenter reports={reports} blockedCount={blockedIds.length} datePlans={Object.values(chatMessages).flat().filter(message=>message.type==='date')} safeCheckIns={safeCheckIns} onCheckIn={(id)=>setSafeCheckIns(current=>[...new Set([...current,id])])} onDeleteAccount={deleteAccount} onBack={()=>setScreen('profile')}/>} 
+    {screen==='chat'&&<Chat match={selected} messages={chatMessages[selected.id]??[]} reflection={relationshipReflections[selected.id]} reminder={relationshipReminders[selected.id]} settings={chatSettings[selected.id]??{nickname:'',theme:'Ruby Velvet'}} initialDraft={chatDrafts[selected.id]??''} onDraftConsumed={()=>setChatDrafts(current=>{const next={...current};delete next[selected.id];return next})} onSettingsChange={updateSelectedChatSettings} onDateStatus={(messageId,status)=>updateDatePlanStatus(selected.id,messageId,status)} onReflection={(messageId,choice)=>saveReflection(selected.id,messageId,choice)} onLearningConsent={(enabled)=>updateRelationshipLearningConsent(selected.id,enabled)} onReminder={(messageId,enabled)=>updateRelationshipReminder(selected.id,messageId,enabled)} onJourneyEvent={recordJourneyEvent} coinBalance={coinBalance} roseAvailability={roseAvailability} onRose={()=>openRose(selected)} onSend={(message)=>appendChatMessage(selected,message)} onSpendCoins={(coins)=>setCoinBalance(balance=>spendCoins(balance,coins))} onReport={reportSelected} onBlock={async()=>{if(await blockMatch(selected))setScreen('home')}} onUnmatch={async()=>{if(await unmatchMatch(selected))setScreen('home')}} navigate={setScreen}/>} 
+    {screen==='datePlan'&&<DatePlanner match={selected} preset={datePlanPreset} onBack={()=>setScreen('events')} onSend={async(message)=>{const sent=await appendChatMessage(selected,message);if(sent)setScreen('chat');return sent}}/>}
+    {screen==='safety'&&<SafetyCenter reports={reports} blockedCount={blockedIds.length} datePlans={Object.values(chatMessages).flat().filter(message=>message.type==='date')} safeCheckIns={safeCheckIns} onCheckIn={recordSafeCheckIn} onDeleteAccount={deleteAccount} onBack={()=>setScreen('profile')}/>} 
     {screen==='likes'&&<Likes openPricing={()=>setScreen('pricing')} navigate={setScreen}/>} 
     {screen==='profile'&&<Profile profile={profileDraft} verified={verified} profilePhoto={profilePhotos[0]} hasVoiceIntro={!!voiceIntroUri} lastSeenVisible={lastSeenVisible} analyticsConsent={analyticsConsent} onLastSeenVisibleChange={updateLastSeenPrivacy} onAnalyticsConsentChange={updateAnalyticsPrivacy} navigate={setScreen} onReset={resetDemo}/>} 
     {screen==='support'&&<SupportCenter onBack={()=>setScreen('profile')}/>} 
     {screen==='pricing'&&<Pricing back={()=>setScreen('profile')} onBuyRoses={(amount=5)=>{setRoseLedger(current=>({...current,paidCredits:current.paidCredits+amount}));setAppNotice({title:'Spark pack added',body:`Preview pack added ${amount} Golden Sparks. Production uses Apple/Google in-app billing and restore purchase.`,icon:'sparkles',tone:'gold'})}}/>} 
     <RoseComposer visible={!!roseTarget} recipientName={roseTarget?.name??''} availability={roseAvailability} onClose={()=>setRoseTarget(null)} onSend={(note)=>{if(roseTarget)void sendRose(roseTarget,note);setRoseTarget(null)}}/>
     <RoseReceivedPopup data={rosePopup} onClose={()=>setRosePopup(null)} onOpenChat={(match)=>{setSelected(match);setRosePopup(null);setScreen('chat')}}/>
-    <SafetyActions visible={detailSafetyOpen} match={selected} onClose={()=>setDetailSafetyOpen(false)} onSafetyCenter={()=>{setDetailSafetyOpen(false);setScreen('safety')}} onReport={(reason,details)=>{reportSelected(reason,details);setDetailSafetyOpen(false);setAppNotice({title:'Report submitted privately',body:'Your report is saved for safety review. The other member is not notified.',icon:'flag-outline',tone:'gold'})}} onBlock={()=>{setDetailSafetyOpen(false);blockMatch(selected);setScreen('home');setAppNotice({title:'Blocked privately',body:`${selected.name} is hidden from your matches, likes and chats. They will not be notified.`,icon:'ban-outline',tone:'ruby'})}} onUnmatch={()=>{setDetailSafetyOpen(false);unmatchMatch(selected);setScreen('home');setAppNotice({title:'Unmatched',body:`${selected.name} has been removed from this preview deck and conversation flow.`,icon:'person-remove-outline',tone:'rose'})}}/>
+    <SafetyActions visible={detailSafetyOpen} match={selected} onClose={()=>setDetailSafetyOpen(false)} onSafetyCenter={()=>{setDetailSafetyOpen(false);setScreen('safety')}} onReport={async(reason,details)=>{setDetailSafetyOpen(false);if(await reportSelected(reason,details))setAppNotice({title:'Report submitted privately',body:'Your report is saved for safety review. The other member is not notified.',icon:'flag-outline',tone:'gold'})}} onBlock={async()=>{setDetailSafetyOpen(false);if(await blockMatch(selected)){setScreen('home');setAppNotice({title:'Blocked privately',body:`${selected.name} is hidden from your matches, likes and chats. They will not be notified.`,icon:'ban-outline',tone:'ruby'})}}} onUnmatch={async()=>{setDetailSafetyOpen(false);if(await unmatchMatch(selected)){setScreen('home');setAppNotice({title:'Unmatched',body:`${selected.name} has been removed from your introductions and conversation flow.`,icon:'person-remove-outline',tone:'rose'})}}}/>
     <AppNoticeSheet notice={appNotice} onClose={()=>setAppNotice(null)} onAction={(screen)=>{setAppNotice(null);setScreen(screen)}}/>
   </View></SafeAreaProvider>
 }
@@ -679,6 +717,7 @@ function Otp({destination,password,onBack,onVerified}:{destination:string;passwo
 }
 
 function Verify({verified,selfieUri,onSelfie,setVerified,onNext}:{verified:boolean;selfieUri:string;onSelfie:(uri:string)=>void;setVerified:(x:boolean)=>void;onNext:()=>void}) {
+  const preview=memberDataRuntime.source==='preview';
   const [error,setError]=useState('');
   const [idUri,setIdUri]=useState('');
   const pickVerificationPhoto=async()=>{
@@ -686,17 +725,18 @@ function Verify({verified,selfieUri,onSelfie,setVerified,onNext}:{verified:boole
     const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
     if(!permission.granted){setError('Photo library permission is needed to add a verification photo.');return}
     const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,aspect:[1,1],quality:.8});
-    if(!result.canceled&&result.assets[0]){onSelfie(result.assets[0].uri);setVerified(true)}
+    if(!result.canceled&&result.assets[0]){onSelfie(result.assets[0].uri);if(preview)setVerified(true)}
   };
   const captureSelfie=async()=>{
     setError('');
     const permission=await ImagePicker.requestCameraPermissionsAsync();
     if(!permission.granted){setError('Camera permission is needed for selfie verification.');return}
     const result=await ImagePicker.launchCameraAsync({mediaTypes:['images'],cameraType:ImagePicker.CameraType.front,allowsEditing:true,aspect:[1,1],quality:.8});
-    if(!result.canceled&&result.assets[0]){onSelfie(result.assets[0].uri);setVerified(true)}
+    if(!result.canceled&&result.assets[0]){onSelfie(result.assets[0].uri);if(preview)setVerified(true)}
   };
   const pickGovernmentId=async()=>{
     setError('');
+    if(!preview){setError('Secure ID verification is not connected yet. No identity document was selected or stored.');return}
     const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
     if(!permission.granted){setError('Photo library permission is needed to add an optional ID.');return}
     const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,quality:.8});
@@ -706,16 +746,16 @@ function Verify({verified,selfieUri,onSelfie,setVerified,onNext}:{verified:boole
     <SectionTitle eyebrow="Trust matters" title="A safer place to meet." body="Add a clear verification photo from your gallery first. Camera is optional if you want to retake."/>
     <View style={[shared.card,{alignItems:'center',gap:14,paddingVertical:24}]}>
       <View style={styles.selfie}>{selfieUri?<Image source={{uri:selfieUri}} style={mediaStyles.selfieImage}/>:<PremiumIcon name="scan-outline" tone="plum" size={68} iconSize={31}/>} {verified&&<View style={mediaStyles.selfieCheck}><MiniPremiumIcon name="checkmark" tone="gold" size={27} iconSize={13}/></View>}</View>
-      <Text style={styles.cardTitle}>{verified?'You’re verified':'Photo verification'}</Text>
-      <Text style={[shared.body,{textAlign:'center'}]}>{verified?'Your profile now shows the Verified Member badge.':'Choose a clear face photo. This private verification photo won’t appear on your profile.'}</Text>
+      <Text style={styles.cardTitle}>{verified?'You’re verified':selfieUri&&!preview?'Verification pending':'Photo verification'}</Text>
+      <Text style={[shared.body,{textAlign:'center'}]}>{verified?'Your profile now shows the Verified Member badge.':selfieUri&&!preview?'Your private selfie is ready for secure liveness review. No badge is shown until the provider and server approve it.':'Choose a clear face photo. This private verification photo won’t appear on your profile.'}</Text>
       <View style={{width:'100%',gap:10}}>
         <Button variant={verified?'gold':'secondary'} label={verified?'Choose another photo':'Choose from gallery'} onPress={pickVerificationPhoto} icon="images"/>
         <Button variant="ghost" label="Use camera instead" onPress={captureSelfie} icon="camera-outline"/>
       </View>
       {!!error&&<Text style={styles.formError}>{error}</Text>}
     </View>
-    <Pressable onPress={()=>void pickGovernmentId()} style={styles.upload}><MiniPremiumIcon name={idUri?'checkmark-circle':'id-card-outline'} tone={idUri?'gold':'dark'} size={38} iconSize={18}/><View style={{flex:1}}><Text style={shared.label}>{idUri?'Government ID selected':'Add a government ID'}</Text><Text style={styles.helper}>{idUri?'Private preview file selected · backend ID verification connects later':'Optional · strengthens trust'}</Text></View><MiniPremiumIcon name={idUri?'images':'chevron-forward'} tone={idUri?'gold':'dark'} size={30} iconSize={14}/></Pressable>
-    <View style={shared.spacer}/><Button label="Continue" disabled={!verified} onPress={onNext}/>
+    <Pressable onPress={()=>void pickGovernmentId()} style={styles.upload}><MiniPremiumIcon name={idUri?'checkmark-circle':'id-card-outline'} tone={idUri?'gold':'dark'} size={38} iconSize={18}/><View style={{flex:1}}><Text style={shared.label}>{idUri?'Government ID selected':preview?'Add a government ID':'Government ID verification'}</Text><Text style={styles.helper}>{idUri?'Private preview file selected · backend ID verification connects later':preview?'Optional · strengthens trust':'Available only through the secure identity provider flow'}</Text></View><MiniPremiumIcon name={idUri?'images':preview?'chevron-forward':'lock-closed'} tone={idUri?'gold':'dark'} size={30} iconSize={14}/></Pressable>
+    <View style={shared.spacer}/><Button label={selfieUri&&!verified&&!preview?'Continue with review pending':'Continue'} disabled={preview?!verified:!selfieUri} onPress={onNext}/>
   </FormPage>
 }
 
@@ -1860,16 +1900,17 @@ const executiveApplicationSteps=[
   ['Approved circle','Member unlocks private intros, events, gifting and VIP date planning.'],
 ] as const;
 function ExecutiveCircle({navigate,onBack,onOpenEvents,onOpenPricing,onOpenVerify,onOpenDatePlan}:{navigate:(s:Screen)=>void;onBack:()=>void;onOpenEvents:()=>void;onOpenPricing:()=>void;onOpenVerify:()=>void;onOpenDatePlan:()=>void}){
+  const preview=memberDataRuntime.source==='preview';
   const [tab,setTab]=useState<'overview'|'apply'|'matches'|'concierge'>('overview');
-  const [application,setApplication]=useState({role:'Founder / business owner',city:'New York, NY',intent:'Marriage in 12–24 months',privacy:'Hidden profile'});
-  const [conciergeNote,setConciergeNote]=useState('Plan a quiet premium dinner with serious conversation.');
+  const [application,setApplication]=useState(preview?{role:'Founder / business owner',city:'New York, NY',intent:'Marriage in 12–24 months',privacy:'Hidden profile'}:{role:'',city:'',intent:'',privacy:''});
+  const [conciergeNote,setConciergeNote]=useState(preview?'Plan a quiet premium dinner with serious conversation.':'');
   const [status,setStatus]=useState({title:'',body:''});
   const [applicationError,setApplicationError]=useState('');
   const [conciergeError,setConciergeError]=useState('');
-  const submitApplication=()=>{setApplicationError('');const missing=Object.entries(application).find(([,value])=>value.trim().length<3);if(missing){setApplicationError('Please complete every application field before submitting.');return}setStatus({title:'Application moved to private review',body:`${application.role} · ${application.city} · ${application.intent}. Next: verification + concierge interview.`});setTab('apply')};
-  const requestIntro=(name:string)=>setStatus({title:`Intro request queued for ${name}`,body:'Concierge will review compatibility, privacy preference and relationship intent before any introduction is shown.'});
-  const sendGift=(name:string)=>setStatus({title:`Luxury gift request started for ${name}`,body:'Choose Real Gift in chat to create the private accept → pay → courier flow. Recipient address remains hidden.'});
-  const askConcierge=()=>{setConciergeError('');const note=conciergeNote.trim();if(note.length<20){setConciergeError('Write at least 20 characters so concierge has useful context.');return}setStatus({title:'Concierge note saved',body:note});};
+  const submitApplication=()=>{setApplicationError('');if(!preview){setApplicationError('Executive application service must be connected before a private application can be submitted.');return}const missing=Object.entries(application).find(([,value])=>value.trim().length<3);if(missing){setApplicationError('Please complete every application field before submitting.');return}setStatus({title:'Application moved to private review',body:`${application.role} · ${application.city} · ${application.intent}. Next: verification + concierge interview.`});setTab('apply')};
+  const requestIntro=(name:string)=>setStatus(preview?{title:`Intro request queued for ${name}`,body:'Concierge will review compatibility, privacy preference and relationship intent before any introduction is shown.'}:{title:'Verified concierge connection required',body:'No introduction was requested. Live Executive members will appear only from the approved private feed.'});
+  const sendGift=(name:string)=>setStatus(preview?{title:`Luxury gift request started for ${name}`,body:'Choose Real Gift in chat to create the private accept → pay → courier flow. Recipient address remains hidden.'}:{title:'Verified fulfillment connection required',body:'No gift request was created or charged.'});
+  const askConcierge=()=>{setConciergeError('');if(!preview){setConciergeError('Executive concierge messaging must be connected before this note can be sent.');return}const note=conciergeNote.trim();if(note.length<20){setConciergeError('Write at least 20 characters so concierge has useful context.');return}setStatus({title:'Concierge note saved',body:note});};
   return <LinearGradient colors={['#250006',colors.black,colors.black]} style={{flex:1}}><SafeAreaView style={shared.safe}><View style={coachStyles.header}><Pressable onPress={onBack} style={styles.backButton}><PremiumIcon name="arrow-back" tone="dark" size={42} iconSize={20}/></Pressable><Text style={[styles.cardTitle,{marginLeft:12}]}>Executive Circle</Text></View><ScrollView contentContainerStyle={[coachStyles.content,{paddingBottom:120}]} showsVerticalScrollIndicator={false}>
     <View style={ventureStyles.hero}>
       <PremiumIcon name="briefcase" tone="gold" size={68} iconSize={30}/>
@@ -1895,8 +1936,8 @@ function ExecutiveCircle({navigate,onBack,onOpenEvents,onOpenPricing,onOpenVerif
       <Button label="Complete verification first" icon="id-card" variant="secondary" onPress={onOpenVerify}/>
     </View>}
     {tab==='matches'&&<View style={ventureStyles.section}>
-      <View style={shared.row}><Text style={styles.sectionLabel}>EXECUTIVE-ONLY SAMPLE MATCHES</Text><View style={shared.spacer}/><Pressable onPress={()=>setTab('apply')}><Text style={coachStyles.resultCount}>Apply</Text></Pressable></View>
-      {executiveMatches.map(person=><View key={person.name} style={ventureStyles.executiveMatchCard}><Image source={{uri:person.photo}} style={ventureStyles.executivePhoto}/><LinearGradient colors={['transparent','rgba(10,0,3,.96)']} style={StyleSheet.absoluteFill}/><View style={ventureStyles.executiveMatchInfo}><Chip label="Executive approved" gold/><Text style={ventureStyles.executiveName}>{person.name}, {person.age}</Text><Text style={styles.matchMeta}>{person.role} · {person.city}</Text><Text style={styles.helper}>{person.intent} · {person.vibe}</Text><View style={styles.chipRow}><Pressable onPress={()=>requestIntro(person.name)} style={coachStyles.rsvpButton}><Text style={coachStyles.rsvpText}>Request intro</Text></Pressable><Pressable onPress={onOpenDatePlan} style={coachStyles.detailsButton}><Text style={coachStyles.detailsText}>VIP date</Text></Pressable><Pressable onPress={()=>sendGift(person.name)} style={coachStyles.detailsButton}><Text style={coachStyles.detailsText}>Gift</Text></Pressable></View></View></View>)}
+      <View style={shared.row}><Text style={styles.sectionLabel}>{preview?'EXECUTIVE-ONLY SAMPLE MATCHES':'EXECUTIVE-ONLY INTRODUCTIONS'}</Text><View style={shared.spacer}/><Pressable onPress={()=>setTab('apply')}><Text style={coachStyles.resultCount}>Apply</Text></Pressable></View>
+      {preview?executiveMatches.map(person=><View key={person.name} style={ventureStyles.executiveMatchCard}><Image source={{uri:person.photo}} style={ventureStyles.executivePhoto}/><LinearGradient colors={['transparent','rgba(10,0,3,.96)']} style={StyleSheet.absoluteFill}/><View style={ventureStyles.executiveMatchInfo}><Chip label="Executive approved" gold/><Text style={ventureStyles.executiveName}>{person.name}, {person.age}</Text><Text style={styles.matchMeta}>{person.role} · {person.city}</Text><Text style={styles.helper}>{person.intent} · {person.vibe}</Text><View style={styles.chipRow}><Pressable onPress={()=>requestIntro(person.name)} style={coachStyles.rsvpButton}><Text style={coachStyles.rsvpText}>Request intro</Text></Pressable><Pressable onPress={onOpenDatePlan} style={coachStyles.detailsButton}><Text style={coachStyles.detailsText}>VIP date</Text></Pressable><Pressable onPress={()=>sendGift(person.name)} style={coachStyles.detailsButton}><Text style={coachStyles.detailsText}>Gift</Text></Pressable></View></View></View>):<View style={[shared.card,{gap:12,alignItems:'center'}]}><PremiumIcon name="shield-checkmark" tone="gold" size={54} iconSize={25}/><Text style={styles.cardTitle}>Approved private feed required</Text><Text style={[styles.helper,{textAlign:'center'}]}>No sample executives are shown in a live account. Approved introductions will appear only after membership, verification and concierge review are confirmed by the server.</Text></View>}
       <Button label="Talk to concierge" icon="person" onPress={()=>setTab('concierge')}/>
     </View>}
     {tab==='concierge'&&<View style={ventureStyles.section}>
@@ -1917,11 +1958,12 @@ function ChecklistRow({title,body,done}:{title:string;body:string;done:boolean})
 }
 
 function VerificationHub({verified,selfieUri,hasVoiceIntro,vouches,onBack,onVerify,onOpenSafety}:{verified:boolean;selfieUri:string;hasVoiceIntro:boolean;vouches:string[];onBack:()=>void;onVerify:()=>void;onOpenSafety:()=>void}){
+  const preview=memberDataRuntime.source==='preview';
   const [biometricConsent,setBiometricConsent]=useState(false);
   const [idStatus,setIdStatus]=useState<'not_started'|'submitted'|'verified'>('not_started');
   const [businessStatus,setBusinessStatus]=useState<'not_started'|'submitted'|'verified'>('not_started');
-  const [sessionStatus,setSessionStatus]=useState('Current device trusted · session controls ready for backend.');
-  const [trustStatus,setTrustStatus]=useState('Trust Engine preview is ready. Connect providers later for real checks.');
+  const [sessionStatus,setSessionStatus]=useState(preview?'Preview device · session controls ready for backend.':'Secure device status unavailable until session sync is connected.');
+  const [trustStatus,setTrustStatus]=useState(preview?'Trust Engine preview is ready. Connect providers later for real checks.':'Verification results appear only after a secure provider and server acknowledgement.');
   const idVerified=idStatus==='verified';
   const businessVerified=businessStatus==='verified';
   const trustScore=(verified?25:8)+(selfieUri||verified?15:0)+(hasVoiceIntro?12:0)+Math.min(vouches.length,3)*10+(idVerified?18:idStatus==='submitted'?9:0)+(businessVerified?12:businessStatus==='submitted'?6:0)+(biometricConsent?8:0)+10;
@@ -1941,10 +1983,11 @@ function VerificationHub({verified,selfieUri,hasVoiceIntro,vouches,onBack,onVeri
     {title:'Voice Intro',body:'Signals authenticity without exposing private data.',icon:'mic' as const,done:hasVoiceIntro},
     {title:'Trusted Circle',body:'Friend vouches add confidence for serious matches.',icon:'people' as const,done:vouches.length>0},
   ];
-  const runLiveness=()=>{if(!biometricConsent){setTrustStatus('Please accept biometric consent before liveness verification.');return}onVerify();setTrustStatus('Selfie/liveness preview completed. Production will call a liveness provider here.')};
-  const advanceId=()=>{if(idStatus==='not_started'){setIdStatus('submitted');setTrustStatus('ID review packet prepared. Production will upload encrypted documents to the provider.');return}setIdStatus('verified');setTrustStatus('ID check marked verified in preview. Public profile only shows a simple badge.')};
-  const advanceBusiness=()=>{if(businessStatus==='not_started'){setBusinessStatus('submitted');setTrustStatus('Business verification packet prepared for Executive Circle review.');return}setBusinessStatus('verified');setTrustStatus('Business verification marked approved. Executive Circle can unlock after real review.')};
-  const refreshSession=()=>{setSessionStatus(`Trusted device refreshed · ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`);setTrustStatus('Session/device review refreshed. Backend will store trusted devices and revoke controls.')};
+  const requirePreview=(action:()=>void)=>{if(preview){action();return}setTrustStatus('Secure provider connection required. No verification, consent, or trusted-device result was changed.')};
+  const runLiveness=()=>requirePreview(()=>{if(!biometricConsent){setTrustStatus('Please accept biometric consent before liveness verification.');return}onVerify();setTrustStatus('Selfie/liveness preview completed. Production will call a liveness provider here.')});
+  const advanceId=()=>requirePreview(()=>{if(idStatus==='not_started'){setIdStatus('submitted');setTrustStatus('ID review packet prepared. Production will upload encrypted documents to the provider.');return}setIdStatus('verified');setTrustStatus('ID check marked verified in preview. Public profile only shows a simple badge.')});
+  const advanceBusiness=()=>requirePreview(()=>{if(businessStatus==='not_started'){setBusinessStatus('submitted');setTrustStatus('Business verification packet prepared for Executive Circle review.');return}setBusinessStatus('verified');setTrustStatus('Business verification marked approved. Executive Circle can unlock after real review.')});
+  const refreshSession=()=>requirePreview(()=>{setSessionStatus(`Preview device refreshed · ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`);setTrustStatus('Session/device preview refreshed. Backend will store trusted devices and revoke controls.')});
   const providerChecklist=[
     ['Auth provider','Phone/email OTP, resend limits, device/session logs.',true],
     ['Liveness vendor','Biometric consent, selfie capture, duplicate-face checks.',biometricConsent],
@@ -1957,12 +2000,12 @@ function VerificationHub({verified,selfieUri,hasVoiceIntro,vouches,onBack,onVeri
     <View style={ventureStyles.trustMeter}><View style={shared.row}><View><Text style={styles.kicker}>TRUST LEVEL</Text><Text style={ventureStyles.trustScore}>{Math.min(100,trustScore)}%</Text></View><View style={shared.spacer}/><PremiumIcon name={verified?'shield-checkmark':'shield-outline'} tone="gold" size={54} iconSize={25}/></View><View style={ventureStyles.progressTrack}><View style={[ventureStyles.progressFill,{width:`${Math.min(100,trustScore)}%`}]}/></View><Text style={styles.helper}>Internal trust signal only. Members see badges, not private scores.</Text></View>
     <View style={trustHubStyles.badgeGrid}>{memberBadges.map(badge=><View key={badge.title} style={[trustHubStyles.badgeCard,badge.done&&trustHubStyles.badgeCardOn]}><MiniPremiumIcon name={badge.done?'checkmark-circle':badge.icon} tone={badge.done?'gold':'dark'} size={34} iconSize={16}/><Text style={trustHubStyles.badgeTitle}>{badge.title}</Text><Text style={trustHubStyles.badgeBody}>{badge.body}</Text></View>)}</View>
     <View style={trustHubStyles.statusCard}><MiniPremiumIcon name="sparkles" tone="gold" size={30} iconSize={14}/><Text style={trustHubStyles.statusText}>{trustStatus}</Text></View>
-    <Pressable onPress={()=>{setBiometricConsent(value=>!value);setTrustStatus(!biometricConsent?'Biometric consent accepted for provider handoff.':'Biometric consent removed in preview.')}} style={[trustHubStyles.consentCard,biometricConsent&&trustHubStyles.consentCardOn]}><PremiumIcon name="finger-print" tone={biometricConsent?'gold':'ruby'} size={46} iconSize={21}/><View style={{flex:1}}><Text style={styles.cardTitle}>Biometric consent</Text><Text style={styles.helper}>Required before selfie/liveness checks. Consent is separate from public profile badges.</Text></View><View style={[discoveryStyles.switch,biometricConsent&&discoveryStyles.switchOn]}><View style={[discoveryStyles.switchThumb,biometricConsent&&discoveryStyles.switchThumbOn]}/></View></Pressable>
+    <Pressable onPress={()=>requirePreview(()=>{setBiometricConsent(value=>!value);setTrustStatus(!biometricConsent?'Biometric consent accepted for provider handoff.':'Biometric consent removed in preview.')})} style={[trustHubStyles.consentCard,biometricConsent&&trustHubStyles.consentCardOn]}><PremiumIcon name="finger-print" tone={biometricConsent?'gold':'ruby'} size={46} iconSize={21}/><View style={{flex:1}}><Text style={styles.cardTitle}>Biometric consent</Text><Text style={styles.helper}>{preview?'Required before selfie/liveness checks. Consent is separate from public profile badges.':'Consent can be recorded only through the secure liveness provider flow.'}</Text></View><View style={[discoveryStyles.switch,biometricConsent&&discoveryStyles.switchOn]}><View style={[discoveryStyles.switchThumb,biometricConsent&&discoveryStyles.switchThumbOn]}/></View></Pressable>
     <View style={trustHubStyles.actionGrid}>
-      <TrustAction icon="camera" title="Run liveness preview" body="Completes the selfie/liveness step after consent." cta={verified?'Refresh':'Run'} onPress={runLiveness}/>
+      <TrustAction icon="camera" title={preview?'Run liveness preview':'Selfie liveness'} body={preview?'Completes the selfie/liveness step after consent.':'Requires the connected liveness provider and server review.'} cta={preview?(verified?'Refresh':'Run'):'Unavailable'} onPress={runLiveness}/>
       <TrustAction icon="id-card" title="ID provider packet" body={idStatus==='not_started'?'Prepare encrypted ID review handoff.':idVerified?'Verified in preview.':'Ready for reviewer approval.'} cta={idStatus==='not_started'?'Prepare':idVerified?'Verified':'Mark verified'} onPress={advanceId}/>
       <TrustAction icon="briefcase" title="Business proof" body={businessStatus==='not_started'?'Prepare Executive Circle proof review.':businessVerified?'Executive proof approved.':'Ready for concierge review.'} cta={businessStatus==='not_started'?'Prepare':businessVerified?'Approved':'Approve'} onPress={advanceBusiness}/>
-      <TrustAction icon="phone-portrait" title="Device/session" body={sessionStatus} cta="Refresh" onPress={refreshSession}/>
+      <TrustAction icon="phone-portrait" title="Device/session" body={sessionStatus} cta={preview?'Refresh':'Unavailable'} onPress={refreshSession}/>
     </View>
     <View style={trustHubStyles.privacyPanel}><PremiumIcon name="eye-off-outline" tone="gold" size={46} iconSize={21}/><View style={{flex:1}}><Text style={styles.cardTitle}>What stays private</Text><Text style={styles.helper}>ID documents, selfie source files, exact trust score, reports, blocks and safety notes are never shown on public profiles.</Text></View></View>
     <View style={ventureStyles.section}>{steps.map(step=><TrustStep key={step.title} {...step}/>)}</View>
@@ -3094,7 +3137,7 @@ const dateVenues:DateVenue[]=[
 ];
 const dateTimes=['Friday · 7:00 PM','Saturday · 11:00 AM','Saturday · 5:00 PM','Sunday · 4:00 PM'];
 
-function DatePlanner({match,preset,onBack,onSend}:{match:Match;preset?:PlaceItem|null;onBack:()=>void;onSend:(message:ChatMessage)=>void}){
+function DatePlanner({match,preset,onBack,onSend}:{match:Match;preset?:PlaceItem|null;onBack:()=>void;onSend:(message:ChatMessage)=>Promise<boolean>}){
   const presetCategory=preset?(['Restaurant','Hotel','Lounge'].includes(preset.kind)?'Dinner':preset.kind==='Cafe'||preset.kind==='Dessert'?'Café':preset.kind==='Park'||preset.kind==='Tourist'?'Walk':'Activity'):'Café';
   const presetVenue:DateVenue|undefined=preset?{id:`market-${preset.id}`,name:preset.name,category:presetCategory,area:`${preset.area} · ${preset.city}`,price:preset.price,vibe:preset.vibe,icon:preset.icon}:undefined;
   const plannerVenues=presetVenue?[presetVenue,...dateVenues]:dateVenues;
@@ -3149,7 +3192,7 @@ function DatePlanner({match,preset,onBack,onSend}:{match:Match;preset?:PlaceItem
       setReservationStatus('reserved');
     }catch(error){setReservationStatus('idle');setPaymentError(error instanceof Error?error.message:'Secure checkout could not be completed.')}
   };
-  const sendPlan=()=>{if(!selectedVenue||!time)return;onSend({id:`date-${Date.now()}`,type:'date',date:{venue:selectedVenue.name,category:selectedVenue.category,area:useArea?'Near your approximate area':selectedVenue.area,time,safetyCheckIn,packageTitle:selectedPackage?.title,packageTier:selectedPackage?.tier,planStatus:'proposed'},createdAt:Date.now(),status:'sent'})};
+  const sendPlan=async()=>{if(!selectedVenue||!time)return;await onSend({id:`date-${Date.now()}`,type:'date',date:{venue:selectedVenue.name,category:selectedVenue.category,area:useArea?'Near your approximate area':selectedVenue.area,time,safetyCheckIn,packageTitle:selectedPackage?.title,packageTier:selectedPackage?.tier,planStatus:'proposed'},createdAt:Date.now(),status:'sent'})};
   return <LinearGradient colors={['#2D0727',colors.black,colors.black]} style={{flex:1}}><SafeAreaView style={shared.safe}><View style={dateStyles.header}><Pressable onPress={onBack} style={styles.backButton}><PremiumIcon name="arrow-back" tone="dark" size={42} iconSize={20}/></Pressable><View style={{marginLeft:12}}><Text style={styles.cardTitle}>Plan a date with {match.name}</Text><Text style={styles.helper}>Suggest, don’t pressure</Text></View></View><ScrollView contentContainerStyle={dateStyles.content} showsVerticalScrollIndicator={false}><View style={dateStyles.hero}><PremiumIcon name="calendar" tone="gold" size={66} iconSize={30}/><Text style={[shared.h1,{textAlign:'center'}]}>Turn a good chat into a real moment.</Text><Text style={[shared.body,{textAlign:'center'}]}>Choose a public place and a time. {match.name} can accept or suggest something different.</Text></View><View style={dateStyles.planStatusCard}><View style={shared.row}><View style={{flex:1}}><Text style={styles.kicker}>PLAN READINESS</Text><Text style={dateStyles.planStatusTitle}>{selectedVenue&&time?'Ready to suggest':selectedVenue?'Pick a time next':'Choose a place first'}</Text></View><Text style={dateStyles.planStatusPercent}>{Math.min(100,planProgress)}%</Text></View><View style={dateStyles.planTrack}><View style={[dateStyles.planFill,{width:`${Math.min(100,planProgress)}%`}]}/></View><View style={dateStyles.planStepRow}>{planSteps.map(step=><View key={step.label} style={dateStyles.planStep}><MiniPremiumIcon name={step.icon} tone={step.done?'gold':'dark'} size={26} iconSize={12}/><Text style={[dateStyles.planStepText,step.done&&{color:colors.ivory}]}>{step.label}</Text></View>)}</View></View><Pressable onPress={()=>void enableArea()} style={[dateStyles.areaButton,useArea&&dateStyles.areaButtonOn]}><PremiumIcon name={useArea?'location':'location-outline'} tone={useArea?'gold':'rose'} size={44} iconSize={20}/><View style={{flex:1}}><Text style={styles.cardTitle}>{useArea?'Using your approximate area':'Find ideas near me'}</Text><Text style={styles.helper}>Foreground location only · exact location never shared</Text></View><MiniPremiumIcon name={useArea?'checkmark-circle':'chevron-forward'} tone={useArea?'gold':'dark'} size={34} iconSize={16}/></Pressable>{!!locationError&&<Text style={styles.formError}>{locationError}</Text>}<View style={{gap:11}}><View style={shared.row}><Text style={styles.sectionLabel}>DATE PACKAGE</Text><View style={shared.spacer}/><Text style={dateStyles.sampleLabel}>{selectedPackage?.tier??'Choose one'}</Text></View><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:9}}>{datePackages.map(item=><Pressable key={item.id} onPress={()=>choosePackage(item)} style={[dateStyles.packageSelect,packageId===item.id&&dateStyles.packageSelectOn]}><MiniPremiumIcon name={item.icon} tone={packageId===item.id?'gold':'rose'} size={30} iconSize={14}/><Text style={[dateStyles.packageSelectTitle,packageId===item.id&&{color:colors.ivory}]}>{item.title}</Text><Text style={dateStyles.packageSelectMeta}>{item.price}</Text></Pressable>)}</ScrollView></View><View style={{gap:11}}><Text style={styles.sectionLabel}>WHAT FEELS RIGHT?</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:9}}>{dateCategories.map(item=><Pressable key={item.name} onPress={()=>selectCategory(item.name)} style={[dateStyles.category,category===item.name&&dateStyles.categoryOn]}><MiniPremiumIcon name={item.icon} tone={category===item.name?'gold':'rose'} size={30} iconSize={14}/><Text style={[dateStyles.categoryText,category===item.name&&{color:colors.ivory}]}>{item.name}</Text></Pressable>)}</ScrollView></View><View style={{gap:10}}><View style={shared.row}><Text style={styles.sectionLabel}>CURATED IDEAS</Text><View style={shared.spacer}/><Text style={dateStyles.sampleLabel}>SAMPLE VENUES</Text></View>{venues.map(venue=><Pressable key={venue.id} onPress={()=>{setVenueId(venue.id);setReservationStatus('idle');setPaymentError('')}} style={[dateStyles.venueCard,venueId===venue.id&&dateStyles.venueCardOn]}><Text style={dateStyles.venueEmoji}>{venue.icon}</Text><View style={{flex:1}}><Text style={styles.cardTitle}>{venue.name}</Text><Text style={dateStyles.venueVibe}>{venue.vibe}</Text><Text style={styles.helper}>{useArea?'Near your approximate area':venue.area} · {venue.price}</Text></View><MiniPremiumIcon name={venueId===venue.id?'checkmark-circle':'ellipse-outline'} tone={venueId===venue.id?'gold':'dark'} size={34} iconSize={16}/></Pressable>)}</View><View style={{gap:10}}><Text style={styles.sectionLabel}>PICK A TIME</Text><View style={dateStyles.timeGrid}>{dateTimes.map(option=><Pressable key={option} onPress={()=>setTime(option)} style={[dateStyles.timeChip,time===option&&dateStyles.timeChipOn]}><Text style={[dateStyles.timeText,time===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}</View></View><View style={dateStyles.safetyCard}><View style={shared.row}><PremiumIcon name="shield-checkmark" tone="gold" size={44} iconSize={20}/><Text style={[styles.cardTitle,{marginLeft:8}]}>Date safety</Text></View><DateToggle title="Check in after the date" body="DestinyOne reminds you to confirm you’re safe." value={safetyCheckIn} onPress={()=>setSafetyCheckIn(value=>!value)}/><DateToggle title="Share plan with a trusted contact" body="Prepared for secure sharing when contacts backend is connected." value={sharePlan} onPress={()=>setSharePlan(value=>!value)}/></View><DatePlanPreview venue={selectedVenue} packageTitle={selectedPackage?.title} packageTier={selectedPackage?.tier} time={time} useArea={useArea} safetyCheckIn={safetyCheckIn} sharePlan={sharePlan}/><View style={dateStyles.sampleNotice}><MiniPremiumIcon name="information-circle-outline" tone="gold" size={34} iconSize={16}/><Text style={[styles.helper,{flex:1}]}>Venue cards are MVP samples. Production connects a Places provider for live cafés, opening hours, ratings and map directions.</Text></View><ReservationCheckout venue={selectedVenue} quote={reservationQuote} status={reservationStatus} applePaySupported={applePaySupported} error={paymentError} onReserve={()=>void reserveDate()}/><Button disabled={!selectedVenue||!time} label={selectedVenue&&time?`Suggest to ${match.name}`:'Choose a place and time'} icon="send" onPress={sendPlan}/></ScrollView></SafeAreaView></LinearGradient>
 }
 
@@ -3373,7 +3416,7 @@ const coupleThemes=[
   {name:'Ivory Calm',accent:'#FFF0D2',soft:'rgba(255,240,210,.10)',panel:'#17110E',bg:'#070504',border:'#6D5A44'},
 ];
 
-function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftConsumed,onSettingsChange,onDateStatus,onReflection,onLearningConsent,onReminder,onJourneyEvent,coinBalance,roseAvailability,onRose,onSend,onSpendCoins,onReport,onBlock,onUnmatch,navigate}:{match:Match;messages:ChatMessage[];reflection?:RelationshipReflectionRecord;reminder?:RelationshipReminderRecord;settings:CoupleChatSettings;initialDraft?:string;onDraftConsumed?:()=>void;onSettingsChange:(settings:CoupleChatSettings)=>void;onDateStatus:(messageId:string,status:DatePlanStatus)=>void;onReflection:(messageId:string,choice:RelationshipReflectionChoice|null)=>void;onLearningConsent:(enabled:boolean)=>void;onReminder:(messageId:string,enabled:boolean)=>void;onJourneyEvent:(name:RelationshipJourneyEventName,properties:Record<string,string|boolean>)=>void;coinBalance:number;roseAvailability:RoseAvailability;onRose:()=>void;onSend:(message:ChatMessage)=>void;onSpendCoins:(coins:number)=>void;onReport:(reason:string,details?:string)=>void;onBlock:()=>void;onUnmatch:()=>void;navigate:(s:Screen)=>void}) {
+function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftConsumed,onSettingsChange,onDateStatus,onReflection,onLearningConsent,onReminder,onJourneyEvent,coinBalance,roseAvailability,onRose,onSend,onSpendCoins,onReport,onBlock,onUnmatch,navigate}:{match:Match;messages:ChatMessage[];reflection?:RelationshipReflectionRecord;reminder?:RelationshipReminderRecord;settings:CoupleChatSettings;initialDraft?:string;onDraftConsumed?:()=>void;onSettingsChange:(settings:CoupleChatSettings)=>void;onDateStatus:(messageId:string,status:DatePlanStatus)=>void;onReflection:(messageId:string,choice:RelationshipReflectionChoice|null)=>void;onLearningConsent:(enabled:boolean)=>void;onReminder:(messageId:string,enabled:boolean)=>void;onJourneyEvent:(name:RelationshipJourneyEventName,properties:Record<string,string|boolean>)=>void;coinBalance:number;roseAvailability:RoseAvailability;onRose:()=>void;onSend:(message:ChatMessage)=>Promise<boolean>;onSpendCoins:(coins:number)=>void;onReport:(reason:string,details?:string)=>void;onBlock:()=>void;onUnmatch:()=>void;navigate:(s:Screen)=>void}) {
   const {width:chatWidth}=useWindowDimensions();
   const messagesRef=useRef<ScrollView|null>(null);
   const [text,setText]=useState('');
@@ -3399,6 +3442,7 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
   const [starredMessages,setStarredMessages]=useState<string[]>([]);
   const [disappearingMessages,setDisappearingMessages]=useState(false);
   const [journeyOpen,setJourneyOpen]=useState(false);
+  const [sending,setSending]=useState(false);
   const recorder=useAudioRecorder(RecordingPresets.HIGH_QUALITY,(status)=>{
     if(status.hasError)setChatError(status.error??'Voice note failed. Please try again.');
   });
@@ -3412,8 +3456,14 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
   },[initialDraft,onDraftConsumed]);
   const createMessage=(message:Omit<ChatMessage,'id'|'createdAt'|'status'>):ChatMessage=>({...message,id:`${Date.now()}-${Math.random().toString(36).slice(2,7)}`,createdAt:Date.now(),status:'read'});
   const messageSummary=(message:ChatMessage)=>message.text?.trim()||message.date?.venue||message.gift?.name||(message.type==='voice'?'Voice message':message.type==='location'?'Live location':message.type==='image'?'Photo':message.type==='gif'?'GIF':message.type==='snap'?'View-once photo':'Message');
-  const sendText=()=>{const value=text.trim();if(value){const replyPrefix=replyTarget?`↩ ${messageSummary(replyTarget).slice(0,64)}\n`:'';onSend(createMessage({type:'text',text:`${replyPrefix}${value}`}));setText('');setReplyTarget(null);setShowEmoji(false)}};
-  const sendQuickShare=(textValue:string)=>{onSend(createMessage({type:'text',text:textValue}));setShowAttachments(false);setAttachmentPage('main')};
+  const dispatchMessage=async(message:ChatMessage)=>{
+    setChatError('');
+    const sent=await onSend(message);
+    if(!sent)setChatError('Message was not confirmed. Check your connection and try again.');
+    return sent;
+  };
+  const sendText=async()=>{const value=text.trim();if(!value||sending)return;const replyPrefix=replyTarget?`↩ ${messageSummary(replyTarget).slice(0,64)}\n`:'';setSending(true);try{if(await dispatchMessage(createMessage({type:'text',text:`${replyPrefix}${value}`}))){setText('');setReplyTarget(null);setShowEmoji(false)}}finally{setSending(false)}};
+  const sendQuickShare=(textValue:string)=>{void dispatchMessage(createMessage({type:'text',text:textValue}));setShowAttachments(false);setAttachmentPage('main')};
   const startVoiceNote=async()=>{
     setChatError('');
     const permission=await requestRecordingPermissionsAsync();
@@ -3425,9 +3475,9 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
   const stopVoiceNote=async()=>{
     await recorder.stop();
     await setAudioModeAsync({allowsRecording:false});
-    if(recorder.uri){onSend(createMessage({type:'voice',uri:recorder.uri,voice:{uri:recorder.uri,durationMs:recorderState.durationMillis}}))}
+    if(recorder.uri){await dispatchMessage(createMessage({type:'voice',uri:recorder.uri,voice:{uri:recorder.uri,durationMs:recorderState.durationMillis}}))}
   };
-  const sendOrRecord=()=>{if(text.trim()){sendText();return} void (recorderState.isRecording?stopVoiceNote():startVoiceNote())};
+  const sendOrRecord=()=>{if(text.trim()){void sendText();return} void (recorderState.isRecording?stopVoiceNote():startVoiceNote())};
   const shareLiveLocation=async()=>{
     setChatError('');
     const permission=await Location.requestForegroundPermissionsAsync();
@@ -3435,8 +3485,7 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
     try{
       const position=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});
       const locationMessage=createMessage({type:'location',text:'Live location shared',location:{latitude:position.coords.latitude,longitude:position.coords.longitude,label:'Live location · tracking for 30 min',live:true,expiresAt:Date.now()+30*60*1000,accuracy:position.coords.accuracy??undefined}});
-      onSend(locationMessage);
-      if(locationMessage.location)void persistLiveLocationShare(conversationIdFor(match),locationMessage.location,locationMessage.id);
+      await dispatchMessage(locationMessage);
       setShowAttachments(false);
     }catch{
       setChatError('Could not get your current location. Try again outdoors or check permission settings.');
@@ -3447,30 +3496,30 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
     const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
     if(!permission.granted){setChatError('Photo permission is needed to share an image.');return}
     const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],quality:.8});
-    if(!result.canceled&&result.assets[0]){onSend(createMessage({type:'image',uri:result.assets[0].uri}));setShowAttachments(false)}
+    if(!result.canceled&&result.assets[0]){await dispatchMessage(createMessage({type:'image',uri:result.assets[0].uri}));setShowAttachments(false)}
   };
   const sendCameraPhoto=async()=>{
     setChatError('');
     const permission=await ImagePicker.requestCameraPermissionsAsync();
     if(!permission.granted){setChatError('Camera permission is needed to take a photo.');return}
     const result=await ImagePicker.launchCameraAsync({mediaTypes:['images'],quality:.85,allowsEditing:true,aspect:[4,5]});
-    if(!result.canceled&&result.assets[0]){onSend(createMessage({type:'image',uri:result.assets[0].uri}));setShowAttachments(false)}
+    if(!result.canceled&&result.assets[0]){await dispatchMessage(createMessage({type:'image',uri:result.assets[0].uri}));setShowAttachments(false)}
   };
-  const sendGif=(uri:string)=>{onSend(createMessage({type:'gif',uri}));setGifOpen(false);setShowAttachments(false)};
+  const sendGif=(uri:string)=>{void dispatchMessage(createMessage({type:'gif',uri}));setGifOpen(false);setShowAttachments(false)};
   const sendDigitalGift=(gift:DigitalGift)=>{
     if(digitalGiftWalletMode!=='demo'){setChatError('Digital gifts are unavailable until verified store billing and server wallet sync are active.');setGiftOpen(false);return}
     if(!canSendGift(coinBalance,gift.coins)){setChatError('Not enough coins. Secure wallet top-up will be enabled with production billing.');setGiftOpen(false);return}
-    track('gift_sent',{gift:gift.name,coins:gift.coins});onSpendCoins(gift.coins);onSend(createMessage({type:'gift',gift:{name:gift.name,emoji:gift.emoji,coins:gift.coins}}));setGiftOpen(false);setShowAttachments(false);
+    track('gift_sent',{gift:gift.name,coins:gift.coins});onSpendCoins(gift.coins);void dispatchMessage(createMessage({type:'gift',gift:{name:gift.name,emoji:gift.emoji,coins:gift.coins}}));setGiftOpen(false);setShowAttachments(false);
   };
   const sendPhysicalGift=async(gift:PhysicalGift,note:string)=>{
     const order=await createPhysicalGiftOrder({productId:gift.id,productName:gift.name,recipientId:match.id,recipientName:match.name,priceCents:gift.priceCents,etaHint:gift.eta,note});
     track('physical_gift_requested',{gift:gift.name,demo:order.demo});
-    onSend(createMessage({type:'gift',text:`${gift.name} requested · ${order.quote.etaLabel}`,gift:{name:gift.name,emoji:gift.emoji,priceCents:gift.priceCents,physical:true,orderId:order.orderId,deliveryStatus:order.deliveryStatus,etaLabel:order.quote.etaLabel,etaConfidence:order.quote.etaConfidence,provider:order.quote.providerLabel,quoteId:order.quote.quoteId,serviceLevel:order.quote.serviceLevelLabel,providerRecommendation:order.quote.providerRecommendation,paymentPolicy:order.quote.paymentPolicy,cancellationPolicy:order.quote.cancellationPolicy,supportPolicy:order.quote.supportPolicy,recipientPrivacy:order.quote.recipientPrivacy,acceptanceWindowMinutes:order.quote.acceptanceWindowMinutes,acceptanceExpiresAt:order.quote.acceptanceExpiresAt,trackingUrl:order.trackingUrl,totalCents:order.quote.totalCents,steps:order.steps}}));
+    await dispatchMessage(createMessage({type:'gift',text:`${gift.name} requested · ${order.quote.etaLabel}`,gift:{name:gift.name,emoji:gift.emoji,priceCents:gift.priceCents,physical:true,orderId:order.orderId,deliveryStatus:order.deliveryStatus,etaLabel:order.quote.etaLabel,etaConfidence:order.quote.etaConfidence,provider:order.quote.providerLabel,quoteId:order.quote.quoteId,serviceLevel:order.quote.serviceLevelLabel,providerRecommendation:order.quote.providerRecommendation,paymentPolicy:order.quote.paymentPolicy,cancellationPolicy:order.quote.cancellationPolicy,supportPolicy:order.quote.supportPolicy,recipientPrivacy:order.quote.recipientPrivacy,acceptanceWindowMinutes:order.quote.acceptanceWindowMinutes,acceptanceExpiresAt:order.quote.acceptanceExpiresAt,trackingUrl:order.trackingUrl,totalCents:order.quote.totalCents,steps:order.steps}}));
     setGiftOpen(false);setShowAttachments(false);
   };
-  const sendSnap=(uri:string,filter:string,sticker:string,viewOnce:boolean)=>{onSend(createMessage({type:'snap',uri,snap:{filter,sticker,viewOnce,expiresAt:Date.now()+24*60*60*1000}}));setSnapOpen(false);setShowAttachments(false)};
-  const sendFaceEmoji=(faceUri:string,emoji:string,filter:string)=>{onSend(createMessage({type:'sticker',sticker:{faceUri,emoji,filter,label:'My face emoji'}}));setFaceEmojiOpen(false);setShowAttachments(false)};
-  const startGame=(game:typeof coupleGames[number])=>{onSend(createMessage({type:'text',text:`🎮 ${game.title}: ${game.prompt}`}));setGamesOpen(false);setShowAttachments(false)};
+  const sendSnap=(uri:string,filter:string,sticker:string,viewOnce:boolean)=>{void dispatchMessage(createMessage({type:'snap',uri,snap:{filter,sticker,viewOnce,expiresAt:Date.now()+24*60*60*1000}}));setSnapOpen(false);setShowAttachments(false)};
+  const sendFaceEmoji=(faceUri:string,emoji:string,filter:string)=>{void dispatchMessage(createMessage({type:'sticker',sticker:{faceUri,emoji,filter,label:'My face emoji'}}));setFaceEmojiOpen(false);setShowAttachments(false)};
+  const startGame=(game:typeof coupleGames[number])=>{void dispatchMessage(createMessage({type:'text',text:`🎮 ${game.title}: ${game.prompt}`}));setGamesOpen(false);setShowAttachments(false)};
   const activeTheme=coupleThemes.find(theme=>theme.name===settings.theme)??coupleThemes[0]!;
   const displayName=settings.nickname.trim()||match.name;
   const messageSafety=scanMessageSafety(text);
@@ -3484,7 +3533,7 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
     <View style={[styles.chatHead,chatPremiumStyles.chatHead,{backgroundColor:'rgba(14,3,7,.96)',borderBottomColor:'rgba(255,255,255,.07)'}]}>
       <Pressable accessibilityRole="button" accessibilityLabel="Back to matches" onPress={()=>navigate('home')}><PremiumIcon name="arrow-back" tone="dark" size={35} iconSize={17}/></Pressable>
       <Image source={{uri:match.photo}} style={[styles.chatAvatar,chatPremiumStyles.chatAvatar,{borderWidth:1,borderColor:activeTheme.accent}]}/>
-      <View style={{flex:1}}><Text numberOfLines={1} style={shared.label}>{displayName}</Text><View style={chatStyles.onlineRow}><View style={[chatStyles.onlineDot,{backgroundColor:activeTheme.accent}]}/><Text style={styles.onlineText}>{settings.nickname.trim()?`${match.name} · Online`:'Online'}</Text></View></View>
+      <View style={{flex:1}}><Text numberOfLines={1} style={shared.label}>{displayName}</Text><View style={chatStyles.onlineRow}><View style={[chatStyles.onlineDot,{backgroundColor:memberDataRuntime.source==='preview'?activeTheme.accent:colors.muted}]}/><Text style={styles.onlineText}>{memberDataRuntime.source==='preview'?(settings.nickname.trim()?`${match.name} · Online`:'Online'):'Private conversation'}</Text></View></View>
       <Pressable accessibilityRole="button" accessibilityLabel="Audio call" hitSlop={8} onPress={()=>setCallMode('audio')} style={chatStyles.headerAction}><Ionicons name="call-outline" size={20} color={colors.ivory}/></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Video call" hitSlop={8} onPress={()=>setCallMode('video')} style={chatStyles.headerAction}><Ionicons name="videocam-outline" size={21} color={colors.ivory}/></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Chat options" hitSlop={8} onPress={()=>setOptionsOpen(true)} style={chatStyles.headerAction}><Ionicons name="ellipsis-vertical" size={20} color={colors.muted}/></Pressable>
@@ -3494,9 +3543,7 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
     {showCoach&&<View style={[coachStyles.chatCoach,chatStyles.coachPanel]}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:7}}>{chatCoachSuggestions.map(item=><Pressable key={item.label} onPress={()=>{setText(item.message(match));setShowCoach(false)}} style={[coachStyles.suggestionChip,{borderColor:'rgba(255,255,255,.10)',backgroundColor:'rgba(255,255,255,.045)'}]}><Text style={coachStyles.suggestionText}>{item.label}</Text></Pressable>)}</ScrollView><Pressable onPress={()=>navigate('coach')} style={chatStyles.coachOpen}><Text style={chatStyles.coachOpenText}>Open coach</Text></Pressable></View>}
     {!!chatError&&<Pressable onPress={()=>setChatError('')} style={chatStyles.errorBanner}><Text style={chatStyles.errorText}>{chatError}</Text><MiniPremiumIcon name="close" tone="dark" size={28} iconSize={13}/></Pressable>}
     <ScrollView ref={messagesRef} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'on-drag'} onContentSizeChange={()=>messagesRef.current?.scrollToEnd({animated:true})} contentContainerStyle={[styles.messages,chatPremiumStyles.messages]}>
-      <View style={styles.iceReveal}><Text style={styles.kicker}>ICEBREAKER REVEALED</Text><Text style={styles.revealText}>You both chose: <Text style={{color:colors.ivory}}>Road trip 🚗</Text></Text></View>
-      <Text style={chatStyles.dayLabel}>TODAY</Text>
-      <View style={[styles.theirBubble,chatPremiumStyles.theirBubble]}><Text style={styles.bubbleText}>Okay, excellent choice. Mountains or coast? 😊</Text><Text style={styles.time}>7:42 PM</Text></View>
+      {memberDataRuntime.source==='preview'&&<><View style={styles.iceReveal}><Text style={styles.kicker}>ICEBREAKER REVEALED</Text><Text style={styles.revealText}>You both chose: <Text style={{color:colors.ivory}}>Road trip 🚗</Text></Text></View><Text style={chatStyles.dayLabel}>TODAY</Text><View style={[styles.theirBubble,chatPremiumStyles.theirBubble]}><Text style={styles.bubbleText}>Okay, excellent choice. Mountains or coast? 😊</Text><Text style={styles.time}>7:42 PM</Text></View></>}
       {visibleMessages.map(message=><View key={message.id} style={chatStyles.messageGroup}>
         <ChatBubble message={message} accent={activeTheme.accent} reaction={messageReactions[message.id]} starred={starredMessages.includes(message.id)} onPress={()=>selectMessage(message)}/>
         {selectedMessageId===message.id&&<View style={chatStyles.messageActions}>
@@ -3506,7 +3553,7 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
         </View>}
       </View>)}
       {!!normalizedSearch&&!visibleMessages.length&&<View style={chatStyles.emptySearch}><Ionicons name="search-outline" size={24} color={colors.muted}/><Text style={chatStyles.emptySearchText}>No messages match “{searchQuery}”.</Text></View>}
-      <View style={chatStyles.typingBubble}><View style={chatStyles.typingDot}/><View style={chatStyles.typingDot}/><View style={chatStyles.typingDot}/></View>
+      {memberDataRuntime.source==='preview'&&<View style={chatStyles.typingBubble}><View style={chatStyles.typingDot}/><View style={chatStyles.typingDot}/><View style={chatStyles.typingDot}/></View>}
     </ScrollView>
     <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':Platform.OS==='android'?'height':undefined} style={chatStyles.keyboardWrap}>
       {!!text.trim()&&messageSafety.signals.length>0&&(
@@ -3533,7 +3580,7 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
       </>}</View>}
       {showEmoji&&<View style={chatStyles.emojiPanel}><View style={chatStyles.emojiHeader}><Text style={chatStyles.emojiTitle}>Emojis</Text><Text style={chatStyles.emojiCount}>{quickEmojis.length} daily-use</Text></View><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={chatStyles.emojiTray}>{quickEmojis.map((emoji,index)=><Pressable key={`${emoji}-${index}`} style={chatStyles.emojiButton} onPress={()=>setText(value=>value+emoji)}><Text style={chatStyles.emoji}>{emoji}</Text></Pressable>)}</ScrollView></View>}
       {replyTarget&&<View style={chatStyles.replyPreview}><View style={chatStyles.replyAccent}/><View style={{flex:1}}><Text style={chatStyles.replyTitle}>Replying to your message</Text><Text numberOfLines={1} style={chatStyles.replyText}>{messageSummary(replyTarget)}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Cancel reply" onPress={()=>setReplyTarget(null)}><Ionicons name="close" size={20} color={colors.muted}/></Pressable></View>}
-      <View style={[styles.composer,chatPremiumStyles.composer]}><Pressable accessibilityRole="button" accessibilityLabel={showAttachments?'Close attachments':'Add attachment'} onPress={()=>{setShowAttachments(value=>{if(!value)setAttachmentPage('main');return !value});setShowEmoji(false)}}><PremiumIcon name={showAttachments?'close':'add-circle-outline'} tone={showAttachments?'ruby':'dark'} size={36} iconSize={17}/></Pressable><View style={[chatStyles.inputWrap,{backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:recorderState.isRecording?colors.gold:'rgba(255,255,255,.10)'}]}><TextInput value={text} onChangeText={setText} onSubmitEditing={sendText} returnKeyType="send" placeholder={recorderState.isRecording?'Recording voice note…':'Message…'} placeholderTextColor="#8C7888" editable={!recorderState.isRecording} style={[styles.chatInput,chatPremiumStyles.chatInput]}/><Pressable accessibilityRole="button" accessibilityLabel={showEmoji?'Close emoji picker':'Open emoji picker'} onPress={()=>{setShowEmoji(value=>!value);setShowAttachments(false)}}><Ionicons name={showEmoji?'close':'happy-outline'} size={21} color={showEmoji?colors.gold:'#B59DA4'}/></Pressable></View><Pressable accessibilityRole="button" accessibilityLabel={text.trim()?'Send message':recorderState.isRecording?'Stop recording':'Record voice note'} onPress={sendOrRecord} style={chatStyles.sendButton}><Ionicons name={text.trim()?'send':recorderState.isRecording?'stop':'mic'} size={20} color={colors.ivory}/></Pressable></View>
+      <View style={[styles.composer,chatPremiumStyles.composer]}><Pressable accessibilityRole="button" accessibilityLabel={showAttachments?'Close attachments':'Add attachment'} onPress={()=>{setShowAttachments(value=>{if(!value)setAttachmentPage('main');return !value});setShowEmoji(false)}}><PremiumIcon name={showAttachments?'close':'add-circle-outline'} tone={showAttachments?'ruby':'dark'} size={36} iconSize={17}/></Pressable><View style={[chatStyles.inputWrap,{backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:recorderState.isRecording?colors.gold:'rgba(255,255,255,.10)'}]}><TextInput value={text} onChangeText={setText} onSubmitEditing={() => void sendText()} returnKeyType="send" placeholder={sending?'Sending…':recorderState.isRecording?'Recording voice note…':'Message…'} placeholderTextColor="#8C7888" editable={!recorderState.isRecording&&!sending} style={[styles.chatInput,chatPremiumStyles.chatInput]}/><Pressable accessibilityRole="button" accessibilityLabel={showEmoji?'Close emoji picker':'Open emoji picker'} onPress={()=>{setShowEmoji(value=>!value);setShowAttachments(false)}}><Ionicons name={showEmoji?'close':'happy-outline'} size={21} color={showEmoji?colors.gold:'#B59DA4'}/></Pressable></View><Pressable disabled={sending} accessibilityRole="button" accessibilityLabel={sending?'Sending message':text.trim()?'Send message':recorderState.isRecording?'Stop recording':'Record voice note'} onPress={sendOrRecord} style={chatStyles.sendButton}><Ionicons name={sending?'time-outline':text.trim()?'send':recorderState.isRecording?'stop':'mic'} size={20} color={colors.ivory}/></Pressable></View>
     </KeyboardAvoidingView>
     <BottomNav active="chat" navigate={navigate}/>
     <GifPicker visible={gifOpen} onClose={()=>setGifOpen(false)} onSelect={sendGif}/>
@@ -3937,6 +3984,7 @@ function SafetyReportPlan({report}:{report:LocalReport}){
 }
 
 function SafetyToolSheet({tool,datePlans,safeCheckIns,onCheckIn,onDeleteAccount,onClose}:{tool:SafetyTool;datePlans:ChatMessage[];safeCheckIns:string[];onCheckIn:(id:string)=>void;onDeleteAccount:()=>void;onClose:()=>void}){
+  const preview=memberDataRuntime.source==='preview';
   const [sharedPlan,setSharedPlan]=useState(false);
   const [sharePlanStatus,setSharePlanStatus]=useState('');
   const [exportRequested,setExportRequested]=useState(false);
@@ -3960,8 +4008,8 @@ function SafetyToolSheet({tool,datePlans,safeCheckIns,onCheckIn,onDeleteAccount,
   return <Modal visible transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,{maxHeight:'86%'}]}><SheetHeader title={titles[tool][0]} subtitle={titles[tool][1]} onClose={onClose}/>
     {tool==='plan'&&<View style={{gap:12}}><View style={safetyStyles.toolHero}><PremiumIcon name="location" tone="gold" size={50} iconSize={23}/><View style={{flex:1}}><Text style={styles.cardTitle}>{latestPlan?.date?.venue??'No active date plan yet'}</Text><Text style={styles.helper}>{latestPlan?.date?`${latestPlan.date.time} · ${latestPlan.date.area}`:'Open chat → Date to create one before sharing.'}</Text></View></View><View style={safetyStyles.sharePreview}><Text style={safetyStyles.shareText}>{planText}</Text></View>{!!sharePlanStatus&&<View style={safetyStyles.inlineNotice}><MiniPremiumIcon name="share-social" tone="gold" size={28} iconSize={13}/><Text style={safetyStyles.inlineNoticeText}>{sharePlanStatus}</Text></View>}{latestPlan&&!safeCheckIns.includes(latestPlan.id)&&<Pressable onPress={()=>onCheckIn(latestPlan.id)} style={safetyStyles.checkInWide}><MiniPremiumIcon name="shield-checkmark" tone="gold" size={26} iconSize={12}/><Text style={safetyStyles.checkInWideText}>Mark this plan as safe after date</Text></Pressable>}<Button disabled={!latestPlan} label={sharedPlan?'Share card prepared':'Share with trusted contact'} icon="share-social" onPress={()=>void sharePlan()}/></View>}
     {tool==='emergency'&&<View style={{gap:12}}><View style={safetyStyles.emergencyCard}><PremiumIcon name="warning" tone="ruby" size={54} iconSize={25}/><View style={{flex:1}}><Text style={[styles.cardTitle,{color:colors.danger}]}>If you are in immediate danger</Text><Text style={styles.helper}>Leave the situation if you can, move to a public place, and contact emergency services.</Text></View></View><Button label="Call emergency services" icon="call" variant="gold" onPress={callEmergency}/>{emergencyFallback&&<View style={safetyStyles.emergencyFallback}><MiniPremiumIcon name="call" tone="ruby" size={30} iconSize={14}/><Text style={safetyStyles.emergencyFallbackText}>This preview could not open your phone dialer. Please call local emergency services immediately from your device.</Text></View>}<View style={safetyStyles.toolList}>{['Keep conversations in DestinyOne until trust is built.','Do not share exact home/work address early.','Use your own transport for first dates.','Report pressure, money requests, threats or fake identity.'].map(item=><View key={item} style={safetyStyles.toolRow}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={26} iconSize={12}/><Text style={safetyStyles.toolRowText}>{item}</Text></View>)}</View></View>}
-    {tool==='privacy'&&<View style={{gap:11}}><SafetyLocalToggle title="Hide last online" body="Keep your recent activity private from matches." value={privacy.hideLastSeen} onPress={()=>setPrivacy(current=>({...current,hideLastSeen:!current.hideLastSeen}))}/><SafetyLocalToggle title="Limit approximate location" body="Use city-level discovery and avoid exact-place matching." value={privacy.pauseLocation} onPress={()=>setPrivacy(current=>({...current,pauseLocation:!current.pauseLocation}))}/><SafetyLocalToggle title="Private profile-view alerts" body="Only send profile-view notifications after deeper views." value={privacy.limitProfileViews} onPress={()=>setPrivacy(current=>({...current,limitProfileViews:!current.limitProfileViews}))}/><View style={safetyStyles.privacySummary}><MiniPremiumIcon name="lock-closed" tone="gold" size={30} iconSize={14}/><Text style={[styles.helper,{flex:1}]}>Preview controls update instantly here. Production will sync them securely to your account.</Text></View></View>}
-    {tool==='data'&&<View style={{gap:12}}><View style={safetyStyles.toolHero}><PremiumIcon name="download-outline" tone="rose" size={50} iconSize={23}/><View style={{flex:1}}><Text style={styles.cardTitle}>Export package</Text><Text style={styles.helper}>Profile, preferences, match decisions, safety reports and chat metadata.</Text></View></View><View style={safetyStyles.toolList}>{['Profile and onboarding answers','Match decisions and filters','Reports, blocks and safety check-ins','Messages export after identity verification'].map(item=><View key={item} style={safetyStyles.toolRow}><MiniPremiumIcon name="document-text-outline" tone="rose" size={26} iconSize={12}/><Text style={safetyStyles.toolRowText}>{item}</Text></View>)}</View>{exportRequested?<View style={safetyStyles.exportReady}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={32} iconSize={15}/><Text style={safetyStyles.exportReadyText}>Export request prepared. Backend will email a secure link after identity verification.</Text></View>:<Button label="Prepare export request" icon="download" onPress={()=>setExportRequested(true)}/>}</View>}
+    {tool==='privacy'&&<View style={{gap:11}}><SafetyLocalToggle title="Hide last online" body="Keep your recent activity private from matches." value={privacy.hideLastSeen} onPress={()=>preview?setPrivacy(current=>({...current,hideLastSeen:!current.hideLastSeen})):setSharePlanStatus('Secure privacy settings connection required. No account setting was changed.')}/><SafetyLocalToggle title="Limit approximate location" body="Use city-level discovery and avoid exact-place matching." value={privacy.pauseLocation} onPress={()=>preview?setPrivacy(current=>({...current,pauseLocation:!current.pauseLocation})):setSharePlanStatus('Secure privacy settings connection required. No account setting was changed.')}/><SafetyLocalToggle title="Private profile-view alerts" body="Only send profile-view notifications after deeper views." value={privacy.limitProfileViews} onPress={()=>preview?setPrivacy(current=>({...current,limitProfileViews:!current.limitProfileViews})):setSharePlanStatus('Secure privacy settings connection required. No account setting was changed.')}/>{!!sharePlanStatus&&<View style={safetyStyles.inlineNotice}><MiniPremiumIcon name="lock-closed" tone="gold" size={28} iconSize={13}/><Text style={safetyStyles.inlineNoticeText}>{sharePlanStatus}</Text></View>}<View style={safetyStyles.privacySummary}><MiniPremiumIcon name="lock-closed" tone="gold" size={30} iconSize={14}/><Text style={[styles.helper,{flex:1}]}>{preview?'Preview controls update only this device.':'Live controls change only after secure server confirmation.'}</Text></View></View>}
+    {tool==='data'&&<View style={{gap:12}}><View style={safetyStyles.toolHero}><PremiumIcon name="download-outline" tone="rose" size={50} iconSize={23}/><View style={{flex:1}}><Text style={styles.cardTitle}>Export package</Text><Text style={styles.helper}>Profile, preferences, match decisions, safety reports and chat metadata.</Text></View></View><View style={safetyStyles.toolList}>{['Profile and onboarding answers','Match decisions and filters','Reports, blocks and safety check-ins','Messages export after identity verification'].map(item=><View key={item} style={safetyStyles.toolRow}><MiniPremiumIcon name="document-text-outline" tone="rose" size={26} iconSize={12}/><Text style={safetyStyles.toolRowText}>{item}</Text></View>)}</View>{exportRequested?<View style={safetyStyles.exportReady}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={32} iconSize={15}/><Text style={safetyStyles.exportReadyText}>Preview export request prepared. No email or server request was created.</Text></View>:preview?<Button label="Prepare preview export" icon="download" onPress={()=>setExportRequested(true)}/>:<View style={safetyStyles.exportReady}><MiniPremiumIcon name="lock-closed" tone="ruby" size={32} iconSize={15}/><Text style={safetyStyles.exportReadyText}>Secure data export is unavailable until identity verification and the live export endpoint are connected. No request was created.</Text></View>}</View>}
     {tool==='delete'&&<View style={{gap:12}}><View style={safetyStyles.deleteConfirm}><PremiumIcon name="trash-outline" tone="ruby" size={58} iconSize={27}/><View style={{flex:1}}><Text style={[styles.cardTitle,{color:colors.danger}]}>Delete your DestinyOne account?</Text><Text style={styles.helper}>This deletes your profile and associated data. Active app-store subscriptions must be managed separately.</Text></View></View><View style={safetyStyles.toolList}>{['Your profile will stop appearing in matches.','Reports and safety records may be retained where legally required.','This preview action clears local app data after confirmation.'].map(item=><View key={item} style={safetyStyles.toolRow}><MiniPremiumIcon name="alert-circle-outline" tone="ruby" size={26} iconSize={12}/><Text style={safetyStyles.toolRowText}>{item}</Text></View>)}</View><Button label="Delete account" icon="trash" onPress={onDeleteAccount}/><Button label="Keep my account" variant="secondary" onPress={onClose}/></View>}
   </SafeAreaView></Modal>
 }
@@ -3972,15 +4020,15 @@ function SafetyLocalToggle({title,body,value,onPress}:{title:string;body:string;
 
 function SafetyStat({value,label}:{value:number;label:string}){return <View style={safetyStyles.stat}><Text style={safetyStyles.statValue}>{value}</Text><Text style={safetyStyles.statLabel}>{label}</Text></View>}
 
-function Likes({openPricing,navigate}:{openPricing:()=>void;navigate:(s:Screen)=>void}){return <SafeAreaView style={{flex:1}}><ScrollView contentContainerStyle={{padding:22,paddingBottom:120,gap:25}}><SectionTitle eyebrow="Private & intentional" title="People who noticed you." body="Upgrade to DestinyOne Plus to see everyone who’s interested."/><View style={styles.likesGrid}>{matches.slice(0,2).map(m=><View key={m.id} style={styles.likeCard}><Image source={{uri:m.photo}} blurRadius={18} style={styles.fill}/><LinearGradient colors={['transparent','rgba(11,11,15,.9)']} style={StyleSheet.absoluteFill}/><View style={styles.likeLock}><MiniPremiumIcon name="lock-closed" tone="gold" size={34} iconSize={16}/></View><Text style={styles.likeText}>Someone in {m.city.split(',')[0]}</Text></View>)}</View><View style={[shared.card,{gap:14,borderColor:'#6C5520'}]}><PremiumIcon name="sparkles" tone="gold" size={48} iconSize={22}/><Text style={styles.cardTitle}>See who chose you</Text><Text style={shared.body}>Plus members can see likes, meet up to 5 daily matches, and hear voice intros.</Text><Button label="Explore DestinyOne Plus" variant="gold" onPress={openPricing}/></View></ScrollView><BottomNav active="explore" navigate={navigate}/></SafeAreaView>}
+function Likes({openPricing,navigate}:{openPricing:()=>void;navigate:(s:Screen)=>void}){const preview=memberDataRuntime.source==='preview';return <SafeAreaView style={{flex:1}}><ScrollView contentContainerStyle={{padding:22,paddingBottom:120,gap:25}}><SectionTitle eyebrow="Private & intentional" title="People who noticed you." body={preview?"Upgrade to DestinyOne Plus to see everyone who’s interested.":"Incoming interest stays private and appears only after secure account sync."}/>{preview?<View style={styles.likesGrid}>{matches.slice(0,2).map(m=><View key={m.id} style={styles.likeCard}><Image source={{uri:m.photo}} blurRadius={18} style={styles.fill}/><LinearGradient colors={['transparent','rgba(11,11,15,.9)']} style={StyleSheet.absoluteFill}/><View style={styles.likeLock}><MiniPremiumIcon name="lock-closed" tone="gold" size={34} iconSize={16}/></View><Text style={styles.likeText}>Someone in {m.city.split(',')[0]}</Text></View>)}</View>:<View style={[shared.card,{gap:12,alignItems:'center'}]}><PremiumIcon name="lock-closed" tone="gold" size={54} iconSize={25}/><Text style={styles.cardTitle}>Secure likes sync required</Text><Text style={[styles.helper,{textAlign:'center'}]}>DestinyOne will not show sample people or invented like counts. Your verified incoming interests will appear here when the live likes feed is connected.</Text></View>}<View style={[shared.card,{gap:14,borderColor:'#6C5520'}]}><PremiumIcon name="sparkles" tone="gold" size={48} iconSize={22}/><Text style={styles.cardTitle}>See who chose you</Text><Text style={shared.body}>{preview?'Plus members can see likes, meet up to 5 daily matches, and hear voice intros.':'Membership access will unlock verified incoming interests after entitlement and likes sync are both active.'}</Text><Button label="Explore DestinyOne Plus" variant="gold" onPress={openPricing}/></View></ScrollView><BottomNav active="explore" navigate={navigate}/></SafeAreaView>}
 
 function Profile({profile,verified,profilePhoto,hasVoiceIntro,lastSeenVisible,analyticsConsent,onLastSeenVisibleChange,onAnalyticsConsentChange,navigate,onReset}:{profile:ProfileDraft;verified:boolean;profilePhoto?:string;hasVoiceIntro:boolean;lastSeenVisible:boolean;analyticsConsent:boolean;onLastSeenVisibleChange:(value:boolean)=>void;onAnalyticsConsentChange:(value:boolean)=>void;navigate:(s:Screen)=>void;onReset:()=>void}){
   const [settingsOpen,setSettingsOpen]=useState(false);
   const [profileShareStatus,setProfileShareStatus]=useState('');
   const displayName=profile.firstName.trim()||'Member';
-  const displayAge=profile.age.trim()||'30';
-  const displayCity=profile.city.trim()||'New York, NY';
-  const displayProfession=profile.profession.trim()||'Professional';
+  const displayAge=profile.age.trim()||(memberDataRuntime.source==='preview'?'30':'');
+  const displayCity=profile.city.trim()||(memberDataRuntime.source==='preview'?'New York, NY':'City not added');
+  const displayProfession=profile.profession.trim()||(memberDataRuntime.source==='preview'?'Professional':'Profession not added');
   const slugName=displayName.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'member';
   const slugCity=displayCity.split(',')[0]?.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'city';
   const profileTag=`@${slugName}-${slugCity}`;
@@ -4015,15 +4063,15 @@ function Profile({profile,verified,profilePhoto,hasVoiceIntro,lastSeenVisible,an
           <View style={profilePremiumStyles.avatarRing}>{profilePhoto?<Image source={{uri:profilePhoto}} style={profilePremiumStyles.avatarPhoto}/>:<Text style={[styles.avatarText,{fontSize:38}]}>{displayName[0]?.toUpperCase()??'D'}</Text>}</View>
           <View style={profilePremiumStyles.statusGem}><MiniPremiumIcon name="diamond" tone="gold" size={30} iconSize={14}/></View>
         </View>
-        <View style={profilePremiumStyles.nameRow}><Text style={profilePremiumStyles.name}>{displayName}, {displayAge}</Text>{verified&&<MiniPremiumIcon name="shield-checkmark" tone="plum" size={34} iconSize={16}/>}</View>
+        <View style={profilePremiumStyles.nameRow}><Text style={profilePremiumStyles.name}>{displayName}{displayAge?`, ${displayAge}`:''}</Text>{verified&&<MiniPremiumIcon name="shield-checkmark" tone="plum" size={34} iconSize={16}/>}</View>
         <Text style={profilePremiumStyles.meta}>{displayProfession} · {displayCity}</Text>
         <View style={mediaStyles.mediaBadges}>{verified&&<Chip label="Selfie verified" selected/>}{hasVoiceIntro&&<Chip label="Voice intro" selected/>}<Chip label="Serious intent" gold/></View>
         <View style={profilePremiumStyles.stats}>
-          <View style={profilePremiumStyles.stat}><Text style={profilePremiumStyles.statValue}>24</Text><Text style={profilePremiumStyles.statLabel}>profile views</Text></View>
+          <View style={profilePremiumStyles.stat}><Text style={profilePremiumStyles.statValue}>{memberDataRuntime.source==='preview'?'24':'—'}</Text><Text style={profilePremiumStyles.statLabel}>profile views</Text></View>
           <View style={profilePremiumStyles.statLine}/>
           <View style={profilePremiumStyles.stat}><Text style={profilePremiumStyles.statValue}>{Math.min(100,profileStrength)}%</Text><Text style={profilePremiumStyles.statLabel}>strength</Text></View>
           <View style={profilePremiumStyles.statLine}/>
-          <View style={profilePremiumStyles.stat}><Text style={profilePremiumStyles.statValue}>{lastSeenVisible?'12m':'Hidden'}</Text><Text style={profilePremiumStyles.statLabel}>last online</Text></View>
+          <View style={profilePremiumStyles.stat}><Text style={profilePremiumStyles.statValue}>{lastSeenVisible?(memberDataRuntime.source==='preview'?'12m':'Visible'):'Hidden'}</Text><Text style={profilePremiumStyles.statLabel}>last online</Text></View>
         </View>
         <View style={styles.progress}><View style={{width:`${Math.min(100,profileStrength)}%`,height:'100%',backgroundColor:colors.gold}}/></View>
       </LinearGradient>
@@ -4056,7 +4104,7 @@ function Profile({profile,verified,profilePhoto,hasVoiceIntro,lastSeenVisible,an
         <PremiumIcon name={lastSeenVisible?'eye-outline':'eye-off-outline'} tone="gold" size={43} iconSize={20}/>
         <View style={{flex:1}}>
           <Text style={styles.cardTitle}>Last online privacy</Text>
-          <Text style={styles.helper}>{lastSeenVisible?'Matches can see “last online 12 min ago”.':'Your last online time is hidden. Online dot is private.'}</Text>
+          <Text style={styles.helper}>{lastSeenVisible?(memberDataRuntime.source==='preview'?'Matches can see “last online 12 min ago”.':'Matches may see your server-confirmed recent activity; no time is invented locally.'):'Your last online time is hidden. Online dot is private.'}</Text>
           <View style={privacyStyles.toggleRow}>
             <Pressable onPress={()=>onLastSeenVisibleChange(true)} style={[privacyStyles.toggle,lastSeenVisible&&privacyStyles.toggleOn]}><Text style={[privacyStyles.toggleText,lastSeenVisible&&privacyStyles.toggleTextOn]}>Show</Text></Pressable>
             <Pressable onPress={()=>onLastSeenVisibleChange(false)} style={[privacyStyles.toggle,!lastSeenVisible&&privacyStyles.toggleOn]}><Text style={[privacyStyles.toggleText,!lastSeenVisible&&privacyStyles.toggleTextOn]}>Hide</Text></Pressable>
@@ -4076,16 +4124,18 @@ function Profile({profile,verified,profilePhoto,hasVoiceIntro,lastSeenVisible,an
 }
 
 function ProfileSettingsSheet({visible,onClose,lastSeenVisible,analyticsConsent,onLastSeenVisibleChange,onAnalyticsConsentChange,navigate}:{visible:boolean;onClose:()=>void;lastSeenVisible:boolean;analyticsConsent:boolean;onLastSeenVisibleChange:(value:boolean)=>void;onAnalyticsConsentChange:(value:boolean)=>void;navigate:(s:Screen)=>void}){
+  const preview=memberDataRuntime.source==='preview';
   const [notifications,setNotifications]=useState(true);
   const [pauseDiscovery,setPauseDiscovery]=useState(false);
   const [privateMode,setPrivateMode]=useState(false);
-  const [settingsStatus,setSettingsStatus]=useState('Settings are saved on this device for the preview.');
-  const toggleNotifications=()=>{const next=!notifications;setNotifications(next);setSettingsStatus(next?'Notifications turned on for matches, Sparks and calls.':'Notifications turned off for this preview.')};
-  const togglePrivateMode=()=>{const next=!privateMode;setPrivateMode(next);setSettingsStatus(next?'Private profile mode is on. You are hidden from discovery in this preview.':'Private profile mode is off. You can appear in discovery again.')};
-  const togglePauseDiscovery=()=>{const next=!pauseDiscovery;setPauseDiscovery(next);setSettingsStatus(next?'Discovery paused. New daily decks will stop in preview mode.':'Discovery resumed. Daily decks can continue.')};
-  const toggleLastSeen=()=>{const next=!lastSeenVisible;onLastSeenVisibleChange(next);setSettingsStatus(next?'Last online is visible to matches.':'Last online is hidden from matches.')};
-  const toggleAnalytics=()=>{const next=!analyticsConsent;onAnalyticsConsentChange(next);setSettingsStatus(next?'Anonymous product analytics enabled. Private content and profile IDs stay excluded.':'Product analytics disabled. New journey events will not be stored.')};
-  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,{maxHeight:'90%'}]}><SheetHeader title="Account settings" subtitle="Privacy, notifications and control" onClose={onClose}/><View style={settingsSheetStyles.hero}><PremiumIcon name="settings" tone="gold" size={50} iconSize={23}/><View style={{flex:1}}><Text style={styles.cardTitle}>Make DestinyOne feel private by default.</Text><Text style={styles.helper}>Privacy choices save on this device now and sync through the secure account adapter when connected.</Text></View></View><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{gap:9}}><SettingsSwitch icon="notifications-outline" title="Match & message notifications" body="Get alerts for matches, Sparks, calls and support updates." value={notifications} onPress={toggleNotifications}/><SettingsSwitch icon="eye-off-outline" title="Private profile mode" body="Hide from discovery while you review likes and chats." value={privateMode} onPress={togglePrivateMode}/><SettingsSwitch icon="pause-circle-outline" title="Pause discovery" body="Stop appearing in new daily match decks temporarily." value={pauseDiscovery} onPress={togglePauseDiscovery}/><SettingsSwitch icon={lastSeenVisible?'time-outline':'eye-off-outline'} title="Show last online" body={lastSeenVisible?'Matches can see a recent online hint.':'Last online is hidden from matches.'} value={lastSeenVisible} onPress={toggleLastSeen}/><SettingsSwitch icon="analytics-outline" title="Anonymous product analytics" body="Measure stage and consent choices only. Names, profile IDs, messages, photos and precise location are excluded." value={analyticsConsent} onPress={toggleAnalytics}/><View style={settingsSheetStyles.statusCard}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><Text style={settingsSheetStyles.statusText}>{settingsStatus}</Text></View><View style={settingsSheetStyles.shortcutGrid}><Pressable onPress={()=>navigate('safety')} style={settingsSheetStyles.shortcut}><MiniPremiumIcon name="shield-checkmark-outline" tone="gold" size={30} iconSize={14}/><Text style={settingsSheetStyles.shortcutText}>Safety</Text></Pressable><Pressable onPress={()=>navigate('discovery')} style={settingsSheetStyles.shortcut}><MiniPremiumIcon name="options-outline" tone="rose" size={30} iconSize={14}/><Text style={settingsSheetStyles.shortcutText}>Filters</Text></Pressable><Pressable onPress={()=>navigate('support')} style={settingsSheetStyles.shortcut}><MiniPremiumIcon name="help-circle-outline" tone="rose" size={30} iconSize={14}/><Text style={settingsSheetStyles.shortcutText}>Support</Text></Pressable></View><Button label="Done" variant="secondary" onPress={onClose}/></ScrollView></SafeAreaView></Modal>
+  const [settingsStatus,setSettingsStatus]=useState(preview?'Settings are saved on this device for the preview.':'Only server-confirmed settings are applied.');
+  const unavailable=()=>setSettingsStatus('Secure account settings connection required. No local-only change was applied.');
+  const toggleNotifications=()=>{if(!preview){unavailable();return}const next=!notifications;setNotifications(next);setSettingsStatus(next?'Notifications turned on for matches, Sparks and calls.':'Notifications turned off for this preview.')};
+  const togglePrivateMode=()=>{if(!preview){unavailable();return}const next=!privateMode;setPrivateMode(next);setSettingsStatus(next?'Private profile mode is on. You are hidden from discovery in this preview.':'Private profile mode is off. You can appear in discovery again.')};
+  const togglePauseDiscovery=()=>{if(!preview){unavailable();return}const next=!pauseDiscovery;setPauseDiscovery(next);setSettingsStatus(next?'Discovery paused. New daily decks will stop in preview mode.':'Discovery resumed. Daily decks can continue.')};
+  const toggleLastSeen=()=>{const next=!lastSeenVisible;onLastSeenVisibleChange(next);setSettingsStatus(preview?(next?'Last online is visible to matches.':'Last online is hidden from matches.'):'Saving visibility through your secure account…')};
+  const toggleAnalytics=()=>{const next=!analyticsConsent;onAnalyticsConsentChange(next);setSettingsStatus(preview?(next?'Anonymous product analytics enabled. Private content and profile IDs stay excluded.':'Product analytics disabled. New journey events will not be stored.'):'Saving analytics consent through your secure account…')};
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,{maxHeight:'90%'}]}><SheetHeader title="Account settings" subtitle="Privacy, notifications and control" onClose={onClose}/><View style={settingsSheetStyles.hero}><PremiumIcon name="settings" tone="gold" size={50} iconSize={23}/><View style={{flex:1}}><Text style={styles.cardTitle}>Make DestinyOne feel private by default.</Text><Text style={styles.helper}>{preview?'Privacy choices save on this device for the preview.':'Live privacy choices apply only after secure server confirmation.'}</Text></View></View><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{gap:9}}><SettingsSwitch icon="notifications-outline" title="Match & message notifications" body="Get alerts for matches, Sparks, calls and support updates." value={notifications} onPress={toggleNotifications}/><SettingsSwitch icon="eye-off-outline" title="Private profile mode" body="Hide from discovery while you review likes and chats." value={privateMode} onPress={togglePrivateMode}/><SettingsSwitch icon="pause-circle-outline" title="Pause discovery" body="Stop appearing in new daily match decks temporarily." value={pauseDiscovery} onPress={togglePauseDiscovery}/><SettingsSwitch icon={lastSeenVisible?'time-outline':'eye-off-outline'} title="Show last online" body={lastSeenVisible?'Matches can see a recent online hint.':'Last online is hidden from matches.'} value={lastSeenVisible} onPress={toggleLastSeen}/><SettingsSwitch icon="analytics-outline" title="Anonymous product analytics" body="Measure stage and consent choices only. Names, profile IDs, messages, photos and precise location are excluded." value={analyticsConsent} onPress={toggleAnalytics}/><View style={settingsSheetStyles.statusCard}><MiniPremiumIcon name={preview?'checkmark-circle':'shield-checkmark-outline'} tone="gold" size={28} iconSize={13}/><Text style={settingsSheetStyles.statusText}>{settingsStatus}</Text></View><View style={settingsSheetStyles.shortcutGrid}><Pressable onPress={()=>navigate('safety')} style={settingsSheetStyles.shortcut}><MiniPremiumIcon name="shield-checkmark-outline" tone="gold" size={30} iconSize={14}/><Text style={settingsSheetStyles.shortcutText}>Safety</Text></Pressable><Pressable onPress={()=>navigate('discovery')} style={settingsSheetStyles.shortcut}><MiniPremiumIcon name="options-outline" tone="rose" size={30} iconSize={14}/><Text style={settingsSheetStyles.shortcutText}>Filters</Text></Pressable><Pressable onPress={()=>navigate('support')} style={settingsSheetStyles.shortcut}><MiniPremiumIcon name="help-circle-outline" tone="rose" size={30} iconSize={14}/><Text style={settingsSheetStyles.shortcutText}>Support</Text></Pressable></View><Button label="Done" variant="secondary" onPress={onClose}/></ScrollView></SafeAreaView></Modal>
 }
 
 function SettingsSwitch({icon,title,body,value,onPress}:{icon:keyof typeof Ionicons.glyphMap;title:string;body:string;value:boolean;onPress:()=>void}){
@@ -4247,7 +4297,7 @@ function MembershipCheckoutSheet({plan,onClose,onComplete}:{plan:{name:string;pr
   const steps=checkoutSteps(plan.kind,plan.executive);
   const activeStep=stage==='complete'?steps.length-1:stage==='verifying'?2:stage==='store'?1:0;
   const advance=()=>{
-    if(appEnvironment==='production'){
+    if(memberDataRuntime.source==='server'){
       setProductionError(plan.executive?'Executive applications are unavailable until secure application review and approval are connected. No request or charge was created.':Platform.OS==='web'?'Membership purchases are available only through the signed iOS or Android app. No charge was created.':'Store billing is not connected in this release. No charge or entitlement was created.');
       return;
     }

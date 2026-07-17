@@ -13,7 +13,7 @@ describe('monetization readiness wiring', () => {
   it('keeps production paid feature gates and billing lock incomplete until provider integration', () => {
     expect(app).toContain('featureLimitsReady:false');
     expect(app).toContain('productionBillingLocked:false');
-    expect(app).toContain("if(appEnvironment==='production')");
+    expect(app).toContain("if(memberDataRuntime.source==='server')");
     expect(app).toContain('No charge or entitlement was created.');
   });
 

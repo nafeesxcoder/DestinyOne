@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateMemberDataRuntime } from './memberDataRuntime';
+import { canCommitMemberMutation, evaluateMemberDataRuntime, memberMutationFailureMessage } from './memberDataRuntime';
 
 describe('member data runtime policy', () => {
   it('keeps local demo data available only in preview mode', () => {
@@ -20,5 +20,21 @@ describe('member data runtime policy', () => {
       allowsMockMatches: false,
       initialCoinBalance: 0,
     });
+  });
+
+  it('commits preview actions locally but requires backend acknowledgement in server mode', () => {
+    const preview = evaluateMemberDataRuntime('demo');
+    const server = evaluateMemberDataRuntime('supabase');
+    const previewOnly = { saved: false, reason: 'preview_id' as const };
+    const backend = { saved: true, reason: 'backend' as const };
+    expect(canCommitMemberMutation(preview, previewOnly)).toBe(true);
+    expect(canCommitMemberMutation(server, previewOnly)).toBe(false);
+    expect(canCommitMemberMutation(server, backend)).toBe(true);
+  });
+
+  it('returns specific safe failure copy', () => {
+    expect(memberMutationFailureMessage({ saved: false, reason: 'error', error: 'Network unavailable.' }, 'Try again.')).toBe('Network unavailable.');
+    expect(memberMutationFailureMessage({ saved: false, reason: 'preview_id' }, 'Try again.')).toContain('verified member');
+    expect(memberMutationFailureMessage({ saved: false, reason: 'demo' }, 'Try again.')).toContain('did not confirm');
   });
 });
