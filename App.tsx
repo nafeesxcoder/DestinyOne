@@ -63,6 +63,7 @@ import { buildDailyIntroductionDeck } from './src/domain/dailyIntroductions';
 import { buildAlignmentBridge, buildIntentPassport, type AlignmentBridgeItem, type IntentPassportInput } from './src/domain/intentPassport';
 import { buildCoupleModeAccess, coupleModeRoutes, guardCoupleModeRoute, initialCoupleModeState, reduceCoupleMode, type CoupleModeRoute, type CoupleModeState, type ExperienceMode } from './src/domain/coupleMode';
 import { createLocalCoupleModeRepository } from './src/services/coupleModeRepository';
+import { fetchCurrentCoupleConnectionHub, respondToCoupleConnectionRequest, saveCoupleModeMemberProfile, searchCouplePartnerByPhone, sendCoupleConnectionRequest, setServerCoupleMode, type CoupleConnectionHub, type CouplePartnerSummary } from './src/services/coupleConnection';
 
 type Screen = 'splash'|'welcome'|'auth'|'otp'|'verify'|'modeSelect'|'coupleSetup'|'profileSetup'|'vibes'|'intent'|'alignment'|'home'|'explore'|'circle'|'discovery'|'detail'|'mutual'|'icebreaker'|'chat'|'datePlan'|'safety'|'likes'|'profile'|'pricing'|'support'|'coach'|'events'|'executive'|'verifyHub'|'admin';
 
@@ -189,6 +190,7 @@ function DestinyOneApp() {
   const [matchLoadState,setMatchLoadState] = useState<MemberMatchLoadState>(memberDataRuntime.allowsMockMatches?'preview':'loading');
   const [matchingPoolStatus,setMatchingPoolStatus] = useState<MatchingPoolStatus|null>(null);
   const [coupleMode,setCoupleMode] = useState<CoupleModeState>(showcaseCoupleModeState);
+  const [coupleHub,setCoupleHub] = useState<CoupleConnectionHub>({experienceMode:showcaseExperienceMode,connection:null,incomingRequests:[],outgoingRequests:[]});
   const [chatLaunchTool,setChatLaunchTool] = useState<CoupleLaunchTool>(null);
   const [hydrated,setHydrated] = useState(false);
   const couplePartnerName=coupleMode.connection.partner?.displayName.trim()||'My Partner';
@@ -208,6 +210,20 @@ function DestinyOneApp() {
   };
   const conversationPartner=coupleMode.experienceMode==='couple'?couplePartner:selected;
   const coupleAccess=buildCoupleModeAccess(coupleMode);
+  const applyCoupleHub=(hub:CoupleConnectionHub)=>{
+    setCoupleHub(hub);
+    if(!hub.connection){
+      if(hub.experienceMode==='couple')setCoupleMode(current=>current.experienceMode==='couple'?current:reduceCoupleMode(current,{type:'select_experience',mode:'couple',at:new Date().toISOString()}));
+      return;
+    }
+    const connection=hub.connection;
+    setCoupleMode(current=>{
+      if(current.connection.status==='active'&&current.connection.connectionId===connection.connectionId)return current;
+      const at=new Date().toISOString();
+      const inCoupleMode=current.experienceMode==='couple'?current:reduceCoupleMode(current,{type:'select_experience',mode:'couple',at});
+      return reduceCoupleMode(inCoupleMode,{type:'link_partner',connectionId:connection.connectionId,partner:{memberId:connection.partnerMemberId,displayName:connection.partnerDisplayName},at});
+    });
+  };
 
   const refreshServerMatches=async()=>{
     if(memberDataRuntime.source!=='server')return;
@@ -315,6 +331,14 @@ function DestinyOneApp() {
   },[hydrated,onboardingComplete,authDestination,verified,profileDraft,vibeList,intent,alignment,chatMessages,coinBalance,profilePhotos,selfieUri,voiceIntroUri,vouches,discoverySignals,smartDiscovery,crossedPaths,blockedIds,reports,safeCheckIns,matchFilters,roseLedger,lastSeenVisible,analyticsConsent,chatSettings,relationshipReflections,relationshipReminders,coupleMode]);
   useEffect(()=>{configureAnalyticsConsent(hydrated&&analyticsConsent)},[hydrated,analyticsConsent]);
   useEffect(()=>{
+    if(!hydrated||!['coupleSetup','home','profile'].includes(screen))return;
+    let active=true;
+    const sync=()=>void fetchCurrentCoupleConnectionHub().then(hub=>{if(active)applyCoupleHub(hub)}).catch(()=>undefined);
+    sync();
+    const timer=setInterval(sync,coupleMode.experienceMode==='couple'?8000:60000);
+    return()=>{active=false;clearInterval(timer)};
+  },[hydrated,coupleMode.experienceMode,screen]);
+  useEffect(()=>{
     if(coupleMode.experienceMode!=='couple'||!isCoupleModeRoute(screen))return;
     const decision=guardCoupleModeRoute(coupleMode,screen);
     if(!decision.allowed&&decision.resolved!==screen)setScreen(decision.resolved as Screen);
@@ -355,9 +379,17 @@ function DestinyOneApp() {
   },[hydrated,screen,conversationPartner.id]);
   if(!poppins||!satisfy)return <View style={{flex:1,backgroundColor:colors.black}}/>;
   const chooseExperienceMode=(mode:ExperienceMode)=>{
+    if(mode==='seeking'&&(coupleMode.connection.status==='active'||coupleMode.connection.status==='paused')){
+      setAppNotice({title:'Your couple space is still connected',body:'Disconnecting must be confirmed before matching can be enabled again.',icon:'lock-closed-outline',tone:'gold'});
+      return;
+    }
     const at=new Date().toISOString();
     setCoupleMode(current=>reduceCoupleMode(current,{type:'select_experience',mode,at}));
-    if(mode==='seeking')setChatLaunchTool(null);
+    if(mode==='seeking'){
+      setChatLaunchTool(null);
+      setCoupleHub({experienceMode:'seeking',connection:null,incomingRequests:[],outgoingRequests:[]});
+      void setServerCoupleMode(false).catch(error=>setAppNotice({title:'Mode not updated',body:error instanceof Error?error.message:'Could not update Couple Mode.',icon:'cloud-offline-outline',tone:'ruby'}));
+    }
   };
   const navigateTo=(target:Screen)=>{
     if(coupleMode.experienceMode==='couple'&&isCoupleModeRoute(target)){
@@ -378,22 +410,26 @@ function DestinyOneApp() {
     setChatLaunchTool(tool);
     navigateTo('chat');
   };
-  const completeCoupleSetup=(memberName:string,partnerName:string,city:string)=>{
-    const at=new Date().toISOString();
-    const connectionId=`couple-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`;
-    setProfileDraft(current=>({...current,firstName:memberName.trim(),city:city.trim()}));
-    setCoupleMode(current=>{
-      const inCoupleMode=current.experienceMode==='couple'?current:reduceCoupleMode(current,{type:'select_experience',mode:'couple',at});
-      return reduceCoupleMode(inCoupleMode,{type:'link_partner',connectionId,partner:{memberId:`partner-${connectionId}`,displayName:partnerName.trim()},at});
-    });
+  const saveCoupleProfile=async(input:{firstName:string;age:string;city:string;profession:string})=>{
+    await saveCoupleModeMemberProfile(input);
+    await setServerCoupleMode(true);
+    setProfileDraft(current=>({...current,firstName:input.firstName.trim(),age:input.age.trim(),city:input.city.trim(),profession:input.profession.trim()}));
     setOnboardingComplete(true);
-    setChatLaunchTool(null);
-    setScreen('home');
+  };
+  const searchCouplePartner=(phone:string)=>searchCouplePartnerByPhone(phone);
+  const requestCoupleConnection=async(member:CouplePartnerSummary)=>{
+    const request=await sendCoupleConnectionRequest(member);
+    setCoupleHub(current=>({...current,outgoingRequests:[request]}));
+    return request;
+  };
+  const respondCoupleConnection=async(requestId:string,accept:boolean)=>{
+    const hub=await respondToCoupleConnectionRequest(requestId,accept);
+    applyCoupleHub(hub);
+    if(accept&&hub.connection)setScreen('home');
   };
   const shareCoupleSpace=()=>{
-    const connectionCode=(coupleMode.connection.connectionId??'preview').replace(/^couple-/,'').toUpperCase();
-    const webUrl=Platform.OS==='web'&&typeof window!=='undefined'?`${window.location.origin}${window.location.pathname}?preview=modeSelect&mode=couple&coupleInvite=${encodeURIComponent(connectionCode)}`:`https://destinyone.app/couple/${encodeURIComponent(connectionCode)}`;
-    void Share.share({title:'Join me on DestinyOne',message:`Join our private DestinyOne couple space: ${webUrl}`});
+    const webUrl=Platform.OS==='web'&&typeof window!=='undefined'?`${window.location.origin}${window.location.pathname}?preview=modeSelect&mode=couple`:'https://destinyone.app/couple';
+    void Share.share({title:'Join me on DestinyOne',message:`Create your DestinyOne account with your verified phone number, choose Couple Mode, then we can find each other by exact phone number: ${webUrl}`});
   };
   const recordJourneyEvent=(name:RelationshipJourneyEventName,properties:Record<string,string|boolean>)=>{
     track(name,properties as never);
@@ -643,12 +679,12 @@ function DestinyOneApp() {
     {screen==='otp'&&<Otp destination={authDestination} password={authPassword} onBack={()=>setScreen('auth')} onVerified={()=>setScreen('verify')}/>} 
     {screen==='verify'&&<Verify verified={verified} selfieUri={selfieUri} onSelfie={setSelfieUri} setVerified={setVerified} onNext={()=>setScreen('modeSelect')}/>} 
     {screen==='modeSelect'&&<ModeSelect mode={coupleMode.experienceMode} onChange={chooseExperienceMode} onNext={()=>setScreen(coupleMode.experienceMode==='couple'?'coupleSetup':'profileSetup')}/>} 
-    {screen==='coupleSetup'&&<CoupleSetup profile={profileDraft} onBack={()=>setScreen(onboardingComplete?'profile':'modeSelect')} onComplete={completeCoupleSetup}/>} 
+    {screen==='coupleSetup'&&<CoupleSetup profile={profileDraft} hub={coupleHub} onBack={()=>setScreen(onboardingComplete?'profile':'modeSelect')} onSaveProfile={saveCoupleProfile} onSearch={searchCouplePartner} onRequest={requestCoupleConnection} onRespond={respondCoupleConnection} onOpenSpace={()=>setScreen('home')}/>} 
     {screen==='profileSetup'&&<ProfileSetup profile={profileDraft} onProfileChange={setProfileDraft} photos={profilePhotos} onPhotosChange={setProfilePhotos} voiceUri={voiceIntroUri} onVoiceChange={setVoiceIntroUri} onNext={()=>setScreen('vibes')}/>} 
     {screen==='vibes'&&<Vibes value={vibeList} onChange={setVibeList} onNext={()=>setScreen('intent')}/>} 
     {screen==='intent'&&<Intent value={intent} onChange={setIntent} onNext={()=>setScreen('alignment')}/>} 
     {screen==='alignment'&&<Alignment value={alignment} onChange={setAlignment} onNext={completeOnboarding}/>} 
-    {screen==='home'&&(coupleMode.experienceMode==='couple'?<CoupleHome state={coupleMode} memberName={profileDraft.firstName} city={profileDraft.city} messages={chatMessages[conversationPartner.id]??[]} onShare={shareCoupleSpace} onManage={()=>setScreen('coupleSetup')} onOpenTool={openCoupleTool} navigate={navigateTo}/>:<HomeClean items={visibleMatches} matchLoadState={matchLoadState} matchingPoolStatus={matchingPoolStatus} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} alignment={alignment} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={navigateTo}/>)} 
+    {screen==='home'&&(coupleMode.experienceMode==='couple'?<CoupleHome state={coupleMode} hub={coupleHub} memberName={profileDraft.firstName} city={profileDraft.city} messages={chatMessages[conversationPartner.id]??[]} onShare={shareCoupleSpace} onManage={()=>setScreen('coupleSetup')} onOpenTool={openCoupleTool} navigate={navigateTo}/>:<HomeClean items={visibleMatches} matchLoadState={matchLoadState} matchingPoolStatus={matchingPoolStatus} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} alignment={alignment} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={navigateTo}/>)} 
     {screen==='explore'&&<ExploreHub navigate={navigateTo}/>} 
     {screen==='circle'&&<TrustedCircle vouches={vouches} coinBalance={coinBalance} rewardMode={vouchRewardsMode} onBack={()=>setScreen('explore')} onAddVouch={(quality)=>{if(vouchRewardsMode==='demo'&&vouches.length<3&&!vouches.includes(quality)){setVouches(current=>[...current,quality]);setCoinBalance(balance=>balance+100)}}}/>} 
     {screen==='discovery'&&<DiscoveryCenter filters={matchFilters} onFiltersChange={updateMatchFilters} signals={discoverySignals} smartDiscovery={smartDiscovery} crossedPaths={crossedPaths} onSmartChange={updateSmartDiscovery} onCrossedChange={setCrossedPaths} onClear={clearMatchingActivity} onBack={()=>setScreen('explore')}/>} 
@@ -893,23 +929,38 @@ function ModeSelect({mode,onChange,onNext}:{mode:ExperienceMode;onChange:(mode:E
   </FormPage>
 }
 
-function CoupleSetup({profile,onComplete,onBack}:{profile:ProfileDraft;onComplete:(memberName:string,partnerName:string,city:string)=>void;onBack:()=>void}){
-  const incomingCode=Platform.OS==='web'&&typeof window!=='undefined'?new URLSearchParams(window.location.search).get('coupleInvite')??'':'';
+function CoupleSetup({profile,hub,onSaveProfile,onSearch,onRequest,onRespond,onOpenSpace,onBack}:{profile:ProfileDraft;hub:CoupleConnectionHub;onSaveProfile:(input:{firstName:string;age:string;city:string;profession:string})=>Promise<void>;onSearch:(phone:string)=>Promise<CouplePartnerSummary>;onRequest:(member:CouplePartnerSummary)=>Promise<unknown>;onRespond:(requestId:string,accept:boolean)=>Promise<void>;onOpenSpace:()=>void;onBack:()=>void}){
   const [memberName,setMemberName]=useState(profile.firstName);
-  const [partnerName,setPartnerName]=useState('');
+  const [age,setAge]=useState(profile.age);
   const [city,setCity]=useState(profile.city);
-  const ready=memberName.trim().length>=2&&partnerName.trim().length>=2&&city.trim().length>=2;
+  const [profession,setProfession]=useState(profile.profession);
+  const [profileEnabled,setProfileEnabled]=useState(false);
+  const [phone,setPhone]=useState('');
+  const [result,setResult]=useState<CouplePartnerSummary|null>(null);
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState('');
+  const [status,setStatus]=useState('');
+  const profileReady=memberName.trim().length>=2&&Number(age)>=18&&city.trim().length>=2&&profession.trim().length>=2;
+  const saveProfile=async()=>{setBusy(true);setError('');try{await onSaveProfile({firstName:memberName,age,city,profession});setProfileEnabled(true);setStatus('Your Couple Profile is ready. You can now search an exact phone number.')}catch(value){setError(value instanceof Error?value.message:'Could not enable partner search.')}finally{setBusy(false)}};
+  const search=async()=>{setBusy(true);setError('');setStatus('');setResult(null);try{setResult(await onSearch(phone))}catch(value){setError(value instanceof Error?value.message:'No eligible Couple Mode account was found.')}finally{setBusy(false)}};
+  const sendRequest=async()=>{if(!result)return;setBusy(true);setError('');try{await onRequest(result);setResult(null);setStatus(`Request sent privately to ${result.displayName}. It expires in 7 days.`)}catch(value){setError(value instanceof Error?value.message:'Could not send the connection request.')}finally{setBusy(false)}};
+  const respond=async(requestId:string,accept:boolean)=>{setBusy(true);setError('');try{await onRespond(requestId,accept);setStatus(accept?'Couple space connected.':'Request declined privately.')}catch(value){setError(value instanceof Error?value.message:'Could not update the request.')}finally{setBusy(false)}};
+  if(hub.connection)return <FormPage back={onBack}><View style={coupleModeStyles.setupHero}><PremiumIcon name="heart-circle" tone="gold" size={72} iconSize={34}/><Text style={styles.kicker}>CONNECTED</Text><Text style={[shared.h1,{textAlign:'center'}]}>You found each other.</Text><Text style={[shared.body,{textAlign:'center'}]}>Your private Couple Space with {hub.connection.partnerDisplayName} is ready. Matching stays off for both accounts.</Text></View><View style={shared.spacer}/><Button label="Open our Couple Space" icon="heart" variant="gold" onPress={onOpenSpace}/></FormPage>;
   return <FormPage back={onBack}>
-    <View style={coupleModeStyles.setupHero}><PremiumIcon name="heart-circle" tone="gold" size={72} iconSize={34}/><Text style={styles.kicker}>{incomingCode?'PARTNER INVITE FOUND':'COUPLE MODE'}</Text><Text style={[shared.h1,{textAlign:'center'}]}>One private space for both of you.</Text><Text style={[shared.body,{textAlign:'center'}]}>Add the names you use together. Matching, Discover, Likes and Executive Circle stay completely hidden.</Text></View>
-    {incomingCode?<View style={coupleModeStyles.inviteFound}><MiniPremiumIcon name="link" tone="gold" size={34} iconSize={16}/><View style={{flex:1}}><Text style={coupleModeStyles.inviteFoundTitle}>Invite code detected</Text><Text style={styles.helper}>{incomingCode} will be verified when partner sync is connected.</Text></View></View>:null}
-    <View style={coupleModeStyles.setupFields}><Field label="Your first name" placeholder="Your name" value={memberName} onChangeText={setMemberName}/><Field label="Partner's first name" placeholder="Their name" value={partnerName} onChangeText={setPartnerName}/><Field label="Your city" placeholder="Toronto, ON" value={city} onChangeText={setCity}/></View>
+    <View style={coupleModeStyles.setupHero}><PremiumIcon name="people-circle" tone="gold" size={72} iconSize={34}/><Text style={styles.kicker}>PRIVATE PARTNER SEARCH</Text><Text style={[shared.h1,{textAlign:'center'}]}>Find the account you already know.</Text><Text style={[shared.body,{textAlign:'center'}]}>Both people create their own account and choose Couple Mode. Search works only with the complete verified phone number.</Text></View>
+    <View style={coupleModeStyles.profileSetupCard}><View style={shared.row}><MiniPremiumIcon name={profileEnabled?'checkmark-circle':'person-circle-outline'} tone={profileEnabled?'gold':'rose'} size={38} iconSize={18}/><View style={{flex:1,marginLeft:9}}><Text style={styles.cardTitle}>Your Couple Profile</Text><Text style={styles.helper}>This is the minimal profile your partner will confirm.</Text></View></View><View style={coupleModeStyles.setupFields}><Field label="First name" placeholder="Your name" value={memberName} onChangeText={setMemberName}/><View style={styles.twoCol}><View style={{flex:1}}><Field label="Age" placeholder="30" keyboardType="number-pad" value={age} onChangeText={setAge}/></View><View style={{flex:1}}><Field label="City" placeholder="Toronto, ON" value={city} onChangeText={setCity}/></View></View><Field label="Profession" placeholder="Your profession" value={profession} onChangeText={setProfession}/></View><Button disabled={!profileReady||busy} label={profileEnabled?'Profile ready':busy?'Saving securely…':'Enable private partner search'} icon={profileEnabled?'checkmark-circle':'shield-checkmark-outline'} variant={profileEnabled?'secondary':'gold'} onPress={()=>void saveProfile()}/></View>
+    {profileEnabled&&<View style={coupleModeStyles.phoneSearchCard}><View style={shared.row}><PremiumIcon name="search" tone="ruby" size={46} iconSize={21}/><View style={{flex:1,marginLeft:10}}><Text style={styles.cardTitle}>Search by exact phone</Text><Text style={styles.helper}>Include country code, for example +1 647 555 0198.</Text></View></View><Field label="Partner's verified phone number" placeholder="+1 647 555 0198" keyboardType="phone-pad" value={phone} onChangeText={(value:string)=>{setPhone(value);setResult(null);setError('')}}/><Button disabled={busy||phone.trim().length<8} label={busy?'Searching securely…':'Find Couple Mode account'} icon="search" onPress={()=>void search()}/></View>}
+    {!!result&&<View style={coupleModeStyles.partnerResult}><View style={coupleModeStyles.partnerInitial}><Text style={coupleModeStyles.partnerInitialText}>{result.displayName[0]?.toUpperCase()}</Text></View><View style={{flex:1}}><View style={shared.row}><Text style={coupleModeStyles.partnerName}>{result.displayName}</Text>{result.verified&&<MiniPremiumIcon name="shield-checkmark" tone="gold" size={27} iconSize={13}/>}</View><Text style={styles.helper}>{result.profession} · {result.city}</Text><Text style={coupleModeStyles.phoneVerified}>Phone account verified</Text></View><Button disabled={busy} label="Send Request" icon="paper-plane-outline" variant="gold" onPress={()=>void sendRequest()}/></View>}
+    {hub.outgoingRequests.map(request=><View key={request.requestId} style={coupleModeStyles.requestCard}><MiniPremiumIcon name="time-outline" tone="gold" size={38} iconSize={18}/><View style={{flex:1}}><Text style={styles.cardTitle}>Waiting for {request.member.displayName}</Text><Text style={styles.helper}>Request sent. Chat, gifts and games unlock only after they accept.</Text></View><View style={coupleModeStyles.pendingPill}><Text style={coupleModeStyles.pendingText}>PENDING</Text></View></View>)}
+    {hub.incomingRequests.length>0&&<View style={{gap:10}}><Text style={styles.sectionLabel}>CONNECTION REQUESTS</Text>{hub.incomingRequests.map(request=><View key={request.requestId} style={coupleModeStyles.incomingCard}><View style={shared.row}><View style={coupleModeStyles.partnerInitial}><Text style={coupleModeStyles.partnerInitialText}>{request.member.displayName[0]?.toUpperCase()}</Text></View><View style={{flex:1,marginLeft:10}}><Text style={styles.cardTitle}>{request.member.displayName}</Text><Text style={styles.helper}>{request.member.profession} · {request.member.city}</Text></View><MiniPremiumIcon name="shield-checkmark" tone="gold" size={30} iconSize={14}/></View><Text style={styles.helper}>Only accept if you personally know this person and expected their request.</Text><View style={styles.twoCol}><View style={{flex:1}}><Button disabled={busy} label="Decline" variant="secondary" onPress={()=>void respond(request.requestId,false)}/></View><View style={{flex:1}}><Button disabled={busy} label="Accept" icon="checkmark" variant="gold" onPress={()=>void respond(request.requestId,true)}/></View></View></View>)}</View>}
+    {!!error&&<View style={coupleModeStyles.errorCard}><MiniPremiumIcon name="alert-circle-outline" tone="ruby" size={30} iconSize={14}/><Text style={[styles.formError,{flex:1,textAlign:'left'}]}>{error}</Text></View>}
+    {!!status&&<View style={coupleModeStyles.successCard}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={30} iconSize={14}/><Text style={[styles.helper,{flex:1,color:'#F3DFA7'}]}>{status}</Text></View>}
     <View style={coupleModeStyles.privateList}>{[
-      ['people-outline','Exactly two people','Only a connected partner belongs in this space.'],
-      ['eye-off-outline','No match visibility','Neither person appears in matching while Couple Mode is active.'],
-      ['shield-checkmark-outline','Consent before connection','Production unlocks shared tools only after the invited partner accepts.'],
+      ['key-outline','Exact number only','No name search, partial number results or public member directory.'],
+      ['eye-off-outline','Phone stays private','The other person confirms your profile, but never sees a new copy of your number.'],
+      ['shield-checkmark-outline','Mutual consent','Both matching profiles are removed before shared tools unlock.'],
     ].map(([icon,title,body])=><View key={title} style={coupleModeStyles.privateRow}><MiniPremiumIcon name={icon as keyof typeof Ionicons.glyphMap} tone="rose" size={34} iconSize={16}/><View style={{flex:1}}><Text style={coupleModeStyles.privateTitle}>{title}</Text><Text style={styles.helper}>{body}</Text></View></View>)}</View>
-    <View style={shared.spacer}/><Button disabled={!ready} label={ready?'Open our Couple Space':'Add both names and city'} icon="heart" variant="gold" onPress={()=>onComplete(memberName,partnerName,city)}/>
-    <Text style={styles.legal}>This preview connects the couple locally so every feature can be tested. Production will require your partner to accept the private invite before messaging unlocks.</Text>
+    <Text style={styles.legal}>{backendRuntime.mode==='demo'?'Preview search demonstrates the request flow locally. Real two-phone acceptance requires the Supabase pairing migration and live OTP configuration.':'Requests sync securely between both signed-in accounts. Search attempts are rate-limited and audited without storing raw phone numbers.'}</Text>
   </FormPage>
 }
 
@@ -1130,11 +1181,13 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
   </SafeAreaView></LinearGradient>
 }
 
-function CoupleHome({state,memberName,city,messages,onShare,onManage,onOpenTool,navigate}:{state:CoupleModeState;memberName:string;city:string;messages:ChatMessage[];onShare:()=>void;onManage:()=>void;onOpenTool:(tool:Exclude<CoupleLaunchTool,null>)=>void;navigate:(screen:Screen)=>void}){
+function CoupleHome({state,hub,memberName,city,messages,onShare,onManage,onOpenTool,navigate}:{state:CoupleModeState;hub:CoupleConnectionHub;memberName:string;city:string;messages:ChatMessage[];onShare:()=>void;onManage:()=>void;onOpenTool:(tool:Exclude<CoupleLaunchTool,null>)=>void;navigate:(screen:Screen)=>void}){
   const {width}=useWindowDimensions();
   const wide=width>=720;
   const partnerName=state.connection.partner?.displayName||'Your partner';
   const connected=state.connection.status==='active';
+  const incomingCount=hub.incomingRequests.length;
+  const outgoingPartner=hub.outgoingRequests[0]?.member.displayName;
   const latestDate=[...messages].reverse().find(message=>message.type==='date'&&message.date)?.date;
   const actions=[
     {id:'dates',title:'Plan a date',body:'Places, restaurants, packages and events near you.',icon:'calendar' as const,tone:'gold' as const,onPress:()=>navigate('events'),locked:false},
@@ -1147,13 +1200,13 @@ function CoupleHome({state,memberName,city,messages,onShare,onManage,onOpenTool,
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={coupleHomeStyles.content}>
       <LinearGradient colors={['rgba(153,10,38,.92)','rgba(74,4,20,.94)','rgba(42,24,7,.96)']} style={coupleHomeStyles.hero}>
         <View style={coupleHomeStyles.heroGlow}/><View style={coupleHomeStyles.avatarPair}><View style={coupleHomeStyles.initialAvatar}><Text style={coupleHomeStyles.initialText}>{(memberName||'Y')[0]?.toUpperCase()}</Text></View><View style={[coupleHomeStyles.initialAvatar,coupleHomeStyles.partnerAvatar]}><Text style={coupleHomeStyles.initialText}>{partnerName[0]?.toUpperCase()}</Text></View><View style={coupleHomeStyles.heartSeal}><Ionicons name="heart" size={18} color="#2A1005"/></View></View>
-        <Text style={coupleHomeStyles.heroEyebrow}>{connected?'PRIVATE COUPLE SPACE':'PARTNER CONNECTION NEEDED'}</Text><Text style={coupleHomeStyles.heroTitle}>{connected?`${memberName||'You'} & ${partnerName}`:'Build this space together'}</Text><Text style={coupleHomeStyles.heroBody}>{connected?`Your chat, plans and shared moments stay together in one calm place${city?` around ${city}`:''}.`:'Browse dates now. Shared chat, gifts and games unlock after your partner connects.'}</Text>
-        <View style={coupleHomeStyles.statusPill}><View style={[coupleHomeStyles.statusDot,connected&&coupleHomeStyles.statusDotOn]}/><Text style={coupleHomeStyles.statusText}>{connected?'Two-person space connected':'Invite pending'}</Text></View>
+        <Text style={coupleHomeStyles.heroEyebrow}>{connected?'PRIVATE COUPLE SPACE':incomingCount?'REQUEST WAITING':outgoingPartner?'REQUEST SENT':'PARTNER CONNECTION NEEDED'}</Text><Text style={coupleHomeStyles.heroTitle}>{connected?`${memberName||'You'} & ${partnerName}`:incomingCount?'Someone wants to connect.':outgoingPartner?`Waiting for ${outgoingPartner}`:'Build this space together'}</Text><Text style={coupleHomeStyles.heroBody}>{connected?`Your chat, plans and shared moments stay together in one calm place${city?` around ${city}`:''}.`:incomingCount?'Review their minimal profile and accept only if you personally know them.':outgoingPartner?'They will see your request in their Couple Mode account. Shared tools unlock after acceptance.':'Search the exact verified phone number, send a request, and wait for your partner to accept.'}</Text>
+        <View style={coupleHomeStyles.statusPill}><View style={[coupleHomeStyles.statusDot,connected&&coupleHomeStyles.statusDotOn]}/><Text style={coupleHomeStyles.statusText}>{connected?'Two-person space connected':incomingCount?`${incomingCount} request${incomingCount===1?'':'s'} waiting`:outgoingPartner?'Partner approval pending':'Not connected yet'}</Text></View>
       </LinearGradient>
       <View style={coupleHomeStyles.sectionHead}><Text style={styles.sectionLabel}>TOGETHER TOOLS</Text><Text style={coupleHomeStyles.sectionMeta}>Matching is off</Text></View>
       <View style={[coupleHomeStyles.actionGrid,wide&&coupleHomeStyles.actionGridWide]}>{actions.map(action=><Pressable accessibilityRole="button" accessibilityLabel={action.title} key={action.id} onPress={action.onPress} style={[coupleHomeStyles.action,wide&&coupleHomeStyles.actionWide]}><PremiumIcon name={action.icon} tone={action.tone} size={48} iconSize={22}/><View style={{flex:1}}><Text style={coupleHomeStyles.actionTitle}>{action.title}</Text><Text style={coupleHomeStyles.actionBody}>{action.body}</Text></View>{action.locked?<MiniPremiumIcon name="lock-closed" tone="dark" size={28} iconSize={13}/>:<Ionicons name="chevron-forward" size={17} color={colors.muted}/>}</Pressable>)}</View>
       {latestDate?<Pressable onPress={()=>navigate('chat')} style={coupleHomeStyles.nextPlan}><PremiumIcon name="calendar" tone="gold" size={46} iconSize={21}/><View style={{flex:1}}><Text style={styles.kicker}>NEXT SHARED PLAN</Text><Text style={coupleHomeStyles.planTitle}>{latestDate.venue}</Text><Text style={styles.helper}>{latestDate.time} · {latestDate.area}</Text></View><Ionicons name="chevron-forward" size={18} color={colors.gold}/></Pressable>:<Pressable onPress={()=>navigate('events')} style={coupleHomeStyles.nextPlan}><PremiumIcon name="sparkles" tone="gold" size={46} iconSize={21}/><View style={{flex:1}}><Text style={styles.kicker}>MAKE A MEMORY</Text><Text style={coupleHomeStyles.planTitle}>Choose your next date.</Text><Text style={styles.helper}>Explore nearby cafés, restaurants, activities and complete date packages.</Text></View><Ionicons name="chevron-forward" size={18} color={colors.gold}/></Pressable>}
-      <View style={coupleHomeStyles.connectionRow}><View style={{flex:1}}><Text style={coupleHomeStyles.connectionTitle}>Your two-person connection</Text><Text style={styles.helper}>No one is added from contacts automatically. Matching stays disabled until you change modes yourself.</Text></View><Pressable onPress={connected?onShare:onManage} style={coupleHomeStyles.connectionButton}><Ionicons name={connected?'share-social-outline':'link-outline'} size={17} color={colors.gold}/><Text style={coupleHomeStyles.connectionButtonText}>{connected?'Invite':'Connect'}</Text></Pressable></View>
+      <View style={coupleHomeStyles.connectionRow}><View style={{flex:1}}><Text style={coupleHomeStyles.connectionTitle}>Your two-person connection</Text><Text style={styles.helper}>No contacts are uploaded. Connection requires an exact phone search and your partner's approval.</Text></View><Pressable onPress={connected?onShare:onManage} style={coupleHomeStyles.connectionButton}><Ionicons name={connected?'share-social-outline':incomingCount?'mail-unread-outline':'search-outline'} size={17} color={colors.gold}/><Text style={coupleHomeStyles.connectionButtonText}>{connected?'Share app':incomingCount?'Review':'Find partner'}</Text></Pressable></View>
     </ScrollView>
     <BottomNav active="home" mode="couple" onOpenTool={onOpenTool} navigate={navigate}/>
   </SafeAreaView></LinearGradient>
@@ -4742,6 +4795,19 @@ const coupleModeStyles=StyleSheet.create({
   inviteFound:{padding:13,borderRadius:8,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.26)',flexDirection:'row',alignItems:'center',gap:10},
   inviteFoundTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
   setupFields:{gap:14},
+  profileSetupCard:{gap:14,padding:15,borderRadius:8,backgroundColor:'rgba(212,175,55,.055)',borderWidth:1,borderColor:'rgba(212,175,55,.22)'},
+  phoneSearchCard:{gap:14,padding:15,borderRadius:8,backgroundColor:'rgba(114,11,32,.18)',borderWidth:1,borderColor:'rgba(255,112,132,.20)'},
+  partnerResult:{padding:15,borderRadius:8,backgroundColor:'rgba(42,17,7,.92)',borderWidth:1,borderColor:'rgba(212,175,55,.36)',flexDirection:'row',flexWrap:'wrap',alignItems:'center',gap:12},
+  partnerInitial:{width:48,height:48,borderRadius:24,backgroundColor:'#761027',borderWidth:1,borderColor:'rgba(255,255,255,.20)',alignItems:'center',justifyContent:'center'},
+  partnerInitialText:{fontFamily:'Poppins_700Bold',fontSize:20,color:colors.ivory},
+  partnerName:{fontFamily:'Poppins_700Bold',fontSize:15,color:colors.ivory,marginRight:6},
+  phoneVerified:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:colors.gold,marginTop:3},
+  requestCard:{minHeight:76,padding:13,borderRadius:8,backgroundColor:'rgba(212,175,55,.06)',borderWidth:1,borderColor:'rgba(212,175,55,.22)',flexDirection:'row',alignItems:'center',gap:10},
+  incomingCard:{gap:13,padding:15,borderRadius:8,backgroundColor:'rgba(87,10,28,.50)',borderWidth:1,borderColor:'rgba(255,112,132,.25)'},
+  pendingPill:{paddingHorizontal:9,paddingVertical:6,borderRadius:12,backgroundColor:'rgba(212,175,55,.12)'},
+  pendingText:{fontFamily:'Poppins_700Bold',fontSize:8.5,color:colors.gold},
+  errorCard:{padding:12,borderRadius:8,backgroundColor:'rgba(169,18,45,.14)',borderWidth:1,borderColor:'rgba(255,93,116,.25)',flexDirection:'row',alignItems:'center',gap:8},
+  successCard:{padding:12,borderRadius:8,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.24)',flexDirection:'row',alignItems:'center',gap:8},
   privateList:{gap:8},
   privateRow:{minHeight:64,padding:12,borderRadius:8,backgroundColor:'rgba(255,255,255,.04)',borderWidth:1,borderColor:'rgba(255,255,255,.07)',flexDirection:'row',alignItems:'center',gap:10},
   privateTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
