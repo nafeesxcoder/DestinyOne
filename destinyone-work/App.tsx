@@ -64,6 +64,7 @@ import { buildAlignmentBridge, buildIntentPassport, type AlignmentBridgeItem, ty
 import { buildCoupleModeAccess, coupleModeRoutes, guardCoupleModeRoute, initialCoupleModeState, reduceCoupleMode, type CoupleModeRoute, type CoupleModeState, type ExperienceMode } from './src/domain/coupleMode';
 import { createLocalCoupleModeRepository } from './src/services/coupleModeRepository';
 import { fetchCurrentCoupleConnectionHub, respondToCoupleConnectionRequest, saveCoupleModeMemberProfile, searchCouplePartnerByPhone, sendCoupleConnectionRequest, setServerCoupleMode, type CoupleConnectionHub, type CouplePartnerSummary } from './src/services/coupleConnection';
+import { getCitiesOfState } from '@countrystatecity/countries-browser';
 
 type Screen = 'splash'|'welcome'|'auth'|'otp'|'verify'|'modeSelect'|'coupleSetup'|'profileSetup'|'vibes'|'intent'|'alignment'|'home'|'explore'|'circle'|'discovery'|'detail'|'mutual'|'icebreaker'|'chat'|'datePlan'|'safety'|'likes'|'profile'|'pricing'|'support'|'coach'|'events'|'executive'|'verifyHub'|'admin';
 
@@ -966,6 +967,94 @@ function CoupleSetup({profile,hub,onSaveProfile,onSearch,onRequest,onRespond,onO
   </FormPage>
 }
 
+type ProfilePickerKind='age'|'height'|'profession'|'community';
+type RegionOption={code:string;name:string};
+type CityOption={id:string|number;name:string};
+
+const profileAgeOptions=Array.from({length:33},(_,index)=>String(index+18));
+const profileHeightOptions=Array.from({length:29},(_,index)=>{
+  const totalInches=index+56;
+  return `${Math.floor(totalInches/12)} ft ${totalInches%12} in`;
+});
+const profileProfessionOptions=[
+  'Accountant','Architect','Artist','Attorney / Lawyer','Banking professional','Business owner','Consultant','Content creator','Data analyst','Data scientist','Dentist','Designer','Doctor / Physician','Educator / Teacher','Engineer','Entrepreneur / Founder','Finance professional','Government / Public service','Healthcare professional','Hospitality professional','Human resources','Marketing professional','Nurse','Operations professional','Pharmacist','Photographer','Product manager','Professor / Researcher','Project manager','Real estate professional','Sales professional','Small business owner','Social worker','Software engineer','Student','Therapist / Counsellor','Writer / Editor','Other',
+];
+const profileCommunityOptions=[
+  'Punjabi','Gujarati','Tamil','Telugu','Bengali','Marathi','Malayali','Kannada','Sindhi','Rajasthani','Kashmiri','Assamese','Odia','Bhojpuri','Haryanvi','Himachali','Uttarakhandi','Goan','Nepali','Sri Lankan Tamil','Pakistani Punjabi','Pakistani','Bangladeshi','Indo-Caribbean','Mixed South Asian','South Asian + another culture','Prefer not to say','Other',
+];
+const makeRegionOptions=(entries:readonly (readonly [string,string])[]):RegionOption[]=>entries.map(([code,name])=>({code,name}));
+const northAmericaRegions:Record<'US'|'CA',RegionOption[]>={
+  US:makeRegionOptions([
+    ['AL','Alabama'],['AK','Alaska'],['AZ','Arizona'],['AR','Arkansas'],['CA','California'],['CO','Colorado'],['CT','Connecticut'],['DE','Delaware'],['DC','District of Columbia'],['FL','Florida'],['GA','Georgia'],['HI','Hawaii'],['ID','Idaho'],['IL','Illinois'],['IN','Indiana'],['IA','Iowa'],['KS','Kansas'],['KY','Kentucky'],['LA','Louisiana'],['ME','Maine'],['MD','Maryland'],['MA','Massachusetts'],['MI','Michigan'],['MN','Minnesota'],['MS','Mississippi'],['MO','Missouri'],['MT','Montana'],['NE','Nebraska'],['NV','Nevada'],['NH','New Hampshire'],['NJ','New Jersey'],['NM','New Mexico'],['NY','New York'],['NC','North Carolina'],['ND','North Dakota'],['OH','Ohio'],['OK','Oklahoma'],['OR','Oregon'],['PA','Pennsylvania'],['RI','Rhode Island'],['SC','South Carolina'],['SD','South Dakota'],['TN','Tennessee'],['TX','Texas'],['UT','Utah'],['VT','Vermont'],['VA','Virginia'],['WA','Washington'],['WV','West Virginia'],['WI','Wisconsin'],['WY','Wyoming'],['PR','Puerto Rico'],['GU','Guam'],['VI','U.S. Virgin Islands'],['AS','American Samoa'],['MP','Northern Mariana Islands'],
+  ]),
+  CA:makeRegionOptions([
+    ['AB','Alberta'],['BC','British Columbia'],['MB','Manitoba'],['NB','New Brunswick'],['NL','Newfoundland and Labrador'],['NS','Nova Scotia'],['NT','Northwest Territories'],['NU','Nunavut'],['ON','Ontario'],['PE','Prince Edward Island'],['QC','Quebec'],['SK','Saskatchewan'],['YT','Yukon'],
+  ]),
+};
+const canadianRegionCodes=new Set(northAmericaRegions.CA.map(region=>region.code));
+
+function ProfileSelectField({label,value,placeholder,icon,onPress,optional=false}:{label:string;value:string;placeholder:string;icon:keyof typeof Ionicons.glyphMap;onPress:()=>void;optional?:boolean}){
+  return <View style={selectorStyles.selectField}><Text style={shared.label}>{label}{optional?' · optional':''}</Text><Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${value||placeholder}`} onPress={onPress} style={[selectorStyles.selectButton,!!value&&selectorStyles.selectButtonOn]}><MiniPremiumIcon name={icon} tone={value?'gold':'dark'} size={32} iconSize={15}/><Text numberOfLines={1} style={[selectorStyles.selectValue,!value&&selectorStyles.selectPlaceholder]}>{value||placeholder}</Text><MiniPremiumIcon name="chevron-down" tone="dark" size={25} iconSize={12}/></Pressable></View>
+}
+
+function ProfileOptionSheet({visible,title,subtitle,options,value,searchable=false,allowCustom=false,onClose,onSelect}:{visible:boolean;title:string;subtitle:string;options:string[];value:string;searchable?:boolean;allowCustom?:boolean;onClose:()=>void;onSelect:(value:string)=>void}){
+  const [query,setQuery]=useState('');
+  useEffect(()=>{if(visible)setQuery('')},[visible,title]);
+  const normalized=query.trim().toLowerCase();
+  const filtered=options.filter(option=>!normalized||option.toLowerCase().includes(normalized));
+  const custom=query.trim();
+  const showCustom=allowCustom&&custom.length>=2&&!options.some(option=>option.toLowerCase()===custom.toLowerCase());
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,selectorStyles.optionSheet]}><SheetHeader title={title} subtitle={subtitle} onClose={onClose}/>{searchable&&<View style={selectorStyles.sheetSearch}><Ionicons name="search" size={18} color={colors.muted}/><TextInput autoFocus={Platform.OS==='web'} value={query} onChangeText={setQuery} placeholder={`Search ${title.toLowerCase()}`} placeholderTextColor="#746A73" style={selectorStyles.sheetSearchInput}/>{!!query&&<Pressable accessibilityLabel="Clear search" onPress={()=>setQuery('')}><Ionicons name="close-circle" size={20} color={colors.muted}/></Pressable>}</View>}<ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={selectorStyles.optionList}>{showCustom&&<Pressable accessibilityRole="button" onPress={()=>onSelect(custom)} style={selectorStyles.customOption}><MiniPremiumIcon name="add" tone="gold" size={29} iconSize={14}/><View style={{flex:1}}><Text style={selectorStyles.optionTitle}>Use “{custom}”</Text><Text style={selectorStyles.optionBody}>Add this to your profile</Text></View></Pressable>}{filtered.map(option=>{const selected=option===value;return <Pressable accessibilityRole="button" accessibilityState={{selected}} key={option} onPress={()=>onSelect(option)} style={[selectorStyles.optionRow,selected&&selectorStyles.optionRowOn]}><Text style={[selectorStyles.optionTitle,selected&&{color:'#F5DFA9'}]}>{option}</Text>{selected?<MiniPremiumIcon name="checkmark" tone="gold" size={26} iconSize={12}/>:<Ionicons name="chevron-forward" size={16} color="#786A74"/>}</Pressable>})}{!filtered.length&&!showCustom&&<View style={selectorStyles.emptyState}><MiniPremiumIcon name="search" tone="dark" size={38} iconSize={18}/><Text style={styles.cardTitle}>No exact match</Text><Text style={styles.helper}>Try a shorter search.</Text></View>}</ScrollView></SafeAreaView></Modal>
+}
+
+function CityPickerSheet({visible,value,onClose,onSelect}:{visible:boolean;value:string;onClose:()=>void;onSelect:(value:string)=>void}){
+  const [country,setCountry]=useState<'US'|'CA'>('US');
+  const [regionCode,setRegionCode]=useState('');
+  const [regionQuery,setRegionQuery]=useState('');
+  const [cityQuery,setCityQuery]=useState('');
+  const [cities,setCities]=useState<CityOption[]>([]);
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState('');
+  useEffect(()=>{
+    if(!visible)return;
+    const currentCode=value.split(',').at(-1)?.trim().toUpperCase()??'';
+    const nextCountry=canadianRegionCodes.has(currentCode)?'CA':'US';
+    setCountry(nextCountry);
+    setRegionCode(northAmericaRegions[nextCountry].some(region=>region.code===currentCode)?currentCode:'');
+    setRegionQuery('');
+    setCityQuery(value.includes(',')?value.slice(0,value.lastIndexOf(',')).trim():'');
+    setCities([]);
+    setError('');
+  },[visible,value]);
+  useEffect(()=>{
+    if(!visible||!regionCode)return;
+    let cancelled=false;
+    setLoading(true);
+    setError('');
+    getCitiesOfState(country,regionCode).then(items=>{
+      if(cancelled)return;
+      setCities(items.map(item=>({id:item.id,name:item.name})).sort((a,b)=>a.name.localeCompare(b.name)));
+      setLoading(false);
+    }).catch(()=>{
+      if(cancelled)return;
+      const fallback=profileCities.filter(item=>item.endsWith(`, ${regionCode}`)).map((item,index)=>({id:`fallback-${index}`,name:item.slice(0,item.lastIndexOf(','))}));
+      setCities(fallback);
+      setError('Live city list could not load. You can still type and use your city below.');
+      setLoading(false);
+    });
+    return()=>{cancelled=true};
+  },[visible,country,regionCode]);
+  const regions=northAmericaRegions[country].filter(region=>!regionQuery.trim()||`${region.name} ${region.code}`.toLowerCase().includes(regionQuery.trim().toLowerCase()));
+  const normalizedCity=cityQuery.trim().toLowerCase();
+  const filteredCities=cities.filter(city=>!normalizedCity||city.name.toLowerCase().includes(normalizedCity)).slice(0,60);
+  const selectedRegion=northAmericaRegions[country].find(region=>region.code===regionCode);
+  const customCity=cityQuery.trim();
+  const canUseCustom=customCity.length>=2&&!cities.some(city=>city.name.toLowerCase()===customCity.toLowerCase());
+  const changeCountry=(next:'US'|'CA')=>{setCountry(next);setRegionCode('');setRegionQuery('');setCityQuery('');setCities([]);setError('')};
+  const selectCity=(name:string)=>{onSelect(`${name}, ${regionCode}`);onClose()};
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,selectorStyles.citySheet]}><SheetHeader title="Choose your city" subtitle="USA and Canada city search" onClose={onClose}/><View style={selectorStyles.countrySegment}>{(['US','CA'] as const).map(code=><Pressable accessibilityRole="button" accessibilityState={{selected:country===code}} key={code} onPress={()=>changeCountry(code)} style={[selectorStyles.countryOption,country===code&&selectorStyles.countryOptionOn]}><Text style={[selectorStyles.countryText,country===code&&selectorStyles.countryTextOn]}>{code==='US'?'United States':'Canada'}</Text></Pressable>)}</View>{!regionCode?<><Text style={selectorStyles.sheetLabel}>{country==='US'?'STATE OR TERRITORY':'PROVINCE OR TERRITORY'}</Text><View style={selectorStyles.sheetSearch}><Ionicons name="search" size={18} color={colors.muted}/><TextInput autoFocus={Platform.OS==='web'} value={regionQuery} onChangeText={setRegionQuery} placeholder={country==='US'?'Search state':'Search province'} placeholderTextColor="#746A73" style={selectorStyles.sheetSearchInput}/></View><ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={selectorStyles.optionList}>{regions.map(region=><Pressable accessibilityRole="button" key={region.code} onPress={()=>{setRegionCode(region.code);setCityQuery('')}} style={selectorStyles.optionRow}><View style={{flex:1}}><Text style={selectorStyles.optionTitle}>{region.name}</Text><Text style={selectorStyles.optionBody}>{region.code}</Text></View><Ionicons name="chevron-forward" size={16} color="#786A74"/></Pressable>)}</ScrollView></>:<><View style={selectorStyles.regionBar}><View style={{flex:1}}><Text style={selectorStyles.sheetLabel}>SEARCHING IN</Text><Text style={selectorStyles.regionName}>{selectedRegion?.name}, {country==='US'?'USA':'Canada'}</Text></View><Pressable accessibilityRole="button" onPress={()=>{setRegionCode('');setRegionQuery('');setCityQuery('')}} style={selectorStyles.changeRegion}><Text style={selectorStyles.changeRegionText}>Change</Text></Pressable></View><View style={selectorStyles.sheetSearch}><Ionicons name="search" size={18} color={colors.muted}/><TextInput autoFocus={Platform.OS==='web'} value={cityQuery} onChangeText={setCityQuery} placeholder="Start typing your city" placeholderTextColor="#746A73" style={selectorStyles.sheetSearchInput}/>{!!cityQuery&&<Pressable accessibilityLabel="Clear city search" onPress={()=>setCityQuery('')}><Ionicons name="close-circle" size={20} color={colors.muted}/></Pressable>}</View>{loading?<View style={selectorStyles.emptyState}><MiniPremiumIcon name="hourglass-outline" tone="gold" size={38} iconSize={18}/><Text style={styles.cardTitle}>Loading cities…</Text></View>:<ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={selectorStyles.optionList}>{!!error&&<View style={selectorStyles.dataNotice}><Ionicons name="cloud-offline-outline" size={17} color={colors.gold}/><Text style={selectorStyles.dataNoticeText}>{error}</Text></View>}{canUseCustom&&<Pressable accessibilityRole="button" onPress={()=>selectCity(customCity)} style={selectorStyles.customOption}><MiniPremiumIcon name="location" tone="gold" size={29} iconSize={14}/><View style={{flex:1}}><Text style={selectorStyles.optionTitle}>Use “{customCity}, {regionCode}”</Text><Text style={selectorStyles.optionBody}>Choose this city</Text></View></Pressable>}{filteredCities.map(city=><Pressable accessibilityRole="button" key={`${city.id}-${city.name}`} onPress={()=>selectCity(city.name)} style={selectorStyles.optionRow}><Text style={selectorStyles.optionTitle}>{city.name}</Text><Ionicons name="chevron-forward" size={16} color="#786A74"/></Pressable>)}{!cityQuery&&<View style={selectorStyles.emptyState}><MiniPremiumIcon name="location-outline" tone="dark" size={38} iconSize={18}/><Text style={styles.cardTitle}>Type your city</Text><Text style={styles.helper}>Every city in {selectedRegion?.name} is searchable.</Text></View>}</ScrollView>}</>}</SafeAreaView></Modal>
+}
+
 function ProfileSetup({
   profile,
   onProfileChange,
@@ -985,20 +1074,30 @@ function ProfileSetup({
 }) {
   const {width}=useWindowDimensions();
   const [mediaError,setMediaError]=useState('');
-  const [cityQuery,setCityQuery]=useState(profile.city);
   const [photoPickerIndex,setPhotoPickerIndex]=useState<number|null>(null);
+  const [profilePicker,setProfilePicker]=useState<ProfilePickerKind|null>(null);
+  const [cityPickerVisible,setCityPickerVisible]=useState(false);
   const compactPhotos=width<520;
   const photoPrompts=[
     {title:'A clear hello',body:'Face the camera'},
     {title:'Your full look',body:'Show your style'},
     {title:'Your world',body:'A moment you love'},
   ];
-  useEffect(()=>setCityQuery(profile.city),[profile.city]);
   const updateProfile=<Key extends keyof ProfileDraft>(key:Key,value:ProfileDraft[Key])=>onProfileChange({...profile,[key]:value});
-  const citySuggestions=profileCities.filter(item=>item.toLowerCase().includes(cityQuery.trim().toLowerCase())).slice(0,12);
   const ageEligible=isEligibleMemberAge(profile.age);
-  const profileReady=photos.length>=3&&profile.firstName.trim().length>=2&&!!profile.gender&&ageEligible&&!!profile.city&&profile.profession.trim().length>=2;
-  const continueLabel=photos.length<3?'Add 3 photos to keep going':!profile.firstName.trim()?'Add your name to keep going':!profile.gender?'Choose how you identify':!ageEligible?'Enter an age from 25–35':!profile.city?'Choose your city':!profile.profession.trim()?'Add what you do':'Looks good, keep going';
+  const profileReady=photos.length>=3&&profile.firstName.trim().length>=2&&!!profile.gender&&ageEligible&&!!profile.height&&!!profile.city&&profile.profession.trim().length>=2;
+  const continueLabel=photos.length<3?'Add 3 photos to keep going':!profile.firstName.trim()?'Add your name to keep going':!profile.gender?'Choose how you identify':!ageEligible?'Choose an age from 18–50':!profile.height?'Choose your height':!profile.city?'Choose your city':!profile.profession.trim()?'Choose what you do':'Looks good, keep going';
+  const pickerOptions=profilePicker==='age'?profileAgeOptions:profilePicker==='height'?profileHeightOptions:profilePicker==='profession'?profileProfessionOptions:profileCommunityOptions;
+  const pickerValue=profilePicker==='age'?profile.age:profilePicker==='height'?profile.height:profilePicker==='profession'?profile.profession:profile.community;
+  const pickerTitle=profilePicker==='age'?'Choose your age':profilePicker==='height'?'Choose your height':profilePicker==='profession'?'What do you do?':'Culture / community';
+  const pickerSubtitle=profilePicker==='age'?'DestinyOne is for adults ages 18–50.':profilePicker==='height'?'Pick the closest height.':profilePicker==='profession'?'Search or add the answer that fits you.':'Choose one or add your own.';
+  const selectPickerValue=(value:string)=>{
+    if(profilePicker==='age')updateProfile('age',value);
+    if(profilePicker==='height')updateProfile('height',value);
+    if(profilePicker==='profession')updateProfile('profession',value);
+    if(profilePicker==='community')updateProfile('community',value);
+    setProfilePicker(null);
+  };
   const pickPhoto=async(index:number)=>{
     setMediaError('');
     const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -1016,11 +1115,12 @@ function ProfileSetup({
   const choosePhoto=(index:number)=>{
     setPhotoPickerIndex(index);
   };
+  const removePhoto=(index:number)=>onPhotosChange(photos.filter((_,photoIndex)=>photoIndex!==index));
   return <FormPage step={3} scroll>
     <SectionTitle eyebrow="MAKE A FIRST IMPRESSION" title="Make them want to know more." body="Three good photos. A few real details. Zero résumé energy."/>
     <View style={profileSetupStyles.photoSection}>
-      <View style={profileSetupStyles.photoHeader}><View style={{flex:1}}><Text style={shared.label}>Start with 3 photos that feel like you</Text><Text style={styles.helper}>Recent, clear, and unmistakably you.</Text></View><View style={profileSetupStyles.photoCount}><Text style={profileSetupStyles.photoCountText}>{photos.length}/3</Text></View></View>
-      <View style={styles.photoRow}>{[0,1,2].map(index=><Pressable onPress={()=>choosePhoto(index)} key={index} style={[styles.addPhoto,!compactPhotos&&profileSetupStyles.photoDesktop]}>{photos[index]?<Image source={{uri:photos[index]}} style={styles.fill}/>:<View style={profileSetupStyles.photoEmpty}><MiniPremiumIcon name="add" tone="plum" size={34} iconSize={17}/><Text style={profileSetupStyles.photoPrompt}>{photoPrompts[index]!.title}</Text><Text style={profileSetupStyles.photoHint}>{photoPrompts[index]!.body}</Text></View>}<View style={styles.photoNum}><Text style={styles.photoNumText}>{index+1}</Text></View></Pressable>)}</View>
+      <View style={profileSetupStyles.photoHeader}><View style={{flex:1}}><Text style={shared.label}>Start with 3 photos that feel like you</Text><Text style={styles.helper}>Portrait photos are cropped to 4:5. Tap any photo to replace it.</Text></View><View style={profileSetupStyles.photoCount}><Text style={profileSetupStyles.photoCountText}>{photos.length}/3</Text></View></View>
+      <View style={styles.photoRow}>{[0,1,2].map(index=><Pressable accessibilityRole="button" accessibilityLabel={photos[index]?`Replace photo ${index+1}`:`Add photo ${index+1}`} onPress={()=>choosePhoto(index)} key={index} style={[styles.addPhoto,!compactPhotos&&profileSetupStyles.photoDesktop]}>{photos[index]?<><Image source={{uri:photos[index]}} resizeMode="cover" style={styles.fill}/><LinearGradient pointerEvents="none" colors={['transparent','rgba(11,2,8,.84)']} style={profileSetupStyles.photoOverlay}><Text style={profileSetupStyles.photoChange}>Tap to replace</Text></LinearGradient><Pressable accessibilityLabel={`Remove photo ${index+1}`} onPress={event=>{event.stopPropagation();removePhoto(index)}} style={profileSetupStyles.photoRemove}><Ionicons name="close" size={15} color={colors.ivory}/></Pressable></>:<View style={profileSetupStyles.photoEmpty}><MiniPremiumIcon name="add" tone="plum" size={34} iconSize={17}/><Text style={profileSetupStyles.photoPrompt}>{photoPrompts[index]!.title}</Text><Text style={profileSetupStyles.photoHint}>{photoPrompts[index]!.body}</Text></View>}<View pointerEvents="none" style={styles.photoNum}><Text style={styles.photoNumText}>{index+1}</Text></View></Pressable>)}</View>
       {!!mediaError&&<Text style={styles.formError}>{mediaError}</Text>}
     </View>
     <View style={{gap:16}}>
@@ -1028,25 +1128,22 @@ function ProfileSetup({
       <View style={{gap:8}}><Text style={shared.label}>I identify as</Text><View style={aiStyles.filterWrap}>{([
         ['woman','Woman'],['man','Man'],['nonbinary','Non-binary'],
       ] as const).map(([value,label])=><FilterChip key={value} label={label} active={profile.gender===value} onPress={()=>updateProfile('gender',value)}/>)}</View></View>
-      <View style={[styles.twoCol,{width:'100%',minWidth:0}]}><View style={{flex:1,minWidth:0}}><Field label="Age" placeholder="29" keyboardType="number-pad" value={profile.age} onChangeText={(text:string)=>updateProfile('age',text.replace(/\D/g,'').slice(0,2))} error={profile.age&&!ageEligible?'DestinyOne is currently for ages 25–35.':''}/></View><View style={{flex:1,minWidth:0}}><Field label="Height" placeholder={'5′ 8″'} value={profile.height} onChangeText={(text:string)=>updateProfile('height',text)}/></View></View>
-      <View style={{gap:8}}>
-        <Text style={shared.label}>City</Text>
-        <View style={selectorStyles.searchBox}><MiniPremiumIcon name="location-outline" tone="rose" size={32} iconSize={15}/><TextInput value={cityQuery} onChangeText={text=>{setCityQuery(text);if(text!==profile.city)updateProfile('city','')}} placeholder="Search USA or Canada city" placeholderTextColor="#6F6875" style={selectorStyles.searchInput}/></View>
-        {!!profile.city&&<View style={selectorStyles.selectedPill}><MiniPremiumIcon name="checkmark" tone="gold" size={24} iconSize={11}/><Text style={selectorStyles.selectedText}>{profile.city}</Text></View>}
-        {!!cityQuery&&<View style={selectorStyles.suggestionPanel}>{citySuggestions.length?citySuggestions.map(item=><Pressable key={item} onPress={()=>{updateProfile('city',item);setCityQuery(item)}} style={selectorStyles.suggestionRow}><Text style={selectorStyles.suggestionText}>{item}</Text><MiniPremiumIcon name="chevron-forward" tone="dark" size={24} iconSize={11}/></Pressable>):<Text style={styles.helper}>Try a nearby major city in the USA or Canada.</Text>}</View>}
-      </View>
-      <Field label="What do you do?" placeholder="Designer, founder, engineer..." value={profile.profession} onChangeText={(text:string)=>updateProfile('profession',text)}/>
+      <View style={[styles.twoCol,{width:'100%',minWidth:0}]}><View style={{flex:1,minWidth:0}}><ProfileSelectField label="Age" value={profile.age} placeholder="Choose" icon="calendar-outline" onPress={()=>setProfilePicker('age')}/></View><View style={{flex:1,minWidth:0}}><ProfileSelectField label="Height" value={profile.height} placeholder="Choose" icon="resize-outline" onPress={()=>setProfilePicker('height')}/></View></View>
+      <ProfileSelectField label="City" value={profile.city} placeholder="Search USA or Canada city" icon="location-outline" onPress={()=>setCityPickerVisible(true)}/>
+      <ProfileSelectField label="What do you do?" value={profile.profession} placeholder="Choose your profession" icon="briefcase-outline" onPress={()=>setProfilePicker('profession')}/>
       <View style={{gap:8}}>
         <Text style={shared.label}>Faith · optional</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>
           {religions.map(option=><Pressable key={option} onPress={()=>updateProfile('religion',profile.religion===option?'':option)} style={[selectorStyles.religionChip,profile.religion===option&&selectorStyles.religionChipOn]}><Text style={[selectorStyles.religionText,profile.religion===option&&{color:colors.ivory}]}>{option}</Text>{profile.religion===option&&<MiniPremiumIcon name="checkmark" tone="gold" size={22} iconSize={10}/>}</Pressable>)}
         </ScrollView>
       </View>
-      <Field label="Culture / community · optional" placeholder="Punjabi, Gujarati, Telugu, mixed..." value={profile.community} onChangeText={(text:string)=>updateProfile('community',text)}/>
+      <ProfileSelectField label="Culture / community" value={profile.community} placeholder="Choose or add your culture" icon="people-outline" optional onPress={()=>setProfilePicker('community')}/>
     </View>
     <VoiceIntroRecorder uri={voiceUri} onChange={onVoiceChange}/>
     <Button label={continueLabel} disabled={!profileReady} onPress={onNext}/>
     <PhotoPickerSheet visible={photoPickerIndex!==null} slot={photoPickerIndex===null?0:photoPickerIndex+1} onClose={()=>setPhotoPickerIndex(null)} onCamera={()=>{const index=photoPickerIndex;if(index===null)return;setPhotoPickerIndex(null);void takePhoto(index)}} onGallery={()=>{const index=photoPickerIndex;if(index===null)return;setPhotoPickerIndex(null);void pickPhoto(index)}}/>
+    <ProfileOptionSheet visible={profilePicker!==null} title={pickerTitle} subtitle={pickerSubtitle} options={pickerOptions} value={pickerValue} searchable={profilePicker==='profession'||profilePicker==='community'} allowCustom={profilePicker==='profession'||profilePicker==='community'} onClose={()=>setProfilePicker(null)} onSelect={selectPickerValue}/>
+    <CityPickerSheet visible={cityPickerVisible} value={profile.city} onClose={()=>setCityPickerVisible(false)} onSelect={value=>updateProfile('city',value)}/>
   </FormPage>
 }
 
@@ -4790,6 +4887,34 @@ const selectorStyles=StyleSheet.create({
   religionChip:{minHeight:38,paddingHorizontal:12,borderRadius:19,borderWidth:1,borderColor:colors.line,backgroundColor:colors.surface2,flexDirection:'row',alignItems:'center',gap:6},
   religionChipOn:{backgroundColor:'#8F1028',borderColor:colors.pinkSoft},
   religionText:{fontFamily:'Poppins_600SemiBold',fontSize:11,color:colors.muted},
+  selectField:{gap:7},
+  selectButton:{minHeight:57,borderRadius:8,borderWidth:1,borderColor:'rgba(255,255,255,.11)',backgroundColor:'rgba(31,9,14,.92)',flexDirection:'row',alignItems:'center',gap:10,paddingHorizontal:12,shadowColor:'#000',shadowOpacity:.12,shadowRadius:8},
+  selectButtonOn:{borderColor:'rgba(212,175,55,.28)',backgroundColor:'rgba(42,12,18,.94)'},
+  selectValue:{flex:1,minWidth:0,fontFamily:'Poppins_600SemiBold',fontSize:12.5,color:colors.ivory},
+  selectPlaceholder:{fontFamily:'Poppins_400Regular',color:'#766A73'},
+  optionSheet:{maxHeight:'82%',paddingBottom:12},
+  citySheet:{height:'88%',maxHeight:780,paddingBottom:12},
+  sheetSearch:{minHeight:48,borderRadius:8,borderWidth:1,borderColor:'rgba(255,255,255,.11)',backgroundColor:'rgba(255,255,255,.045)',flexDirection:'row',alignItems:'center',gap:9,paddingHorizontal:13},
+  sheetSearchInput:{flex:1,minHeight:46,color:colors.ivory,fontFamily:'Poppins_400Regular',fontSize:13},
+  optionList:{gap:7,paddingBottom:18},
+  optionRow:{minHeight:48,borderRadius:8,borderWidth:1,borderColor:'rgba(255,255,255,.075)',backgroundColor:'rgba(255,255,255,.035)',paddingHorizontal:13,flexDirection:'row',alignItems:'center',gap:10},
+  optionRowOn:{borderColor:'rgba(212,175,55,.34)',backgroundColor:'rgba(212,175,55,.08)'},
+  optionTitle:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:12.5,color:colors.ivory},
+  optionBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,color:colors.muted,marginTop:1},
+  customOption:{minHeight:55,borderRadius:8,borderWidth:1,borderColor:'rgba(212,175,55,.34)',backgroundColor:'rgba(212,175,55,.08)',paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:10},
+  emptyState:{minHeight:118,alignItems:'center',justifyContent:'center',gap:6,padding:16},
+  countrySegment:{height:46,borderRadius:8,padding:3,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',flexDirection:'row'},
+  countryOption:{flex:1,borderRadius:6,alignItems:'center',justifyContent:'center'},
+  countryOptionOn:{backgroundColor:'#8F1028'},
+  countryText:{fontFamily:'Poppins_600SemiBold',fontSize:11.5,color:colors.muted},
+  countryTextOn:{color:colors.ivory},
+  sheetLabel:{fontFamily:'Poppins_700Bold',fontSize:9,letterSpacing:1.2,color:colors.gold},
+  regionBar:{minHeight:56,borderRadius:8,paddingHorizontal:12,backgroundColor:'rgba(212,175,55,.07)',borderWidth:1,borderColor:'rgba(212,175,55,.20)',flexDirection:'row',alignItems:'center',gap:10},
+  regionName:{fontFamily:'Poppins_700Bold',fontSize:13,color:colors.ivory,marginTop:2},
+  changeRegion:{minHeight:34,paddingHorizontal:12,borderRadius:17,backgroundColor:'rgba(255,255,255,.07)',alignItems:'center',justifyContent:'center'},
+  changeRegionText:{fontFamily:'Poppins_600SemiBold',fontSize:10.5,color:'#F2DCA7'},
+  dataNotice:{borderRadius:8,padding:10,backgroundColor:'rgba(212,175,55,.07)',borderWidth:1,borderColor:'rgba(212,175,55,.18)',flexDirection:'row',alignItems:'center',gap:8},
+  dataNoticeText:{flex:1,fontFamily:'Poppins_400Regular',fontSize:9.8,lineHeight:14,color:'#DCC9A1'},
 });
 
 const authStyles=StyleSheet.create({
@@ -5168,6 +5293,9 @@ const profileSetupStyles=StyleSheet.create({
   photoEmpty:{alignItems:'center',justifyContent:'center',gap:4,paddingHorizontal:5},
   photoPrompt:{fontFamily:'Poppins_700Bold',fontSize:10.5,lineHeight:14,color:colors.ivory,textAlign:'center'},
   photoHint:{fontFamily:'Poppins_400Regular',fontSize:8.5,lineHeight:12,color:colors.muted,textAlign:'center'},
+  photoOverlay:{position:'absolute',left:0,right:0,bottom:0,height:58,justifyContent:'flex-end',alignItems:'center',paddingBottom:9},
+  photoChange:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:colors.ivory},
+  photoRemove:{position:'absolute',top:7,right:7,width:27,height:27,borderRadius:14,backgroundColor:'rgba(12,3,8,.82)',borderWidth:1,borderColor:'rgba(255,255,255,.18)',alignItems:'center',justifyContent:'center'},
 });
 
 const vibeStyles=StyleSheet.create({

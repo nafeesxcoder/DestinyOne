@@ -9,7 +9,7 @@
 - [x] iOS bundle ID and Android package ID are configured
 - [x] Build numbers start at 1 and EAS profiles are defined
 - [x] Product QA, Interaction QA, Dating Policy Compliance, Store Review, and Release Readiness domain gates are covered by tests
-- [x] Profile setup includes the current 25–35 audience age gate
+- [x] Profile setup enforces the 18–50 member age range; the core launch audience remains 25–35
 - [x] Canonical App Store/Play Store draft copy is validated for USA + Canada scope and provider-truthful claims
 
 Run before every release:

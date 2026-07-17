@@ -10,7 +10,7 @@ export const normalizeAuthPhone = (value: string) => {
 export const isValidPhone = (value: string) => normalizeAuthPhone(value) !== null;
 export const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 export const isValidPassword = (value: string) => value.length >= 10 && /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value);
-export const isEligibleMemberAge = (value: string, min = 25, max = 35) => {
+export const isEligibleMemberAge = (value: string, min = 18, max = 50) => {
   const age = Number(value.replace(/\D/g, ''));
   return Number.isInteger(age) && age >= min && age <= max;
 };

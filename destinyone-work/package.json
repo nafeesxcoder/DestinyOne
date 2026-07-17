@@ -31,6 +31,7 @@
     "eas-build-pre-install": "node scripts/verify-mobile-build-environment.mjs"
   },
   "dependencies": {
+    "@countrystatecity/countries-browser": "^1.0.2",
     "@expo-google-fonts/poppins": "^0.4.1",
     "@expo-google-fonts/satisfy": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",

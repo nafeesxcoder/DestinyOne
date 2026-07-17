@@ -13,10 +13,10 @@ describe('authentication validation', () => {
     expect(isValidPassword('1234567890')).toBe(false);
     expect(isValidPassword('Destiny123')).toBe(true);
   });
-  it('keeps the current audience age gate at 25 to 35', () => {
-    expect(isEligibleMemberAge('24')).toBe(false);
-    expect(isEligibleMemberAge('25')).toBe(true);
-    expect(isEligibleMemberAge('35')).toBe(true);
-    expect(isEligibleMemberAge('36')).toBe(false);
+  it('keeps membership within the adult 18 to 50 range', () => {
+    expect(isEligibleMemberAge('17')).toBe(false);
+    expect(isEligibleMemberAge('18')).toBe(true);
+    expect(isEligibleMemberAge('50')).toBe(true);
+    expect(isEligibleMemberAge('51')).toBe(false);
   });
 });
