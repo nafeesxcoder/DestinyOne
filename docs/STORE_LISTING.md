@@ -1,44 +1,40 @@
-# DestinyOne — Store Listing
+# DestinyOne store listing
 
-## App Store
+The canonical submission copy is stored in:
 
-- **Name:** DestinyOne
-- **Subtitle:** For something real.
-- **Primary category:** Lifestyle
-- **Secondary category:** Social Networking
-- **Keywords:** Indian dating,matrimony,marriage,serious relationship,Indian singles,USA,verified dating
-- **Promotional text:** Curated introductions for Indians in the USA who are ready for a committed relationship or marriage.
+- `store/release-manifest.json` for names, subtitles, keywords and short copy
+- `store/full-description.txt` for the reviewed long description used by both stores
 
-## Google Play
+This document explains the intended presentation. Do not paste this guidance
+into App Store Connect or Play Console.
 
-- **App name:** DestinyOne
-- **Short description:** Intentional dating for Indians in the USA, built for something real.
+## Positioning
 
-## Full description
-
-DestinyOne is a premium relationship app for Indians living in the USA who are ready for a committed relationship or marriage.
-
-Skip endless swiping. Meet a small, thoughtful set of daily matches based on relationship intent, shared values, and lifestyle compatibility—without public percentage scores.
-
-With DestinyOne you can:
-
-- Build a verified, marriage-minded profile
-- Share values, future goals, and family expectations
-- Receive curated Strong, Great, or Exceptional matches
-- Break the ice before chat unlocks
-- Chat with photos, GIFs, emojis, voice features, and thoughtful virtual gifts
-- Plan dates around cafés and activities without exposing exact locations
-- Add trusted-friend vouches and use built-in safety tools
-
-DestinyOne is not designed for casual dating. It is for people ready to build something real.
+- Product: premium serious dating and marriage-minded introductions
+- Audience: South Asians in the USA and Canada
+- Minimum age: 18; core audience: 25–35
+- Tone: intentional, modern, respectful and premium
+- Category: Dating on Google Play; Lifestyle with Social Networking secondary on iOS
 
 ## Screenshot story
 
-1. **For something real** — Premium welcome experience
-2. **Fewer, better introductions** — Curated daily matches
-3. **Values before small talk** — Intent and life-alignment profiles
-4. **Conversation with personality** — Rich chat and icebreakers
-5. **Plan a thoughtful first date** — Café and activity suggestions
-6. **Designed with safety in mind** — Verification, reports, blocks, and check-ins
+1. **For something real** — premium welcome experience
+2. **Fewer, better introductions** — curated daily matches
+3. **Values before small talk** — intent and life-alignment profiles
+4. **Conversation with personality** — rich chat and icebreakers
+5. **Plan a thoughtful first date** — public-place suggestions
+6. **Designed with safety in mind** — reports, blocks and privacy controls
 
-Avoid claims such as “safest,” “guaranteed matches,” or “AI finds your soulmate.” Store screenshots must use mock profiles with documented model consent.
+Screenshots must use synthetic or consented mock profiles. Record model-consent
+evidence in the store release manifest and review every screenshot on physical
+iOS and Android devices.
+
+## Claim rules
+
+Do not claim guaranteed matches, the safest dating experience, a soulmate
+prediction, universal identity verification, live reservations, or live
+payments before the corresponding provider evidence is approved. Provider-
+dependent copy must describe availability conditionally.
+
+Run `pnpm store:manifest:verify` during development. Run
+`pnpm store:release:verify` before requesting a production release candidate.

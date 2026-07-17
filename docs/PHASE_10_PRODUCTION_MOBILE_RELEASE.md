@@ -24,8 +24,13 @@ The workflow requires the exact confirmation `BUILD_PRODUCTION_RC`, signing
 setup confirmation, final legal review, approved store metadata, reviewed live
 provider evidence, a physical-device QA summary reference and an approved
 release ticket. It then runs the full source release check, production backend
-lock, generated iOS/Android least-privilege audit, and requests a store-signed
-EAS build with auto-incremented build numbers.
+lock, generated iOS/Android least-privilege audit, the canonical production
+store-release manifest gate, and requests a store-signed EAS build with
+auto-incremented build numbers.
+
+The workflow input checkboxes are not sufficient evidence by themselves.
+`pnpm store:release:verify` must also pass using
+`store/release-manifest.json`. See `docs/PHASE_10_STORE_RELEASE_CONTRACT.md`.
 
 Only non-secret build metadata and evidence references are retained for 30
 days. Reviewer login values and OTPs are never stored in client code, build

@@ -39,12 +39,14 @@ describe('production mobile release-candidate workflow', () => {
     const environment = workflow.indexOf('pnpm mobile:build:verify');
     const prebuild = workflow.indexOf('expo prebuild --no-install --platform all');
     const native = workflow.indexOf('pnpm mobile:native:verify -- --variant=production');
+    const store = workflow.indexOf('pnpm store:release:verify');
     const build = workflow.indexOf('eas build --profile production');
     expect(release).toBeGreaterThan(-1);
     expect(release).toBeLessThan(environment);
     expect(environment).toBeLessThan(prebuild);
     expect(prebuild).toBeLessThan(native);
-    expect(native).toBeLessThan(build);
+    expect(native).toBeLessThan(store);
+    expect(store).toBeLessThan(build);
   });
 
   it('creates a store-distribution RC but never auto-submits it', () => {

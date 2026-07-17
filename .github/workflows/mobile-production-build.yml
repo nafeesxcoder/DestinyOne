@@ -107,6 +107,8 @@ jobs:
         run: |
           pnpm exec expo prebuild --no-install --platform all
           pnpm mobile:native:verify -- --variant=production
+      - name: Verify approved store release manifest
+        run: pnpm store:release:verify
       - name: Request signed production release candidate
         run: |
           mkdir -p artifacts
