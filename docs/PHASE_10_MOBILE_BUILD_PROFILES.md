@@ -21,13 +21,25 @@ state and never prints key values.
 
 `app.config.ts` preserves the static `app.json` configuration while selecting
 variant-specific names, schemes and package identifiers. iPad support is
-enabled so tablet QA can use a real native build instead of only web sizing.
+enabled and orientation is set to `default` so tablet QA covers portrait and
+landscape instead of only web sizing. Apple Pay merchant identifiers are also
+isolated per app identity, preventing pilot/development builds from sharing the
+production merchant entitlement.
 
 Before the first pilot build, create `EXPO_PUBLIC_SUPABASE_URL` and
 `EXPO_PUBLIC_SUPABASE_ANON_KEY` in the EAS `preview` environment. Before a store
 build, create their production equivalents in the EAS `production`
 environment. These are public client values; service-role, database, provider
 and signing secrets must never use an `EXPO_PUBLIC_` prefix.
+
+Run `eas init` once with the intended Expo organization to create/link the real
+project. Configure its UUID as the plain `EAS_PROJECT_ID` variable in the EAS
+`preview` and `production` environments. Also add the same UUID as the protected
+GitHub environment variable `PILOT_EAS_PROJECT_ID`; this allows CI to resolve
+the project before EAS-hosted environment variables are loaded. Pilot and
+production build guards reject missing or malformed linkage IDs. The project
+UUID is an identifier rather than a credential, but it should still be managed
+as configuration instead of being invented or copied from another app.
 
 ## Signed Toronto pilot build
 
@@ -45,6 +57,10 @@ rules and these pilot-only secrets:
 - `PILOT_EXPO_TOKEN`
 - `PILOT_EXPO_PUBLIC_SUPABASE_URL`
 - `PILOT_EXPO_PUBLIC_SUPABASE_ANON_KEY`
+
+Add this protected environment variable (not a secret):
+
+- `PILOT_EAS_PROJECT_ID`
 
 Apple distribution, provisioning devices and Android keystore credentials stay
 in the Expo credential service and must be configured before selecting the

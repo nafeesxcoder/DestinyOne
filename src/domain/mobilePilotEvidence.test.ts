@@ -83,6 +83,7 @@ describe('mobile pilot physical-device evidence', () => {
     expect(workflow).toContain("inputs.change_ticket != ''");
     expect(workflow).toContain('environment: toronto-pilot-mobile');
     expect(workflow).toContain('secrets.PILOT_EXPO_TOKEN');
+    expect(workflow).toContain('vars.PILOT_EAS_PROJECT_ID');
     expect(workflow).not.toContain('push:');
     expect(workflow).not.toContain('pull_request:');
   });

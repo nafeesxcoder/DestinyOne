@@ -55,6 +55,7 @@ jobs:
     environment: toronto-pilot-mobile
     env:
       EXPO_TOKEN: ${{ secrets.PILOT_EXPO_TOKEN }}
+      EAS_PROJECT_ID: ${{ vars.PILOT_EAS_PROJECT_ID }}
       APP_VARIANT: pilot
       EXPO_PUBLIC_APP_ENV: staging
       EXPO_PUBLIC_REQUIRE_REAL_BACKEND: 'true'

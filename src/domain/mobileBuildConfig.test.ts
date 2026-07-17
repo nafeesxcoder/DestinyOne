@@ -9,6 +9,7 @@ const validSupabase = {
   EXPO_PUBLIC_SUPABASE_URL: 'https://pilotref.supabase.co',
   EXPO_PUBLIC_SUPABASE_ANON_KEY: 'sb_publishable_12345678901234567890',
 };
+const validEasProjectId = '123e4567-e89b-42d3-a456-426614174000';
 
 function verify(env: Record<string, string>) {
   return spawnSync(process.execPath, [script], {
@@ -32,6 +33,7 @@ describe('mobile build profiles', () => {
       EXPO_PUBLIC_REQUIRE_REAL_BACKEND: 'false',
       EXPO_PUBLIC_SUPABASE_URL: '',
       EXPO_PUBLIC_SUPABASE_ANON_KEY: '',
+      EAS_PROJECT_ID: '',
     });
     expect(result.status).toBe(0);
   });
@@ -43,6 +45,7 @@ describe('mobile build profiles', () => {
       EXPO_PUBLIC_REQUIRE_REAL_BACKEND: 'true',
       EXPO_PUBLIC_SUPABASE_URL: '',
       EXPO_PUBLIC_SUPABASE_ANON_KEY: '',
+      EAS_PROJECT_ID: validEasProjectId,
     });
     expect(result.status).toBe(1);
     expect(result.stdout).toContain('Toronto pilot builds require explicit valid Supabase');
@@ -53,6 +56,7 @@ describe('mobile build profiles', () => {
       APP_VARIANT: 'production',
       EXPO_PUBLIC_APP_ENV: 'production',
       EXPO_PUBLIC_REQUIRE_REAL_BACKEND: 'false',
+      EAS_PROJECT_ID: validEasProjectId,
       ...validSupabase,
     });
     expect(result.status).toBe(1);
@@ -64,9 +68,52 @@ describe('mobile build profiles', () => {
       APP_VARIANT: 'production',
       EXPO_PUBLIC_APP_ENV: 'production',
       EXPO_PUBLIC_REQUIRE_REAL_BACKEND: 'true',
+      EAS_PROJECT_ID: validEasProjectId,
       ...validSupabase,
     });
     expect(result.status).toBe(0);
+  });
+
+  it('fails non-interactive pilot and production builds without an EAS project link', () => {
+    for (const [variant, appEnvironment] of [['pilot', 'staging'], ['production', 'production']] as const) {
+      const result = verify({
+        APP_VARIANT: variant,
+        EXPO_PUBLIC_APP_ENV: appEnvironment,
+        EXPO_PUBLIC_REQUIRE_REAL_BACKEND: 'true',
+        EAS_PROJECT_ID: '',
+        ...validSupabase,
+      });
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain('linked EAS_PROJECT_ID UUID');
+    }
+  });
+
+  it('resolves tablet rotation, project linkage, and isolated Apple Pay identities', () => {
+    const cli = 'node_modules/expo/bin/cli';
+    const resolved = (variant: 'development' | 'pilot' | 'production', appEnvironment: string) => {
+      const result = spawnSync(process.execPath, [cli, 'config', '--type', 'public', '--json'], {
+        env: {
+          ...process.env,
+          APP_VARIANT: variant,
+          EAS_PROJECT_ID: validEasProjectId,
+          EXPO_PUBLIC_APP_ENV: appEnvironment,
+        },
+        encoding: 'utf8',
+      });
+      expect(result.status).toBe(0);
+      return JSON.parse(result.stdout);
+    };
+    const development = resolved('development', 'development');
+    const pilot = resolved('pilot', 'staging');
+    const production = resolved('production', 'production');
+    expect(pilot.orientation).toBe('default');
+    expect(pilot.ios.supportsTablet).toBe(true);
+    expect(pilot.extra.eas.projectId).toBe(validEasProjectId);
+    const merchantId = (config: Record<string, any>) => config.plugins
+      .find((plugin: unknown[]) => plugin[0] === '@stripe/stripe-react-native')[1].merchantIdentifier;
+    expect(merchantId(development)).toBe('merchant.com.destinyone.app.dev');
+    expect(merchantId(pilot)).toBe('merchant.com.destinyone.app.pilot');
+    expect(merchantId(production)).toBe('merchant.com.destinyone.app');
   });
 
   it('binds EAS profiles to the correct environment and policy', () => {

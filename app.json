@@ -6,7 +6,7 @@
     "description": "Intentional dating for South Asians in the USA and Canada, built for committed relationships and marriage.",
     "icon": "./assets/icon-red-velvet.png",
     "scheme": "destinyone",
-    "orientation": "portrait",
+    "orientation": "default",
     "userInterfaceStyle": "dark",
     "primaryColor": "#E5092F",
     "splash": {
