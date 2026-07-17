@@ -1,4 +1,5 @@
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { appEnvironment, isSupabaseConfigured, requiresRealBackend, supabase } from '../lib/supabase';
+import { buildRuntimeCapabilities } from '../domain/runtimeCapabilities';
 
 export type GiftDeliveryProvider = 'demo_local' | 'doordash_drive' | 'uber_direct';
 export type GiftServiceLevel = 'on_demand' | 'same_day' | 'scheduled';
@@ -100,9 +101,20 @@ type ProductRule = {
 
 const giftsApiUrl=process.env.EXPO_PUBLIC_GIFTS_API_URL?.replace(/\/$/,'')??'';
 export const giftOrderingConfigured=Boolean(giftsApiUrl);
+const giftRuntimeCapabilities=buildRuntimeCapabilities({
+  appEnvironment,
+  requiresRealBackend,
+  paymentsConfigured:false,
+  giftOrderingConfigured,
+  storeBillingConnected:false,
+  verifiedVouchRewardsConnected:false,
+});
+export const physicalGiftOrderingMode=giftRuntimeCapabilities.physicalGiftOrdering;
+export const digitalGiftWalletMode=giftRuntimeCapabilities.digitalGiftWallet;
+export const vouchRewardsMode=giftRuntimeCapabilities.vouchRewards;
 
 const providerLabels:Record<GiftDeliveryProvider,string>={
-  demo_local:'Demo local partner',
+  demo_local:physicalGiftOrderingMode==='blocked'?'Delivery unavailable':'Demo local partner',
   doordash_drive:'DoorDash Drive',
   uber_direct:'Uber Direct',
 };
@@ -246,6 +258,9 @@ export function giftOrderSummary(status:GiftFulfillmentStatus, quote:GiftOrderQu
  */
 export async function createPhysicalGiftOrder(input:GiftOrderRequest):Promise<GiftOrderResponse>{
   const localQuote=estimateGiftOrderQuote(input);
+  if(physicalGiftOrderingMode==='blocked'){
+    throw new Error('Physical gift delivery is unavailable. No order or payment was created.');
+  }
   if(!giftOrderingConfigured){
     await new Promise(resolve=>setTimeout(resolve,850));
     const orderId=`demo-gift-${Date.now()}`;

@@ -1,4 +1,5 @@
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { appEnvironment, isSupabaseConfigured, requiresRealBackend, supabase } from '../lib/supabase';
+import { buildRuntimeCapabilities } from '../domain/runtimeCapabilities';
 
 export type DateReservationIntent = {
   orderId?: string;
@@ -39,6 +40,14 @@ export type DateReservationStep = {
 export const stripePublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
 export const paymentsApiUrl = process.env.EXPO_PUBLIC_PAYMENTS_API_URL?.replace(/\/$/, '') ?? '';
 export const paymentsConfigured = Boolean(stripePublishableKey && paymentsApiUrl);
+export const dateReservationMode = buildRuntimeCapabilities({
+  appEnvironment,
+  requiresRealBackend,
+  paymentsConfigured,
+  giftOrderingConfigured: false,
+  storeBillingConnected: false,
+  verifiedVouchRewardsConnected: false,
+}).dateReservations;
 
 export function formatPaymentMoney(cents: number, currency: 'usd' = 'usd') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase(), maximumFractionDigits: cents % 100 === 0 ? 0 : 2 }).format(cents / 100);
@@ -52,7 +61,11 @@ export function estimateDateReservationQuote(input: DateReservationIntent, now =
     amountCents: input.amountCents,
     currency: input.currency,
     holdLabel: `${formatPaymentMoney(input.amountCents, input.currency)} refundable venue hold`,
-    providerLabel: paymentsConfigured ? 'Stripe + Apple Pay ready' : 'Demo reservation preview',
+    providerLabel: dateReservationMode === 'live'
+      ? 'Stripe + Apple Pay ready'
+      : dateReservationMode === 'demo'
+        ? 'Demo reservation preview'
+        : 'Reservations unavailable',
     refundPolicy: 'Hold is refundable if the match declines, venue cannot confirm, or the date is cancelled before cutoff.',
     safetyPolicy: 'Only public-place reservations are allowed. Exact live location is never shared without permission.',
     confirmationPolicy: 'Both people should accept the date plan before any real venue hold is captured.',
@@ -71,6 +84,7 @@ export function buildDateReservationSteps(status: DateReservationStatus): DateRe
 }
 
 export function dateReservationStatusCopy(status: DateReservationStatus, quote: DateReservationQuote) {
+  if (dateReservationMode === 'blocked') return 'Live reservations are unavailable until the verified payment and venue provider connection is active.';
   if (status === 'reserved') return `Reservation preview confirmed for ${quote.venueName}. Production will attach receipt, refund rules and calendar reminder.`;
   if (status === 'processing') return `Preparing secure checkout for ${quote.holdLabel}.`;
   return `${quote.holdLabel}. ${quote.confirmationPolicy}`;
@@ -82,6 +96,9 @@ export function dateReservationStatusCopy(status: DateReservationStatus, quote: 
  * Never trust an amount supplied by the mobile client.
  */
 export async function createDateReservationIntent(input: DateReservationIntent): Promise<PaymentIntentResponse> {
+  if (dateReservationMode === 'blocked') {
+    throw new Error('Live reservations are unavailable. No payment or reservation was created.');
+  }
   if (!paymentsConfigured) {
     await new Promise((resolve)=>setTimeout(resolve, 650));
     return {demo:true,reservationId:`demo-${Date.now()}`};
