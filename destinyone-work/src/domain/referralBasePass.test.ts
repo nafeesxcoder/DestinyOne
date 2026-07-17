@@ -15,7 +15,7 @@ describe('verified referral Base Pass', () => {
   it('shows the referral offer only after onboarding completes', () => {
     expect(app.indexOf('setOnboardingComplete(true)')).toBeLessThan(app.indexOf('setReferralOfferOpen(true)'));
     expect(app).toContain('Invite a verified friend. Get Base free for 7 days.');
-    expect(app).toContain('Share private invite');
+    expect(app).toContain('Send my invite');
     expect(app).toContain('Invite a friend · Get 7 days');
     expect(app).toContain('style={referralStyles.profileBanner}');
   });
