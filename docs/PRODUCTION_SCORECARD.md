@@ -20,7 +20,7 @@ every gate in that category has current evidence.
 | City user density | 2/10 | Controlled launch markets, private waitlist/referral/ambassador contracts, seven liquidity gates, a privacy-safe member city panel, and an honest Admin Audit are source-ready. Hosted metrics and verified live member supply remain absent, so no city pilot or expansion readiness is claimed. |
 | Marketplace operations | 3/10 | A complete local booking lifecycle now covers fresh server-priced quotes, active-match acceptance, payment preparation, provider confirmation, cancellation/refund outcomes, signed idempotent webhooks, reconciliation rules, and a working preview UI. Live inventory, partner contracts, payments, staffed support, deployed migrations, and operational evidence remain pending. |
 | Growth engine | 3/10 | A consent-gated nine-stage funnel, privacy-safe attribution, deterministic guarded experiments, verified-activation referral rewards, immutable reward ledger, cohort contracts, client adapter and honest Admin Audit are source-functional. Live event delivery, dashboards, deployed schema, experiment evidence and a repeatable acquisition channel remain pending. |
-| Monetization readiness | 4/10 | Store-compliant product rails, signed idempotent webhook ingestion, hashed receipts, immutable entitlement events, restore, grace/retry states, refund cases, chargeback reversal, finance snapshots, unit-economics math and an honest operations gate are source-functional. Live Apple/Google/processor accounts, tax setup, executed sandbox transactions and reconciled finance evidence remain pending. |
+| Monetization readiness | 4/10 | Store-compliant product rails, purchase-session binding, signed idempotent webhooks, hashed receipts, immutable entitlements, restore, grace/retry states, refunds/chargebacks, unit economics and an atomic daily-free/paid Golden Spark send are source-functional. Live Apple/Google/processor accounts, tax setup, executed sandbox transactions and reconciled finance evidence remain pending. |
 
 ## Scoring rules
 
@@ -156,7 +156,7 @@ every gate in that category has current evidence.
 ## Current automated evidence
 
 - TypeScript: passing on 2026-07-15.
-- Domain/service tests: rerun through the full release gate after each phase; monetization operations adds billing-rail, purchase-session, lifecycle, entitlement and unit-economics coverage while the pgTAP contract reaches 132 assertions.
+- Domain/service tests: rerun through the full release gate after each phase; monetization operations adds billing-rail, purchase-session, lifecycle, wallet debit, Golden Spark and unit-economics coverage while the pgTAP contract reaches 135 assertions.
 - Expo web export: passing on 2026-07-15.
 - These checks prove source health only. They do not prove production providers,
   real-device behavior, operational staffing, city liquidity, or unit economics.

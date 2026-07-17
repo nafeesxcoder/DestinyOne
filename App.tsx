@@ -33,7 +33,7 @@ import { buildCityDensitySnapshot, resolveLaunchMarket, type CityDensitySnapshot
 import { buildGrowthEngineSnapshot, growthFunnelEvents, type GrowthEngineSnapshot } from './src/domain/growthEngine';
 import { annualSavingsLabel, billingPeriodLabel, buildPaymentEntitlementSnapshot, buildRestorePreview, checkoutSteps, executivePlan, formatMoney, membershipEntitlementSummary, membershipPlans, membershipPriceLabel, sparkPacks, type BillingCycle, type PaymentEntitlementGate, type PaymentEntitlementSnapshot, type ProductKind } from './src/domain/monetization';
 import { buildMonetizationOperationsSnapshot, previewEntitlementAllowed, type MonetizationOperationsSnapshot } from './src/domain/monetizationOps';
-import { restoreStorePurchases } from './src/services/billing';
+import { restoreStorePurchases, sendGoldenSpark } from './src/services/billing';
 import { buildReportActionPlan, buildSafetyChecklist, safetyReadinessScore, scanMessageSafety, type MessageSafetyScan, type SafetyChecklistItem } from './src/domain/safety';
 import { buildProductQualitySnapshot, type ProductQualityItem } from './src/domain/productQuality';
 import { buildInteractionAuditSnapshot, type InteractionAuditSnapshot } from './src/domain/interactionQuality';
@@ -429,9 +429,23 @@ function DestinyOneApp() {
     setDismissedIds(current=>[...new Set([...current,match.id])]);
     void persistUnmatch(conversationIdFor(match),`unmatch-${Date.now()}`);
   };
-  const sendRose=(match:Match,note:string)=>{
+  const sendRose=async(match:Match,note:string)=>{
     const today=todayKey();
     const available=getRoseAvailability(roseLedger);
+    if(appEnvironment==='production'){
+      const actionId=`golden-spark-${Date.now()}`;
+      try{
+        const result=await sendGoldenSpark(profileIdFor(match),note,actionId);
+        const serverPaid=result.paymentSource==='paid_spark';
+        setRoseLedger(current=>({dayKey:today,freeUsed:serverPaid?current.freeUsed:true,paidCredits:typeof result.balance==='number'?result.balance:current.paidCredits,sent:[...current.sent.slice(-49),{id:result.id,matchId:match.id,note,paid:serverPaid,createdAt:Date.now()}]}));
+        trackDiscovery('interested',match);
+        if(result.matched){appendChatMessage(match,createRoseMessage(note));setRosePopup({match,note,paid:serverPaid})}
+        else setAppNotice({title:'Golden Spark sent',body:`Your intentional note was delivered privately to ${match.name}. Chat opens only after mutual interest.`,icon:'sparkles',tone:'gold'});
+      }catch(error){
+        setAppNotice({title:'Spark not sent',body:error instanceof Error?error.message:'The secure Spark service is unavailable. Your balance was not changed.',icon:'shield-outline',tone:'ruby'});
+      }
+      return;
+    }
     if(!available.freeAvailable&&available.paidCredits<=0){
       setAppNotice({title:'Golden Spark pack',body:'Free plan includes 1 Golden Spark every day. Extra Sparks can be added through secure in-app purchase.',icon:'sparkles',tone:'gold',actionLabel:'See Spark packs',actionScreen:'pricing'});
       return;
@@ -474,7 +488,7 @@ function DestinyOneApp() {
     {screen==='profile'&&<Profile profile={profileDraft} verified={verified} profilePhoto={profilePhotos[0]} hasVoiceIntro={!!voiceIntroUri} lastSeenVisible={lastSeenVisible} analyticsConsent={analyticsConsent} onLastSeenVisibleChange={updateLastSeenPrivacy} onAnalyticsConsentChange={updateAnalyticsPrivacy} navigate={setScreen} onReset={resetDemo}/>} 
     {screen==='support'&&<SupportCenter onBack={()=>setScreen('profile')}/>} 
     {screen==='pricing'&&<Pricing back={()=>setScreen('profile')} onBuyRoses={(amount=5)=>{setRoseLedger(current=>({...current,paidCredits:current.paidCredits+amount}));setAppNotice({title:'Spark pack added',body:`Preview pack added ${amount} Golden Sparks. Production uses Apple/Google in-app billing and restore purchase.`,icon:'sparkles',tone:'gold'})}}/>} 
-    <RoseComposer visible={!!roseTarget} recipientName={roseTarget?.name??''} availability={roseAvailability} onClose={()=>setRoseTarget(null)} onSend={(note)=>{if(roseTarget)sendRose(roseTarget,note);setRoseTarget(null)}}/>
+    <RoseComposer visible={!!roseTarget} recipientName={roseTarget?.name??''} availability={roseAvailability} onClose={()=>setRoseTarget(null)} onSend={(note)=>{if(roseTarget)void sendRose(roseTarget,note);setRoseTarget(null)}}/>
     <RoseReceivedPopup data={rosePopup} onClose={()=>setRosePopup(null)} onOpenChat={(match)=>{setSelected(match);setRosePopup(null);setScreen('chat')}}/>
     <SafetyActions visible={detailSafetyOpen} match={selected} onClose={()=>setDetailSafetyOpen(false)} onSafetyCenter={()=>{setDetailSafetyOpen(false);setScreen('safety')}} onReport={(reason,details)=>{reportSelected(reason,details);setDetailSafetyOpen(false);setAppNotice({title:'Report submitted privately',body:'Your report is saved for safety review. The other member is not notified.',icon:'flag-outline',tone:'gold'})}} onBlock={()=>{setDetailSafetyOpen(false);blockMatch(selected);setScreen('home');setAppNotice({title:'Blocked privately',body:`${selected.name} is hidden from your matches, likes and chats. They will not be notified.`,icon:'ban-outline',tone:'ruby'})}} onUnmatch={()=>{setDetailSafetyOpen(false);unmatchMatch(selected);setScreen('home');setAppNotice({title:'Unmatched',body:`${selected.name} has been removed from this preview deck and conversation flow.`,icon:'person-remove-outline',tone:'rose'})}}/>
     <AppNoticeSheet notice={appNotice} onClose={()=>setAppNotice(null)} onAction={(screen)=>{setAppNotice(null);setScreen(screen)}}/>

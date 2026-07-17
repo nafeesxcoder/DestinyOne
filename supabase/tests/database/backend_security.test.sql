@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(132);
+select plan(135);
 
 select has_table('public','billing_products','server-owned billing catalog exists');
 select has_table('public','billing_purchase_sessions','server-bound store purchase sessions exist');
@@ -11,11 +11,13 @@ select has_table('public','billing_entitlement_snapshots','current entitlement s
 select has_table('public','billing_webhook_receipts','idempotent billing webhook receipts exist');
 select has_table('public','billing_refund_cases','billing refund support cases exist');
 select has_table('public','billing_daily_finance_snapshots','unit economics snapshots exist');
+select has_table('public','golden_spark_sends','server-owned Golden Spark sends exist');
 select has_function('public','get_current_entitlements',array[]::text[],'safe entitlement RPC exists');
 select has_function('public','restore_store_purchases',array[]::text[],'server-verified restore RPC exists');
 select has_function('public','request_billing_refund',array['uuid','text','text'],'idempotent refund request RPC exists');
 select has_function('public','prepare_store_purchase',array['text','text','text'],'rate-limited store preparation RPC exists');
 select has_function('public','consume_billing_entitlement',array['text','integer','text'],'idempotent Spark consumption RPC exists');
+select has_function('public','send_golden_spark',array['uuid','text','text'],'atomic Golden Spark RPC exists');
 select function_privs_are('public','billing_status_transition_allowed',array['text','text'],'service_role',array['EXECUTE'],'billing transition guard is service-only');
 select function_privs_are('public','process_billing_webhook',array['text','text','text','text','uuid','text','text','text','timestamp with time zone','timestamp with time zone','integer'],'service_role',array['EXECUTE'],'billing processor is service-only');
 select table_privs_are('public','billing_purchase_receipts','authenticated',array[]::text[],'members cannot query raw purchase receipts');
@@ -23,6 +25,7 @@ select table_privs_are('public','billing_entitlement_ledger','authenticated',arr
 select table_privs_are('public','billing_webhook_receipts','authenticated',array[]::text[],'members cannot read provider webhook payload hashes');
 select table_privs_are('public','billing_daily_finance_snapshots','authenticated',array[]::text[],'members cannot read finance operations');
 select ok(not has_table_privilege('authenticated','public.billing_entitlement_snapshots','INSERT'),'members cannot self-grant entitlements');
+select ok(not has_table_privilege('authenticated','public.golden_spark_sends','INSERT'),'members cannot bypass Spark allowance or wallet debit');
 
 select has_table('public','growth_attribution_touches','private attribution touches exist');
 select has_table('public','growth_events','consented funnel events exist');

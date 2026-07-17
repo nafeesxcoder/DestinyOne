@@ -118,6 +118,20 @@ create table if not exists public.billing_daily_finance_snapshots (
   primary key(snapshot_date,platform,city_key)
 );
 
+create table if not exists public.golden_spark_sends (
+  id uuid primary key default gen_random_uuid(),
+  sender_id uuid not null references public.profiles(id) on delete cascade,
+  recipient_id uuid not null references public.profiles(id) on delete cascade,
+  note text not null default '' check (char_length(note)<=280),
+  payment_source text not null check (payment_source in ('daily_free','paid_spark')),
+  idempotency_key text not null,
+  sent_on date not null default current_date,
+  created_at timestamptz not null default now(),
+  unique(sender_id,idempotency_key),
+  check(sender_id<>recipient_id)
+);
+create unique index if not exists golden_spark_one_free_daily_idx on public.golden_spark_sends(sender_id,sent_on) where payment_source='daily_free';
+
 alter table public.billing_products enable row level security;
 alter table public.billing_purchase_sessions enable row level security;
 alter table public.billing_purchase_receipts enable row level security;
@@ -126,9 +140,11 @@ alter table public.billing_entitlement_snapshots enable row level security;
 alter table public.billing_webhook_receipts enable row level security;
 alter table public.billing_refund_cases enable row level security;
 alter table public.billing_daily_finance_snapshots enable row level security;
+alter table public.golden_spark_sends enable row level security;
 
 create policy "members view own billing entitlement snapshots" on public.billing_entitlement_snapshots for select to authenticated using ((select auth.uid())=user_id);
 create policy "members view own refund cases" on public.billing_refund_cases for select to authenticated using ((select auth.uid())=user_id);
+create policy "participants view Golden Sparks" on public.golden_spark_sends for select to authenticated using ((select auth.uid()) in (sender_id,recipient_id));
 
 create or replace function public.prevent_billing_ledger_mutation()
 returns trigger language plpgsql set search_path=public,pg_temp as $$
@@ -209,6 +225,34 @@ begin
   insert into public.billing_entitlement_ledger(user_id,receipt_id,entitlement_key,event_type,unit_delta,source_event_key,expires_at,metadata)
   values(viewer,snapshot.source_receipt_id,p_entitlement_key,'consume',-p_units,source_key,snapshot.expires_at,jsonb_build_object('balanceAfter',balance_after));
   return jsonb_build_object('entitlementKey',p_entitlement_key,'balance',balance_after,'consumed',p_units);
+end $$;
+
+create or replace function public.send_golden_spark(p_recipient_id uuid,p_note text,p_idempotency_key text)
+returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
+declare viewer uuid:=auth.uid(); existing public.golden_spark_sends; sent public.golden_spark_sends; payment_source text; wallet_result jsonb; decision_result jsonb;
+begin
+  if viewer is null then raise exception 'authentication required'; end if;
+  if p_recipient_id is null or p_recipient_id=viewer then raise exception 'invalid recipient'; end if;
+  if nullif(trim(p_idempotency_key),'') is null then raise exception 'idempotency key required'; end if;
+  if char_length(coalesce(p_note,''))>280 then raise exception 'Spark note too long'; end if;
+  perform pg_advisory_xact_lock(hashtextextended(viewer::text||':golden-spark',0));
+  select * into existing from public.golden_spark_sends where sender_id=viewer and idempotency_key=left(trim(p_idempotency_key),120);
+  if existing.id is not null then
+    return jsonb_build_object('id',existing.id,'paymentSource',existing.payment_source,'balance',case when existing.payment_source='paid_spark' then (select units from public.billing_entitlement_snapshots where user_id=viewer and entitlement_key='spark_wallet') else null end,'matched',(select exists(select 1 from public.matches where status='mutual' and viewer in(user_a,user_b) and p_recipient_id in(user_a,user_b))));
+  end if;
+  if public.is_blocked_pair(viewer,p_recipient_id) or not exists(select 1 from public.profiles where id=p_recipient_id and onboarding_complete) then raise exception 'recipient unavailable'; end if;
+  if exists(select 1 from public.golden_spark_sends where sender_id=viewer and sent_on=current_date and payment_source='daily_free') then
+    payment_source:='paid_spark';
+    wallet_result:=public.consume_billing_entitlement('spark_wallet',1,'golden-spark:'||left(trim(p_idempotency_key),120));
+  else
+    payment_source:='daily_free';
+  end if;
+  insert into public.golden_spark_sends(sender_id,recipient_id,note,payment_source,idempotency_key)
+  values(viewer,p_recipient_id,left(coalesce(p_note,''),280),payment_source,left(trim(p_idempotency_key),120)) returning * into sent;
+  decision_result:=public.submit_match_decision(p_recipient_id,'interested');
+  insert into public.member_notifications(user_id,type,title,body,metadata)
+  values(p_recipient_id,'golden_spark_received','A Golden Spark arrived','Someone chose to stand out with intention.',jsonb_build_object('sender_id',viewer,'golden_spark_id',sent.id));
+  return jsonb_build_object('id',sent.id,'paymentSource',payment_source,'balance',case when payment_source='paid_spark' then wallet_result->'balance' else null end,'matched',coalesce((decision_result->>'matched')::boolean,false));
 end $$;
 
 create or replace function public.billing_status_transition_allowed(p_from text,p_to text)
@@ -300,13 +344,14 @@ exception when others then
   return false;
 end $$;
 
-revoke all on public.billing_products,public.billing_purchase_sessions,public.billing_purchase_receipts,public.billing_entitlement_ledger,public.billing_entitlement_snapshots,public.billing_webhook_receipts,public.billing_refund_cases,public.billing_daily_finance_snapshots from anon,authenticated;
-grant select on public.billing_entitlement_snapshots,public.billing_refund_cases to authenticated;
+revoke all on public.billing_products,public.billing_purchase_sessions,public.billing_purchase_receipts,public.billing_entitlement_ledger,public.billing_entitlement_snapshots,public.billing_webhook_receipts,public.billing_refund_cases,public.billing_daily_finance_snapshots,public.golden_spark_sends from anon,authenticated;
+grant select on public.billing_entitlement_snapshots,public.billing_refund_cases,public.golden_spark_sends to authenticated;
 revoke execute on function public.get_current_entitlements() from public,anon;
 revoke execute on function public.restore_store_purchases() from public,anon;
 revoke execute on function public.request_billing_refund(uuid,text,text) from public,anon;
 revoke execute on function public.prepare_store_purchase(text,text,text) from public,anon;
 revoke execute on function public.consume_billing_entitlement(text,integer,text) from public,anon;
+revoke execute on function public.send_golden_spark(uuid,text,text) from public,anon;
 revoke execute on function public.billing_status_transition_allowed(text,text) from public,anon,authenticated;
 revoke execute on function public.process_billing_webhook(text,text,text,text,uuid,text,text,text,timestamptz,timestamptz,integer) from public,anon,authenticated;
 grant execute on function public.get_current_entitlements() to authenticated;
@@ -314,5 +359,6 @@ grant execute on function public.restore_store_purchases() to authenticated;
 grant execute on function public.request_billing_refund(uuid,text,text) to authenticated;
 grant execute on function public.prepare_store_purchase(text,text,text) to authenticated;
 grant execute on function public.consume_billing_entitlement(text,integer,text) to authenticated;
+grant execute on function public.send_golden_spark(uuid,text,text) to authenticated;
 grant execute on function public.billing_status_transition_allowed(text,text) to service_role;
 grant execute on function public.process_billing_webhook(text,text,text,text,uuid,text,text,text,timestamptz,timestamptz,integer) to service_role;

@@ -43,6 +43,17 @@ export async function consumeSparkEntitlement(units: number, idempotencyKey: str
   return data as { entitlementKey: 'spark_wallet'; balance: number; consumed: number };
 }
 
+export async function sendGoldenSpark(recipientId: string, note: string, idempotencyKey: string) {
+  requireBillingBackend();
+  const { data, error } = await supabase.rpc('send_golden_spark', {
+    p_recipient_id: recipientId,
+    p_note: note,
+    p_idempotency_key: idempotencyKey,
+  });
+  if (error) throw error;
+  return data as { id: string; paymentSource: 'daily_free' | 'paid_spark'; balance: number | null; matched: boolean };
+}
+
 export async function requestBillingRefund(receiptId: string, reason: string, idempotencyKey: string) {
   requireBillingBackend();
   const { data, error } = await supabase.rpc('request_billing_refund', {

@@ -379,6 +379,10 @@ export type Database = {
         Args: { p_entitlement_key: string; p_units: number; p_idempotency_key: string };
         Returns: Json;
       };
+      send_golden_spark: {
+        Args: { p_recipient_id: string; p_note: string; p_idempotency_key: string };
+        Returns: Json;
+      };
       request_billing_refund: {
         Args: { p_receipt_id: string; p_reason: string; p_idempotency_key: string };
         Returns: Json;

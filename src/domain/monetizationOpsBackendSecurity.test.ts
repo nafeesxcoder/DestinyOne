@@ -51,4 +51,12 @@ describe('monetization operations backend security', () => {
     expect(migration).toContain("source_key:='member-consume:'");
     expect(migration).toContain("snapshot.units<p_units");
   });
+
+  it('atomically applies the daily free Spark or paid wallet debit before recording interest', () => {
+    expect(migration).toContain('create table if not exists public.golden_spark_sends');
+    expect(migration).toContain('golden_spark_one_free_daily_idx');
+    expect(migration).toContain('create or replace function public.send_golden_spark');
+    expect(migration).toContain("public.consume_billing_entitlement('spark_wallet',1");
+    expect(migration).toContain("public.submit_match_decision(p_recipient_id,'interested')");
+  });
 });

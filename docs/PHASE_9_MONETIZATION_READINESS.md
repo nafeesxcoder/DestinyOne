@@ -12,6 +12,7 @@ DestinyOne now has a fail-closed source contract for paid access. Digital member
 - Provider transaction identifiers stored only as SHA-256 hashes
 - Append-only entitlement ledger and member-safe current entitlement snapshots
 - SKU-owned Spark quantities and an idempotent server-side Spark wallet debit prevent client balance manipulation or duplicate consumption
+- Golden Spark send atomically chooses the daily free allowance or paid wallet debit, records interest, and notifies the recipient without opening chat before mutual interest
 - Server-verified restore purchase RPC; clients cannot self-grant paid access
 - Idempotent refund support cases and explicit chargeback/revocation handling
 - Daily finance snapshots for revenue, fees, taxes, refunds, chargebacks, marketplace cost, support cost and acquisition cost

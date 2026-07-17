@@ -61,6 +61,7 @@ const objects = [
   ['table', 'billing_webhook_receipts'],
   ['table', 'billing_refund_cases'],
   ['table', 'billing_daily_finance_snapshots'],
+  ['table', 'golden_spark_sends'],
   ['rpc', 'daily_matches'],
   ['rpc', 'get_current_member_bootstrap'],
   ['rpc', 'send_match_message'],
@@ -90,6 +91,7 @@ const objects = [
   ['rpc', 'request_billing_refund'],
   ['rpc', 'prepare_store_purchase'],
   ['rpc', 'consume_billing_entitlement'],
+  ['rpc', 'send_golden_spark'],
 ];
 
 const rpcBodies = {
@@ -168,6 +170,11 @@ const rpcBodies = {
   consume_billing_entitlement: {
     p_entitlement_key: 'spark_wallet',
     p_units: 1,
+    p_idempotency_key: 'deployment-probe',
+  },
+  send_golden_spark: {
+    p_recipient_id: '00000000-0000-4000-8000-000000000000',
+    p_note: 'deployment probe',
     p_idempotency_key: 'deployment-probe',
   },
 };
