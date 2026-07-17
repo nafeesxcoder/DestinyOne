@@ -17,7 +17,7 @@ const migrationFiles = readdirSync(migrationDir)
   .sort();
 const versions = migrationFiles.map((name) => Number(name.match(/^(\d{3})_[a-z0-9_]+\.sql$/)?.[1] ?? -1));
 
-requireCondition(migrationFiles.length >= 27, 'Expected at least 27 ordered migrations.');
+requireCondition(migrationFiles.length >= 28, 'Expected at least 28 ordered migrations.');
 requireCondition(versions.every((version) => version > 0), 'Migration names must use NNN_snake_case.sql.');
 requireCondition(versions.every((version, index) => version === index + 1), 'Migration versions must be contiguous from 001.');
 
@@ -74,6 +74,12 @@ const requiredContracts = [
   'create table if not exists public.growth_experiments',
   'create table if not exists public.growth_referral_conversions',
   'create table if not exists public.growth_daily_cohort_snapshots',
+  'create table if not exists public.growth_campaigns',
+  'create table if not exists public.growth_experiment_approvals',
+  'create table if not exists public.growth_experiment_metric_snapshots',
+  'create table if not exists public.growth_experiment_decisions',
+  'create table if not exists public.growth_referral_risk_reviews',
+  'create table if not exists public.growth_cohort_ingestion_runs',
   'create table if not exists public.billing_purchase_receipts',
   'create table if not exists public.billing_purchase_sessions',
   'create table if not exists public.billing_entitlement_ledger',
@@ -108,6 +114,14 @@ const requiredContracts = [
   'create or replace function public.redeem_growth_referral',
   'create or replace function public.assign_growth_experiment',
   'create or replace function public.process_growth_referral_reward',
+  'create or replace function public.start_growth_experiment',
+  'create or replace function public.record_growth_experiment_exposure',
+  'create or replace function public.record_growth_experiment_metric_snapshot',
+  'create or replace function public.decide_growth_experiment',
+  'create or replace function public.review_growth_referral_risk',
+  'create or replace function public.reverse_growth_referral_reward',
+  'create or replace function public.record_growth_cohort_snapshot',
+  'create or replace function public.withdraw_growth_analytics_consent',
   'create or replace function public.get_current_entitlements',
   'create or replace function public.restore_store_purchases',
   'create or replace function public.request_billing_refund',

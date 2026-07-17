@@ -32,9 +32,10 @@ describe('growth engine operations', () => {
   });
 
   it('never presents source-only growth contracts as live evidence', () => {
-    const snapshot = buildGrowthEngineSnapshot({ liveInstrumentationConnected: false, mappedEvents: 9, liveEventCount: 0, attributionConnected: false, experimentRegistryConnected: false, cohortDashboardConnected: false, referralVerificationConnected: false, activeExperiments: 0, verifiedConversions: 0 });
+    const snapshot = buildGrowthEngineSnapshot({ liveInstrumentationConnected: false, mappedEvents: 9, liveEventCount: 0, attributionConnected: false, experimentRegistryConnected: false, cohortDashboardConnected: false, referralVerificationConnected: false, activeExperiments: 0, verifiedConversions: 0, serverVerifiedOutcomesReady: true, campaignGovernanceReady: true, experimentSafetyControlsReady: true, referralRiskLedgerReady: true, consentWithdrawalReady: true, cohortProvenanceReady: true });
     expect(snapshot.status).toBe('Source model only');
     expect(snapshot.score).toBe(0);
     expect(snapshot.funnelCoverage).toBe(100);
+    expect(snapshot.sourceControlScore).toBe(100);
   });
 });

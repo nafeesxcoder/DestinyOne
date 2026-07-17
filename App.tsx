@@ -2100,7 +2100,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     appEnvironment,
     requiresRealBackend,
     supabaseConfigured:isSupabaseConfigured,
-    migrationCount:27,
+    migrationCount:28,
     edgeFunctionCount:5,
     dataModuleCount:dataSnapshot.totalModules,
     backendReadyModuleCount:dataSnapshot.backendReadyModules,
@@ -2383,6 +2383,12 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     referralVerificationConnected:false,
     activeExperiments:0,
     verifiedConversions:0,
+    serverVerifiedOutcomesReady:true,
+    campaignGovernanceReady:true,
+    experimentSafetyControlsReady:true,
+    referralRiskLedgerReady:true,
+    consentWithdrawalReady:true,
+    cohortProvenanceReady:true,
   });
   const p1Snapshot=buildP1OperationsSnapshot({
     hasDateMarketplacePreview:marketplaceSnapshot.ready,
@@ -2461,7 +2467,7 @@ function GrowthEngineReadinessCard({snapshot}:{snapshot:GrowthEngineSnapshot}){
   return <View style={cityDensityStyles.auditCard}>
     <View style={shared.row}><PremiumIcon name="trending-up" tone="rose" size={48} iconSize={22}/><View style={{flex:1,marginLeft:10}}><Text style={styles.kicker}>GROWTH ENGINE GATE</Text><Text style={adminOpsStyles.qualityTitle}>{snapshot.status} · {snapshot.score}%</Text><Text style={styles.helper}>Growth is measured from verified profile to retained member and accepted date, with consent and safety guardrails.</Text></View></View>
     <View style={adminOpsStyles.qualityTrack}><View style={[adminOpsStyles.qualityFill,{width:`${snapshot.score}%`}]}/></View>
-    <View style={adminOpsStyles.areaGrid}><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Funnel map</Text><Text style={adminOpsStyles.areaScore}>{snapshot.funnelCoverage}%</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Live events</Text><Text style={adminOpsStyles.areaScore}>{snapshot.liveEventCount}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Experiments</Text><Text style={adminOpsStyles.areaScore}>{snapshot.activeExperiments}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Conversions</Text><Text style={adminOpsStyles.areaScore}>{snapshot.verifiedConversions}</Text></View></View>
+    <View style={adminOpsStyles.areaGrid}><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Source</Text><Text style={adminOpsStyles.areaScore}>{snapshot.sourceControlScore}%</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Controls</Text><Text style={adminOpsStyles.areaScore}>{snapshot.sourceControlReady}/{snapshot.sourceControlTotal}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Live events</Text><Text style={adminOpsStyles.areaScore}>{snapshot.liveEventCount}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Conversions</Text><Text style={adminOpsStyles.areaScore}>{snapshot.verifiedConversions}</Text></View></View>
     <View style={adminOpsStyles.qualityRows}>{snapshot.blockers.map((blocker,index)=><View key={blocker} style={adminOpsStyles.qualityRow}><MiniPremiumIcon name={index===0?'analytics-outline':'lock-closed-outline'} tone="rose" size={28} iconSize={13}/><Text style={[adminOpsStyles.qualityRowBody,{flex:1}]}>{blocker}</Text></View>)}</View>
     <View style={adminOpsStyles.nextOpsCard}><MiniPremiumIcon name="arrow-forward-circle" tone="gold" size={30} iconSize={14}/><Text style={adminOpsStyles.nextOpsText}>{snapshot.nextBestStep}</Text></View>
   </View>

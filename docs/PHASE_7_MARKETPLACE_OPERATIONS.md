@@ -42,10 +42,10 @@ from live provider readiness so mock data cannot produce a false launch claim.
 
 ## Automated evidence
 
-- 27 ordered migrations
+- 28 ordered migrations
 - 5 privileged Edge Functions
-- 219 pgTAP security assertions
-- 70 test files and 294 passing tests
+- 245 pgTAP security assertions
+- 71 test files and 301 passing tests
 - TypeScript, source deployment preflight and Expo web export pass
 
 ## Remaining live gates

@@ -300,6 +300,30 @@ export type Database = {
         severity: 'normal' | 'high' | 'critical'; status: 'open' | 'investigating' | 'resolved' | 'dismissed';
         evidence: Json; created_at: string; resolved_at: string | null;
       }>;
+      growth_campaigns: Table<{
+        campaign_key: string; channel: 'referral' | 'ambassador' | 'event' | 'partnership' | 'paid_search' | 'paid_social' | 'creator'; city_keys: string[];
+        status: 'draft' | 'approved' | 'active' | 'paused' | 'completed' | 'cancelled'; spend_cap_cents: number; starts_at: string | null; ends_at: string | null;
+        owner_id: string | null; created_at: string; updated_at: string;
+      }>;
+      growth_experiment_approvals: Table<{
+        id: string; experiment_key: string; reviewer_id: string; reviewer_role: 'product' | 'data' | 'safety'; decision: 'approved' | 'rejected' | 'revoked';
+        note: string; expires_at: string; created_at: string;
+      }>;
+      growth_experiment_metric_snapshots: Table<{
+        id: string; experiment_key: string; source_run_id: string; sample_size: number; primary_metric_value: number; report_rate: number; block_rate: number;
+        eight_week_retention: number; guardrail_breached: boolean; recorded_at: string; safe_metadata: Json;
+      }>;
+      growth_experiment_decisions: Table<{
+        id: string; experiment_key: string; decision: 'ship' | 'stop' | 'inconclusive' | 'rollback'; reviewer_id: string; reason: string;
+        evidence_snapshot_id: string | null; idempotency_key: string; created_at: string;
+      }>;
+      growth_referral_risk_reviews: Table<{
+        id: string; conversion_id: string; reviewer_id: string; decision: 'cleared' | 'rejected' | 'manual_review'; shared_device: boolean;
+        shared_payment_identity: boolean; velocity_risk: boolean; risk_evidence_hash: string; note: string; idempotency_key: string; created_at: string;
+      }>;
+      growth_cohort_ingestion_runs: Table<{
+        id: string; snapshot_date: string; source_name: string; source_run_id: string; payload_hash: string; row_count: number; recorded_at: string;
+      }>;
     };
     Views: Record<never, never>;
     Functions: {
@@ -437,6 +461,14 @@ export type Database = {
         Returns: Json;
       };
       assign_growth_experiment: { Args: { p_experiment_key: string }; Returns: Json };
+      record_growth_experiment_exposure: { Args: { p_experiment_key: string; p_variant_key: string }; Returns: boolean };
+      withdraw_growth_analytics_consent: { Args: Record<string, never>; Returns: boolean };
+      start_growth_experiment: { Args: { p_experiment_key: string; p_rollout_percent: number; p_starts_at: string; p_idempotency_key: string }; Returns: Json };
+      record_growth_experiment_metric_snapshot: { Args: { p_experiment_key: string; p_source_run_id: string; p_sample_size: number; p_primary_metric_value: number; p_report_rate: number; p_block_rate: number; p_eight_week_retention: number; p_safe_metadata?: Json }; Returns: Json };
+      decide_growth_experiment: { Args: { p_experiment_key: string; p_decision: 'ship' | 'stop' | 'inconclusive' | 'rollback'; p_reviewer_id: string; p_reason: string; p_evidence_snapshot_id: string; p_idempotency_key: string }; Returns: Json };
+      review_growth_referral_risk: { Args: { p_conversion_id: string; p_reviewer_id: string; p_decision: 'cleared' | 'rejected' | 'manual_review'; p_shared_device: boolean; p_shared_payment_identity: boolean; p_velocity_risk: boolean; p_risk_evidence_hash: string; p_note: string; p_idempotency_key: string }; Returns: Json };
+      reverse_growth_referral_reward: { Args: { p_conversion_id: string; p_reviewer_id: string; p_reason: string; p_idempotency_key: string }; Returns: boolean };
+      record_growth_cohort_snapshot: { Args: { p_snapshot_date: string; p_source_name: string; p_source_run_id: string; p_payload_hash: string; p_rows: Json }; Returns: Json };
       get_current_entitlements: { Args: Record<string, never>; Returns: Json };
       restore_store_purchases: { Args: Record<string, never>; Returns: Json };
       prepare_store_purchase: {

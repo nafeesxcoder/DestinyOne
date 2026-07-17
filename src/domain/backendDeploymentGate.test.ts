@@ -45,8 +45,8 @@ describe('hosted backend deployment gate', () => {
     expect(verifier).toContain("import { deploymentContract } from './supabase-deployment-contract.mjs'");
     expect(preflight).toContain('for (const table of deploymentContract.tables)');
     expect(preflight).toContain('for (const rpc of deploymentContract.rpcs)');
-    expect(contract).toContain("id: 'destinyone-backend-v27'");
-    expect(contract).toContain('schemaVersion: 27');
+    expect(contract).toContain("id: 'destinyone-backend-v28'");
+    expect(contract).toContain('schemaVersion: 28');
   });
 
   it('deploys every privileged Edge Function before hosted verification', () => {

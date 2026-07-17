@@ -50,3 +50,20 @@ export async function getGrowthExperimentAssignment(experimentKey: string) {
   if (error) throw error;
   return data;
 }
+
+export async function recordGrowthExperimentExposure(experimentKey: string, variantKey: string) {
+  requireGrowthBackend();
+  const { data, error } = await supabase.rpc('record_growth_experiment_exposure', {
+    p_experiment_key: experimentKey,
+    p_variant_key: variantKey,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
+export async function withdrawGrowthAnalyticsConsent() {
+  requireGrowthBackend();
+  const { data, error } = await supabase.rpc('withdraw_growth_analytics_consent');
+  if (error) throw error;
+  return data === true;
+}

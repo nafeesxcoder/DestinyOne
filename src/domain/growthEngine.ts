@@ -111,6 +111,9 @@ export function evaluateReferralReward(input: {
 export type GrowthEngineSnapshot = {
   status: GrowthEngineStatus;
   score: number;
+  sourceControlScore: number;
+  sourceControlReady: number;
+  sourceControlTotal: number;
   funnelCoverage: number;
   liveEventCount: number;
   activeExperiments: number;
@@ -129,6 +132,12 @@ export function buildGrowthEngineSnapshot(input: {
   referralVerificationConnected: boolean;
   activeExperiments: number;
   verifiedConversions: number;
+  serverVerifiedOutcomesReady: boolean;
+  campaignGovernanceReady: boolean;
+  experimentSafetyControlsReady: boolean;
+  referralRiskLedgerReady: boolean;
+  consentWithdrawalReady: boolean;
+  cohortProvenanceReady: boolean;
 }): GrowthEngineSnapshot {
   const funnelCoverage = Math.min(100, Math.round((input.mappedEvents / growthFunnelEvents.length) * 100));
   const blockers: string[] = [];
@@ -138,6 +147,17 @@ export function buildGrowthEngineSnapshot(input: {
   if (!input.cohortDashboardConnected) blockers.push('Build city/cohort activation and eight-week retention dashboards.');
   if (!input.referralVerificationConnected) blockers.push('Process referral rewards only after verified activation and fraud review.');
   const ready = blockers.length === 0 && funnelCoverage === 100;
+  const sourceControls = [
+    input.serverVerifiedOutcomesReady,
+    input.campaignGovernanceReady,
+    input.experimentSafetyControlsReady,
+    input.referralRiskLedgerReady,
+    input.consentWithdrawalReady,
+    input.cohortProvenanceReady,
+  ];
+  const sourceControlReady = sourceControls.filter(Boolean).length;
+  const sourceControlTotal = sourceControls.length;
+  const sourceControlScore = Math.round(sourceControlReady / sourceControlTotal * 100);
   const score = input.liveInstrumentationConnected ? Math.round([
     funnelCoverage === 100, input.attributionConnected, input.experimentRegistryConnected,
     input.cohortDashboardConnected, input.referralVerificationConnected,
@@ -145,6 +165,9 @@ export function buildGrowthEngineSnapshot(input: {
   return {
     status: !input.liveInstrumentationConnected ? 'Source model only' : ready ? 'Ready for controlled experiments' : 'Instrumentation incomplete',
     score,
+    sourceControlScore,
+    sourceControlReady,
+    sourceControlTotal,
     funnelCoverage,
     liveEventCount: input.liveEventCount,
     activeExperiments: input.activeExperiments,

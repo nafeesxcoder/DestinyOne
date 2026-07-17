@@ -1,66 +1,70 @@
-# Phase 8: growth engine
+# Phase 8: Growth Engine
 
-## Outcome
+## Honest score
 
-DestinyOne now has a production-oriented growth control model instead of only
-promotional UI and local retention ideas.
+- Source controls: **10/10**
+- Live growth evidence: **0/10**
 
-The measurable funnel is:
+Source readiness means DestinyOne can measure and govern growth without trusting
+client claims. It does not mean that a live acquisition channel or retention
+loop has been proven.
 
-1. signup started
-2. profile verified
-3. profile completed
-4. qualified introduction viewed
-5. mutual match created
-6. meaningful conversation reached
-7. date plan accepted
-8. date outcome submitted
-9. member retained at week eight
+## North-star funnel
 
-Events are off by default. The client analytics adapter and database RPC both
-require explicit analytics consent, and only non-identifying allowlisted
-properties are accepted. Names, contact details, message content, profile or
-match IDs, photos, addresses and precise coordinates are rejected.
+1. Signup started
+2. Profile verified
+3. Profile completed
+4. Qualified introduction viewed
+5. Mutual match created
+6. Meaningful two-sided conversation reached
+7. Date plan accepted
+8. Date outcome submitted
+9. Member retained at week eight
 
-## Migration 017
+Every high-value outcome is checked against authoritative profile, discovery,
+match, message, date or reflection records before it enters growth reporting.
+The client cannot create a verified conversion merely by sending an event name.
 
-`017_growth_engine_and_experiments.sql` adds:
+## Source controls
 
-- private attribution touches and consented funnel events;
-- a controlled experiment registry with stable assignments and mandatory
-  report/block guardrails;
-- referral conversion states that separate joining, verification, activation,
-  fraud review, eligibility and reward;
-- an idempotent reward ledger;
-- service-only city/cohort acquisition, accepted-date, retention, safety and
-  spend snapshots.
+Migrations `017_growth_engine_and_experiments.sql` and
+`028_growth_operations_control_plane.sql` provide:
 
-Referral rewards are not granted for an install or signup. The service-only
-processor requires a distinct member, verified profile, completed onboarding,
-a mutual match as the activation signal, fraud clearance and a unique ledger
-entry.
+- analytics-consent enforcement, a strict property allowlist and member-triggered
+  withdrawal that removes attribution, events and experiment assignments;
+- server-verified funnel outcomes with event source and verification timestamps;
+- governed campaigns so paid, creator, partnership, event, ambassador and
+  referral touches must reference a matching active campaign;
+- deterministic experiment assignment with capped rollout and explicit exposure;
+- distinct product, data and safety approvals, expiry, a kill switch, minimum
+  sample size, immutable decisions and automatic pause on safety/retention breach;
+- referral risk evidence for shared device, shared payment identity and velocity,
+  followed by a real coin-ledger credit only after clearance;
+- idempotent referral reversal with a compensating ledger entry;
+- provenance-backed city, cohort and channel snapshots covering the full funnel,
+  spend, revenue and contribution margin.
 
 ## Admin Audit
 
-The Growth Engine Gate shows funnel mapping, live event count, active
-experiments, verified conversions and the exact missing production connections.
-The current build correctly reports `Source model only · 0%`: there is no live
-analytics provider, production event stream, cohort dashboard or verified
-conversion evidence yet.
+The Growth Engine Gate reports source controls separately from live evidence.
+The current preview correctly shows source readiness at 100% while live events,
+verified conversions and active experiments remain zero.
 
-## Evidence
+## Automated evidence
 
-- 17 contiguous migrations
-- 112 pgTAP contracts
-- consent-bound telemetry tests
-- deterministic experiment, attribution, reward and source-only honesty tests
-- deployment verifier coverage for all growth tables and member RPCs
+- 28 ordered migrations
+- 89 required tables and 71 required RPCs in the deployment contract
+- 245 pgTAP security assertions
+- 71 test files and 301 passing tests
+- TypeScript and source deployment preflight pass
 
-## Remaining production gates
+## Remaining live gates
 
-- Deploy migration 017 and generate database types from the linked project.
-- Connect a privacy-reviewed analytics provider and verify opt-out/deletion.
-- Create city/cohort dashboards and data-quality alerts.
-- Run experiments only after sample-size, safety, retention and rollback review.
-- Prove a repeatable acquisition channel with healthy eight-week retention and
-  contribution margin before increasing spend.
+- Deploy and verify the v28 backend in staging and production.
+- Connect a privacy-reviewed production event pipeline and deletion workflow.
+- Build city, cohort and channel dashboards with freshness and quality alerts.
+- Run one controlled Toronto experiment through approval, exposure, guardrail,
+  decision and rollback drills.
+- Produce verified referral activation, fraud-review and reversal evidence.
+- Sustain an acquisition channel with healthy eight-week retention, accepted-date
+  outcomes, safety guardrails and positive contribution margin before scaling.

@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(219);
+select plan(245);
 
 select has_function('public','get_backend_deployment_manifest',array[]::text[],'read-only deployment manifest exists');
 select function_privs_are('public','get_backend_deployment_manifest',array[]::text[],'service_role',array['EXECUTE'],'deployment manifest is service-role only');
@@ -72,6 +72,32 @@ select has_function('public','assign_growth_experiment',array['text'],'stable ex
 select function_privs_are('public','process_growth_referral_reward',array['uuid','text'],'service_role',array['EXECUTE'],'referral reward processor is service-only');
 select table_privs_are('public','growth_daily_cohort_snapshots','authenticated',array[]::text[],'members cannot read aggregate operations snapshots directly');
 select table_privs_are('public','growth_events','authenticated',array[]::text[],'members cannot query raw growth events directly');
+select has_table('public','growth_campaigns','governed growth campaigns exist');
+select has_table('public','growth_experiment_approvals','experiment approvals exist');
+select has_table('public','growth_experiment_metric_snapshots','experiment evidence snapshots exist');
+select has_table('public','growth_experiment_decisions','experiment decisions are immutable');
+select has_table('public','growth_referral_risk_reviews','referral risk review evidence exists');
+select has_table('public','growth_cohort_ingestion_runs','cohort ingestion provenance exists');
+select has_function('public','start_growth_experiment',array['text','numeric','timestamp with time zone','text'],'governed experiment start RPC exists');
+select has_function('public','record_growth_experiment_exposure',array['text','text'],'member exposure RPC exists');
+select has_function('public','record_growth_experiment_metric_snapshot',array['text','text','integer','numeric','numeric','numeric','numeric','jsonb'],'experiment metric ingestion RPC exists');
+select has_function('public','decide_growth_experiment',array['text','text','uuid','text','uuid','text'],'experiment decision RPC exists');
+select has_function('public','review_growth_referral_risk',array['uuid','uuid','text','boolean','boolean','boolean','text','text','text'],'referral risk review RPC exists');
+select has_function('public','reverse_growth_referral_reward',array['uuid','uuid','text','text'],'referral reversal RPC exists');
+select has_function('public','record_growth_cohort_snapshot',array['date','text','text','text','jsonb'],'cohort ingestion RPC exists');
+select has_function('public','withdraw_growth_analytics_consent',array[]::text[],'analytics withdrawal RPC exists');
+select function_privs_are('public','start_growth_experiment',array['text','numeric','timestamp with time zone','text'],'service_role',array['EXECUTE'],'only services can start experiments');
+select function_privs_are('public','record_growth_experiment_metric_snapshot',array['text','text','integer','numeric','numeric','numeric','numeric','jsonb'],'service_role',array['EXECUTE'],'experiment metrics are service-only');
+select function_privs_are('public','decide_growth_experiment',array['text','text','uuid','text','uuid','text'],'service_role',array['EXECUTE'],'experiment decisions are service-only');
+select function_privs_are('public','review_growth_referral_risk',array['uuid','uuid','text','boolean','boolean','boolean','text','text','text'],'service_role',array['EXECUTE'],'referral risk review is service-only');
+select function_privs_are('public','reverse_growth_referral_reward',array['uuid','uuid','text','text'],'service_role',array['EXECUTE'],'referral reversals are service-only');
+select function_privs_are('public','record_growth_cohort_snapshot',array['date','text','text','text','jsonb'],'service_role',array['EXECUTE'],'cohort ingestion is service-only');
+select function_privs_are('public','record_growth_experiment_exposure',array['text','text'],'authenticated',array['EXECUTE'],'members can record only assigned exposure');
+select function_privs_are('public','withdraw_growth_analytics_consent',array[]::text[],'authenticated',array['EXECUTE'],'members can withdraw analytics consent');
+select table_privs_are('public','growth_experiment_metric_snapshots','authenticated',array[]::text[],'members cannot read experiment evidence');
+select table_privs_are('public','growth_referral_risk_reviews','authenticated',array[]::text[],'members cannot inspect fraud evidence');
+select has_trigger('public','growth_experiments','growth_experiment_control_guard','experiment governance trigger exists');
+select ok(not has_function_privilege('authenticated','public.growth_outcome_is_verified(uuid,text)','EXECUTE'),'members cannot call the authoritative outcome helper');
 
 select has_table('public','marketplace_partners','marketplace partners are modeled privately');
 select has_table('public','marketplace_venues','marketplace venues are modeled privately');

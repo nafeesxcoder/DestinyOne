@@ -39,7 +39,7 @@ baseline; no production backend deployment is claimed by this document.
 Migration `020_complete_deployment_contract.sql` upgrades the stable metadata RPC
 that is executable only by `service_role`. `pnpm supabase:verify` uses that RPC
 to compare the complete hosted app/Edge-Function table, RPC and RLS inventory
-with the versioned v27 contract. The service-only manifest reports actual
+with the versioned v28 contract. The service-only manifest reports actual
 anonymous table grants combined with RLS policies and actual anonymous function
 EXECUTE grants. OpenAPI and read-only `GET ... limit=0` probes are retained only
 for endpoint health, because an empty successful RLS response is not proof of
