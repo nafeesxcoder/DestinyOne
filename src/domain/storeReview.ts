@@ -4,10 +4,9 @@ export type StoreReviewInput = {
   appEnvironment: StoreReviewEnvironment;
   backendMode: 'demo' | 'supabase' | 'missing' | string;
   demoOtpFallbackAllowed: boolean;
-  reviewerEmail?: string;
-  reviewerPhone?: string;
-  reviewerOtp?: string;
-  supportContact?: string;
+  reviewerAccessConfigured: boolean;
+  reviewerAccessReference?: string;
+  supportContactConfigured: boolean;
   legalUrlsPublished: boolean;
 };
 
@@ -24,7 +23,6 @@ export type StoreReviewSnapshot = {
   score: number;
   readyCount: number;
   total: number;
-  reviewerCredential: string;
   reviewerInstructions: string[];
   blockers: StoreReviewItem[];
   items: StoreReviewItem[];
@@ -32,8 +30,7 @@ export type StoreReviewSnapshot = {
 
 export function buildStoreReviewSnapshot(input: StoreReviewInput): StoreReviewSnapshot {
   const isProduction = input.appEnvironment === 'production';
-  const hasCredential = Boolean(input.reviewerEmail || input.reviewerPhone);
-  const hasOtpOrBackend = Boolean(input.reviewerOtp || input.backendMode === 'supabase');
+  const hasReviewerAccess = input.reviewerAccessConfigured && Boolean(input.reviewerAccessReference);
   const productionDemoGuardReady = !isProduction || !input.demoOtpFallbackAllowed;
   const productionBackendReady = !isProduction || input.backendMode === 'supabase';
 
@@ -41,19 +38,19 @@ export function buildStoreReviewSnapshot(input: StoreReviewInput): StoreReviewSn
     {
       id: 'reviewer_credentials',
       title: 'Reviewer login credentials',
-      body: hasCredential && hasOtpOrBackend
-        ? 'A reviewer can enter the app without needing a personal phone number.'
-        : 'Add a review account email/phone and OTP or connect real Supabase auth.',
-      ready: hasCredential && hasOtpOrBackend,
+      body: hasReviewerAccess
+        ? 'Reviewer access is configured in the protected store-console handoff.'
+        : 'Create a review account in the real backend and place its access details only in protected store-console notes.',
+      ready: hasReviewerAccess,
       storeCritical: true,
     },
     {
       id: 'review_notes',
       title: 'Review notes',
-      body: input.supportContact
-        ? 'Reviewer notes can include support contact, demo path and safety feature instructions.'
-        : 'Add support contact and review notes before store submission.',
-      ready: Boolean(input.supportContact),
+      body: input.supportContactConfigured
+        ? 'Protected reviewer notes include support routing, demo path and safety feature instructions.'
+        : 'Configure the reviewed support contact in protected store-console notes before submission.',
+      ready: input.supportContactConfigured,
       storeCritical: true,
     },
     {
@@ -87,10 +84,11 @@ export function buildStoreReviewSnapshot(input: StoreReviewInput): StoreReviewSn
 
   const readyCount = items.filter((item) => item.ready).length;
   const blockers = items.filter((item) => item.storeCritical && !item.ready);
-  const reviewerCredential = input.reviewerEmail || input.reviewerPhone || 'Add reviewer account before submission';
   const reviewerInstructions = [
-    `Login: ${reviewerCredential}`,
-    input.reviewerOtp ? `OTP/code: ${input.reviewerOtp}` : 'OTP/code: use the real Supabase email or phone code',
+    input.reviewerAccessReference
+      ? `Protected access reference: ${input.reviewerAccessReference}`
+      : 'Protected access reference: not configured',
+    'Credentials and OTPs belong only in App Store Connect/Play Console reviewer notes, never in the app bundle.',
     'Test path: complete onboarding → open Matches → view profile → send interest → answer icebreaker → open Chat.',
     'Safety path: open chat menu → Report/Block/Unmatch → Profile → Safety Center → Trust Ops Preview.',
     'Payments/gifts: use preview checkout only until store billing and fulfillment provider are connected.',
@@ -101,7 +99,6 @@ export function buildStoreReviewSnapshot(input: StoreReviewInput): StoreReviewSn
     score: Math.round((readyCount / items.length) * 100),
     readyCount,
     total: items.length,
-    reviewerCredential,
     reviewerInstructions,
     blockers,
     items,

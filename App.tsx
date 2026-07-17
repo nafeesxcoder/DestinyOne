@@ -2200,9 +2200,8 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     appEnvironment,
     backendMode,
     demoOtpFallbackAllowed:allowsPreviewOtpFallback,
-    reviewerEmail:'reviewer@destinyone.app',
-    reviewerOtp:allowsPreviewOtpFallback?'123456':undefined,
-    supportContact:'support@destinyone.app',
+    reviewerAccessConfigured:false,
+    supportContactConfigured:false,
     legalUrlsPublished:false,
   });
   const storeReviewReady=(id:string)=>storeReviewSnapshot.items.find(item=>item.id===id)?.ready??false;

@@ -1,0 +1,128 @@
+name: DestinyOne production mobile release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type BUILD_PRODUCTION_RC after reviewing every release gate
+        required: true
+        type: string
+      platform:
+        description: Store release-candidate platform
+        required: true
+        default: android
+        type: choice
+        options:
+          - android
+          - ios
+          - all
+      credentials_preconfigured:
+        description: Expo and platform signing credentials are configured
+        required: true
+        default: false
+        type: boolean
+      legal_review_complete:
+        description: Final legal text, public URLs, privacy labels, and age rating were reviewed
+        required: true
+        default: false
+        type: boolean
+      store_metadata_approved:
+        description: Store copy, screenshots, reviewer notes, and support routing were approved
+        required: true
+        default: false
+        type: boolean
+      provider_evidence_reviewed:
+        description: Backend, billing, safety, observability, and notification evidence was reviewed
+        required: true
+        default: false
+        type: boolean
+      device_qa_summary_ref:
+        description: Access-controlled iOS/Android physical-device QA summary reference
+        required: true
+        type: string
+      release_ticket:
+        description: Approved production release/change ticket reference
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: destinyone-mobile-production
+  cancel-in-progress: false
+
+jobs:
+  validate-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm release:check
+
+  request-production-rc:
+    needs: validate-source
+    if: >-
+      inputs.confirm == 'BUILD_PRODUCTION_RC' &&
+      inputs.credentials_preconfigured &&
+      inputs.legal_review_complete &&
+      inputs.store_metadata_approved &&
+      inputs.provider_evidence_reviewed &&
+      inputs.device_qa_summary_ref != '' &&
+      inputs.release_ticket != ''
+    runs-on: ubuntu-latest
+    environment: production-mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.PRODUCTION_EXPO_TOKEN }}
+      EAS_PROJECT_ID: ${{ vars.PRODUCTION_EAS_PROJECT_ID }}
+      APP_VARIANT: production
+      EXPO_PUBLIC_APP_ENV: production
+      EXPO_PUBLIC_REQUIRE_REAL_BACKEND: 'true'
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.PRODUCTION_EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PRODUCTION_EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.PRODUCTION_EXPO_TOKEN }}
+      - name: Verify locked production environment
+        run: pnpm mobile:build:verify
+      - name: Generate and audit native production projects
+        run: |
+          pnpm exec expo prebuild --no-install --platform all
+          pnpm mobile:native:verify -- --variant=production
+      - name: Request signed production release candidate
+        run: |
+          mkdir -p artifacts
+          eas build --profile production --platform "${{ inputs.platform }}" --non-interactive --no-wait --json > artifacts/eas-production-rc-request.json
+      - name: Write non-secret release evidence references
+        env:
+          DEVICE_QA_SUMMARY_REF: ${{ inputs.device_qa_summary_ref }}
+          RELEASE_TICKET: ${{ inputs.release_ticket }}
+        run: |
+          node -e "require('fs').writeFileSync('artifacts/production-rc-evidence.json', JSON.stringify({commit:process.env.GITHUB_SHA,deviceQaSummaryRef:process.env.DEVICE_QA_SUMMARY_REF,releaseTicket:process.env.RELEASE_TICKET,legalReviewComplete:true,storeMetadataApproved:true,providerEvidenceReviewed:true},null,2)+'\n')"
+      - name: Upload production RC request evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: eas-production-rc-${{ github.sha }}
+          path: |
+            artifacts/eas-production-rc-request.json
+            artifacts/production-rc-evidence.json
+          if-no-files-found: error
+          retention-days: 30
