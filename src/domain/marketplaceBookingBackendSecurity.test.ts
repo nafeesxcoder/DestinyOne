@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const migration = readFileSync('supabase/migrations/016_marketplace_booking_operations.sql', 'utf8');
+const migration = `${readFileSync('supabase/migrations/016_marketplace_booking_operations.sql', 'utf8')}\n${readFileSync('supabase/migrations/027_marketplace_operations_control_plane.sql', 'utf8')}`;
 const paymentFunction = readFileSync('supabase/functions/create-date-reservation-intent/index.ts', 'utf8');
 
 describe('marketplace backend security contracts', () => {
@@ -24,5 +24,6 @@ describe('marketplace backend security contracts', () => {
     expect(paymentFunction).toContain('/rest/v1/rpc/prepare_marketplace_payment');
     expect(paymentFunction).toContain("'Idempotency-Key':`destinyone-date-${orderId}`");
     expect(paymentFunction).not.toContain('supportedVenues');
+    expect(paymentFunction).not.toContain('amountCents:');
   });
 });

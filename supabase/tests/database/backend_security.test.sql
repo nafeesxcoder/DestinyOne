@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(199);
+select plan(219);
 
 select has_function('public','get_backend_deployment_manifest',array[]::text[],'read-only deployment manifest exists');
 select function_privs_are('public','get_backend_deployment_manifest',array[]::text[],'service_role',array['EXECUTE'],'deployment manifest is service-role only');
@@ -84,7 +84,27 @@ select has_table('public','marketplace_provider_webhook_receipts','idempotent we
 select has_function('public','create_marketplace_quote',array['uuid','uuid','integer','text'],'secure quote RPC exists');
 select has_function('public','prepare_marketplace_payment',array['uuid'],'server-owned payment preparation RPC exists');
 select has_function('public','cancel_marketplace_reservation_order',array['uuid','text','text'],'cancellation RPC exists');
-select function_privs_are('public','process_marketplace_booking_webhook',array['text','text','uuid','text','text','text'],'service_role',array['EXECUTE'],'provider webhook processor is service-only');
+select function_privs_are('public','process_marketplace_booking_webhook',array['text','text','uuid','text','integer','text','text','text','text'],'service_role',array['EXECUTE'],'provider webhook processor is service-only');
+select has_table('public','marketplace_partner_compliance','marketplace partner compliance exists');
+select has_table('public','marketplace_inventory_sync_runs','inventory sync provenance exists');
+select has_table('public','marketplace_inventory_holds','atomic inventory holds exist');
+select has_table('public','marketplace_refund_cases','marketplace refund cases exist');
+select has_table('public','marketplace_reconciliation_cases','marketplace reconciliation cases exist');
+select has_function('public','expire_marketplace_inventory_holds',array['integer'],'inventory hold expiry RPC exists');
+select has_function('public','sync_marketplace_inventory',array['text','text','uuid','jsonb','text'],'provider inventory sync RPC exists');
+select has_function('public','request_marketplace_refund',array['uuid','text','text'],'server-calculated marketplace refund RPC exists');
+select has_function('public','reconcile_marketplace_orders',array['integer'],'marketplace reconciliation RPC exists');
+select function_privs_are('public','expire_marketplace_inventory_holds',array['integer'],'service_role',array['EXECUTE'],'hold expiry is service-only');
+select function_privs_are('public','sync_marketplace_inventory',array['text','text','uuid','jsonb','text'],'service_role',array['EXECUTE'],'inventory sync is service-only');
+select function_privs_are('public','request_marketplace_refund',array['uuid','text','text'],'authenticated',array['EXECUTE'],'members request refunds through validated RPC');
+select function_privs_are('public','reconcile_marketplace_orders',array['integer'],'service_role',array['EXECUTE'],'reconciliation is service-only');
+select table_privs_are('public','marketplace_partner_compliance','authenticated',array[]::text[],'members cannot read partner compliance');
+select table_privs_are('public','marketplace_inventory_sync_runs','authenticated',array[]::text[],'members cannot read inventory sync provenance');
+select table_privs_are('public','marketplace_inventory_holds','authenticated',array[]::text[],'members cannot read other inventory holds');
+select table_privs_are('public','marketplace_reconciliation_cases','authenticated',array[]::text[],'members cannot read reconciliation evidence');
+select table_privs_are('public','marketplace_refund_cases','authenticated',array['SELECT'],'members can read only RLS-filtered refund cases');
+select ok(not has_function_privilege('authenticated','public.marketplace_booking_transition_allowed(text,text)','EXECUTE'),'members cannot call internal transition helper');
+select has_trigger('public','marketplace_partners','marketplace_partner_activation_guard','partner activation compliance trigger exists');
 
 select has_function('public', 'get_current_member_bootstrap', array[]::text[], 'member bootstrap RPC exists');
 select has_function('public', 'block_member', array['uuid'], 'server-owned block RPC exists');

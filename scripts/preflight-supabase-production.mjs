@@ -17,7 +17,7 @@ const migrationFiles = readdirSync(migrationDir)
   .sort();
 const versions = migrationFiles.map((name) => Number(name.match(/^(\d{3})_[a-z0-9_]+\.sql$/)?.[1] ?? -1));
 
-requireCondition(migrationFiles.length >= 26, 'Expected at least 26 ordered migrations.');
+requireCondition(migrationFiles.length >= 27, 'Expected at least 27 ordered migrations.');
 requireCondition(versions.every((version) => version > 0), 'Migration names must use NNN_snake_case.sql.');
 requireCondition(versions.every((version, index) => version === index + 1), 'Migration versions must be contiguous from 001.');
 
@@ -65,6 +65,11 @@ const requiredContracts = [
   'create table if not exists public.city_expansion_decisions',
   'create table if not exists public.marketplace_reservation_orders',
   'create table if not exists public.marketplace_provider_webhook_receipts',
+  'create table if not exists public.marketplace_partner_compliance',
+  'create table if not exists public.marketplace_inventory_sync_runs',
+  'create table if not exists public.marketplace_inventory_holds',
+  'create table if not exists public.marketplace_refund_cases',
+  'create table if not exists public.marketplace_reconciliation_cases',
   'create table if not exists public.growth_events',
   'create table if not exists public.growth_experiments',
   'create table if not exists public.growth_referral_conversions',
@@ -95,6 +100,10 @@ const requiredContracts = [
   'create or replace function public.create_marketplace_quote',
   'create or replace function public.prepare_marketplace_payment',
   'create or replace function public.process_marketplace_booking_webhook',
+  'create or replace function public.expire_marketplace_inventory_holds',
+  'create or replace function public.sync_marketplace_inventory',
+  'create or replace function public.request_marketplace_refund',
+  'create or replace function public.reconcile_marketplace_orders',
   'create or replace function public.record_growth_event',
   'create or replace function public.redeem_growth_referral',
   'create or replace function public.assign_growth_experiment',

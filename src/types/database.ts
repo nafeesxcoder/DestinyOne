@@ -277,6 +277,29 @@ export type Database = {
         primary_reviewer_id: string; secondary_reviewer_id: string; reason: string; decision_status: 'applied' | 'rolled_back';
         idempotency_key: string; evidence: Json; created_at: string;
       }>;
+      marketplace_partner_compliance: Table<{
+        partner_id: string; contract_status: 'missing' | 'review' | 'verified' | 'expired'; insurance_status: 'missing' | 'review' | 'verified' | 'expired';
+        tax_status: 'missing' | 'review' | 'verified' | 'expired'; payout_status: 'missing' | 'review' | 'verified' | 'paused';
+        safety_playbook_accepted: boolean; cancellation_policy_version: string | null; verified_at: string | null; updated_at: string;
+      }>;
+      marketplace_inventory_sync_runs: Table<{
+        id: string; provider: string; provider_sync_id: string; offering_id: string; payload_hash: string; slot_count: number;
+        status: 'accepted' | 'rejected'; received_at: string;
+      }>;
+      marketplace_inventory_holds: Table<{
+        quote_id: string; slot_id: string; party_size: number; status: 'held' | 'converted' | 'released' | 'expired';
+        expires_at: string; created_at: string; updated_at: string;
+      }>;
+      marketplace_refund_cases: Table<{
+        id: string; order_id: string; requested_by: string; reason: string; eligible_amount_cents: number;
+        status: 'requested' | 'provider_pending' | 'approved' | 'partially_refunded' | 'refunded' | 'denied' | 'support_required';
+        idempotency_key: string; provider_refund_id: string | null; created_at: string; resolved_at: string | null;
+      }>;
+      marketplace_reconciliation_cases: Table<{
+        id: string; order_id: string; case_type: 'amount_mismatch' | 'stale_confirmation' | 'missing_payment' | 'refund_mismatch' | 'inventory_mismatch' | 'provider_failure';
+        severity: 'normal' | 'high' | 'critical'; status: 'open' | 'investigating' | 'resolved' | 'dismissed';
+        evidence: Json; created_at: string; resolved_at: string | null;
+      }>;
     };
     Views: Record<never, never>;
     Functions: {
@@ -393,6 +416,14 @@ export type Database = {
         Args: { p_city_key: string; p_to_state: 'waitlist_only' | 'controlled_pilot' | 'healthy_pilot' | 'open'; p_primary_reviewer_id: string; p_secondary_reviewer_id: string; p_reason: string; p_idempotency_key: string };
         Returns: Json;
       };
+      create_marketplace_quote: { Args: { p_offering_id: string; p_slot_id: string; p_party_size: number; p_idempotency_key: string }; Returns: Json };
+      create_marketplace_reservation_order: { Args: { p_quote_id: string; p_match_id: string; p_idempotency_key: string }; Returns: Json };
+      respond_marketplace_reservation_order: { Args: { p_order_id: string; p_accept: boolean; p_idempotency_key: string }; Returns: Json };
+      cancel_marketplace_reservation_order: { Args: { p_order_id: string; p_reason: string; p_idempotency_key: string }; Returns: Json };
+      expire_marketplace_inventory_holds: { Args: { p_limit?: number }; Returns: number };
+      sync_marketplace_inventory: { Args: { p_provider: string; p_provider_sync_id: string; p_offering_id: string; p_slots: Json; p_payload_hash: string }; Returns: Json };
+      request_marketplace_refund: { Args: { p_order_id: string; p_reason: string; p_idempotency_key: string }; Returns: Json };
+      reconcile_marketplace_orders: { Args: { p_stale_minutes?: number }; Returns: number };
       record_growth_event: {
         Args: { p_event_id: string; p_session_id: string; p_event_name: string; p_properties?: Json };
         Returns: boolean;

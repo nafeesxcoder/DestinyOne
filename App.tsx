@@ -1412,6 +1412,10 @@ const buildLiveMarketplaceOpsSnapshot=()=>buildMarketplaceOpsSnapshot({
   eventHostCount:launchMarketplaceCoverage.reduce((sum,city)=>sum+city.eventHosts,0),
   eventConceptCount:eventExperiences.length,
   cityCoverage:launchMarketplaceCoverage,
+  partnerComplianceReady:true,
+  atomicInventoryHoldReady:true,
+  serverRefundCaseReady:true,
+  reconciliationCaseReady:true,
 });
 
 function RelationshipCoach({match,preferences,onBack,onOpenFilters,onUseInChat,onSubmitFeedback}:{match:Match;preferences:{intent:string;vibes:string[];filters:MatchFilters};onBack:()=>void;onOpenFilters:()=>void;onUseInChat:(draft:string)=>void;onSubmitFeedback:(feedback:'promising'|'not_aligned'|'met_in_person',useForMatching:boolean)=>Promise<boolean>}){
@@ -1697,7 +1701,7 @@ function LiveMarketplaceOpsCard({snapshot}:{snapshot:MarketplaceOpsSnapshot}){
       <View style={{flex:1,marginLeft:10}}>
         <Text style={styles.kicker}>LIVE MARKETPLACE OPS</Text>
         <Text style={styles.cardTitle}>{snapshot.status} · {snapshot.score}%</Text>
-        <Text style={styles.helper}>{snapshot.readyCount}/{snapshot.total} operations pillars ready for real bookings, events and support.</Text>
+        <Text style={styles.helper}>Source controls {snapshot.sourceControlScore}% · live readiness {snapshot.readyCount}/{snapshot.total}. Real bookings still require providers, contracts and staffed support.</Text>
       </View>
     </View>
     <View style={adminOpsStyles.qualityTrack}><View style={[adminOpsStyles.qualityFill,{width:`${snapshot.score}%`}]}/></View>
@@ -2096,7 +2100,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     appEnvironment,
     requiresRealBackend,
     supabaseConfigured:isSupabaseConfigured,
-    migrationCount:26,
+    migrationCount:27,
     edgeFunctionCount:5,
     dataModuleCount:dataSnapshot.totalModules,
     backendReadyModuleCount:dataSnapshot.backendReadyModules,

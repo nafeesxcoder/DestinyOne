@@ -27,6 +27,10 @@ const readyInput: MarketplaceOpsInput = {
   eventHostCount: 5,
   eventConceptCount: 8,
   cityCoverage: launchCoverage,
+  partnerComplianceReady: true,
+  atomicInventoryHoldReady: true,
+  serverRefundCaseReady: true,
+  reconciliationCaseReady: true,
 };
 
 describe('marketplace operations', () => {
@@ -65,5 +69,6 @@ describe('marketplace operations', () => {
     expect(snapshot.status).toBe('Ready for live ops');
     expect(snapshot.score).toBe(100);
     expect(snapshot.blockers).toEqual([]);
+    expect(snapshot.sourceControlScore).toBe(100);
   });
 });

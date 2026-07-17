@@ -38,6 +38,10 @@ export type MarketplaceOpsInput = {
   eventHostCount: number;
   eventConceptCount: number;
   cityCoverage: readonly MarketplaceCityCoverage[];
+  partnerComplianceReady: boolean;
+  atomicInventoryHoldReady: boolean;
+  serverRefundCaseReady: boolean;
+  reconciliationCaseReady: boolean;
 };
 
 export type MarketplaceOpsPillar = {
@@ -57,6 +61,9 @@ export type MarketplaceOpsSnapshot = {
   pillars: MarketplaceOpsPillar[];
   cityCoverage: MarketplaceCityCoverage[];
   nextBestStep: string;
+  sourceControlScore: number;
+  sourceControlReady: number;
+  sourceControlTotal: number;
 };
 
 function readinessScore(ready: boolean, started: boolean) {
@@ -164,6 +171,8 @@ export function buildMarketplaceOpsSnapshot(input: MarketplaceOpsInput): Marketp
     readinessScore(cityReady, launchCitiesCovered)
   ) / pillars.length);
   const providerBlockersOnly = blockers.every((pillar) => ['provider_adapter', 'inventory_freshness', 'checkout_refunds', 'webhook_reconciliation', 'safety_sla'].includes(pillar.id));
+  const sourceControls = [input.bookingLifecycleReady,input.inventoryFreshnessReady,input.partnerComplianceReady,input.atomicInventoryHoldReady,input.serverRefundCaseReady,input.reconciliationCaseReady];
+  const sourceControlReady = sourceControls.filter(Boolean).length;
 
   return {
     status: blockers.length === 0 ? 'Ready for live ops' : providerBlockersOnly ? 'Provider connections pending' : 'Ops setup needed',
@@ -174,5 +183,8 @@ export function buildMarketplaceOpsSnapshot(input: MarketplaceOpsInput): Marketp
     pillars,
     cityCoverage: [...input.cityCoverage],
     nextBestStep: blockers[0]?.nextStep ?? 'Begin closed launch with real venue inventory and staffed safety operations.',
+    sourceControlScore: Math.round(sourceControlReady/sourceControls.length*100),
+    sourceControlReady,
+    sourceControlTotal: sourceControls.length,
   };
 }

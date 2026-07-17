@@ -1,52 +1,64 @@
-# Phase 7: marketplace booking operations
+# Phase 7: Marketplace Operations
 
-## Outcome
+## Honest score
 
-The local product now models the complete control path for a date booking:
+- Source controls: **10/10**
+- Live operations: **3/10**
 
-1. A recently provider-synced slot produces a short-lived, server-priced quote.
-2. The purchaser creates an order only inside an active match.
-3. Both distinct match members must accept before payment preparation.
-4. The payment Edge Function validates the bearer token and asks the database
-   for the immutable order total; the client never supplies price.
-5. Signed provider/payment webhooks advance the order idempotently.
-6. Cancellation enters an explicit refund path and append-only events support
-   customer service and reconciliation.
+The source implements the complete booking control path. The live score remains
+low because real provider inventory, signed partner contracts, payment accounts,
+staffed support and reconciled pilot evidence do not yet exist.
 
-The marketplace checkout sheet previews this lifecycle end to end, including
-acceptance, payment selection, provider confirmation, itinerary management and
-cancellation. It continues to state clearly that preview mode does not charge
-or reserve live inventory.
+## Booking control path
 
-## Migration 016
+1. Only an active partner with verified contract, insurance, tax, payout,
+   cancellation-policy and safety evidence can supply bookable inventory.
+2. Every provider sync records source identity, payload hash and sync ID.
+3. A fresh slot creates a short-lived, server-priced quote and atomically
+   decrements capacity. Expired, declined and failed holds restore capacity.
+4. An order can be created only inside an active match. Both distinct members
+   must accept before payment preparation.
+5. The payment Edge Function obtains the immutable amount and currency from the
+   database. The client cannot select or alter the charge.
+6. Signed provider webhooks are idempotent, record a raw-payload hash, validate
+   amount and currency, and enforce legal state transitions.
+7. Cancellation and refund eligibility are calculated server-side from the
+   captured amount, cutoff and offering terms.
+8. Booking participants retain access to orders, events, cancellation and
+   refund rights after a match ends.
+9. Reconciliation jobs create private cases for amount, stale-confirmation,
+   provider-failure and refund mismatches.
 
-`016_marketplace_booking_operations.sql` adds private partners, venues,
-offerings, availability, quotes, orders, order events and webhook receipts. The
-member-facing mutation surface is restricted to security-definer RPCs with
-active-match, quote-freshness, capacity, ownership and idempotency checks.
-Operational inventory and webhook receipts remain service-only.
+## Source implementation
 
-## Payment boundary
+Migration `016_marketplace_booking_operations.sql` defines the private booking
+system. Migration `027_marketplace_operations_control_plane.sql` adds partner
+compliance, atomic holds, provider sync provenance, refund cases, strict webhook
+transitions and reconciliation cases.
 
-`create-date-reservation-intent` now accepts an order ID, validates the Supabase
-session, calls `prepare_marketplace_payment`, and creates Stripe intents with a
-stable idempotency key. `marketplace-booking-webhook` verifies an HMAC signature
-before calling the service-only webhook processor.
+The app service layer exposes idempotent quote, order, response, cancellation
+and refund adapters. The Admin Audit keeps source-control readiness separate
+from live provider readiness so mock data cannot produce a false launch claim.
 
-## Evidence
+## Automated evidence
 
-- 16 contiguous migrations
-- 4 Edge Functions
-- 98 pgTAP security assertions
-- 44 test files and 167 tests
-- TypeScript and source deployment preflight pass
+- 27 ordered migrations
+- 5 privileged Edge Functions
+- 219 pgTAP security assertions
+- 70 test files and 294 passing tests
+- TypeScript, source deployment preflight and Expo web export pass
 
-## Remaining production gates
+## Remaining live gates
 
-- No live places, reservation, payment, Apple Pay, Google Pay or refund provider
-  is connected.
-- Partner contracts, real availability SLAs, customer support staffing,
-  webhook alerts, financial reconciliation jobs and refund exception handling
-  need staging and production evidence.
-- Migration 016 and its RLS tests have not run against the hosted Supabase
-  project. Production readiness therefore remains blocked and is not claimed.
+- Contract and onboard real venue/provider supply with current photos, licensing,
+  accessibility, pricing, availability, safety and cancellation data.
+- Connect live payment, Apple Pay/Google Pay where eligible, provider booking and
+  refund accounts in staging and production.
+- Execute hold, confirmation, cancellation, partial refund, full refund, no-show,
+  dispute and provider-outage drills with reconciled evidence.
+- Staff marketplace support and incident escalation to the published SLA.
+- Prove booking success, cancellation, refund, fraud, support cost and contribution
+  margin targets in a controlled city pilot.
+
+Until these gates pass, DestinyOne must describe marketplace actions as preview
+or sandbox behavior and must not claim a live reservation.

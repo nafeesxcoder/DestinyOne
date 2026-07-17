@@ -867,3 +867,85 @@ export async function applyCityAmbassador(input: { cityKey: string; communityRea
   if (error) throw error;
   return data;
 }
+
+export async function createMarketplaceQuote(input: {
+  offeringId: string;
+  slotId: string;
+  partySize?: number;
+  clientActionId: string;
+}) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('create_marketplace_quote', {
+    p_offering_id: input.offeringId,
+    p_slot_id: input.slotId,
+    p_party_size: input.partySize ?? 2,
+    p_idempotency_key: input.clientActionId,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function createMarketplaceReservationOrder(input: {
+  quoteId: string;
+  matchId: string;
+  clientActionId: string;
+}) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('create_marketplace_reservation_order', {
+    p_quote_id: input.quoteId,
+    p_match_id: input.matchId,
+    p_idempotency_key: input.clientActionId,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function respondMarketplaceReservationOrder(input: {
+  orderId: string;
+  accept: boolean;
+  clientActionId: string;
+}) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('respond_marketplace_reservation_order', {
+    p_order_id: input.orderId,
+    p_accept: input.accept,
+    p_idempotency_key: input.clientActionId,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function cancelMarketplaceReservationOrder(input: {
+  orderId: string;
+  reason: string;
+  clientActionId: string;
+}) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('cancel_marketplace_reservation_order', {
+    p_order_id: input.orderId,
+    p_reason: input.reason,
+    p_idempotency_key: input.clientActionId,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function requestMarketplaceRefund(input: {
+  orderId: string;
+  reason: string;
+  clientActionId: string;
+}) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('request_marketplace_refund', {
+    p_order_id: input.orderId,
+    p_reason: input.reason,
+    p_idempotency_key: input.clientActionId,
+  });
+  if (error) throw error;
+  return data;
+}
