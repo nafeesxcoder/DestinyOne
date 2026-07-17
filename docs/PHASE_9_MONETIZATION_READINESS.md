@@ -30,3 +30,5 @@ DestinyOne now has a fail-closed source contract for paid access. Digital member
 - Staffed billing support and approved customer-facing policy copy
 
 No live charge or production entitlement is claimed by this phase.
+
+The Admin Audit intentionally keeps store billing mode, production billing lock and paid feature-limit enforcement incomplete. Stripe readiness for real-world reservations never counts as Apple/Google digital billing readiness.
