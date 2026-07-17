@@ -189,6 +189,28 @@ begin
   return jsonb_build_object('purchaseSessionId',purchase_session.id,'externalProductId',product.external_product_id,'platform',purchase_session.platform,'expiresAt',purchase_session.expires_at);
 end $$;
 
+create or replace function public.consume_billing_entitlement(p_entitlement_key text,p_units integer,p_idempotency_key text)
+returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
+declare viewer uuid:=auth.uid(); snapshot public.billing_entitlement_snapshots; prior_event public.billing_entitlement_ledger; balance_after integer; source_key text;
+begin
+  if viewer is null then raise exception 'authentication required'; end if;
+  if p_entitlement_key<>'spark_wallet' then raise exception 'entitlement cannot be consumed'; end if;
+  if p_units is null or p_units<1 or p_units>10 then raise exception 'invalid consumption units'; end if;
+  if nullif(trim(p_idempotency_key),'') is null then raise exception 'idempotency key required'; end if;
+  source_key:='member-consume:'||viewer::text||':'||left(trim(p_idempotency_key),120);
+  select * into prior_event from public.billing_entitlement_ledger where source_event_key=source_key;
+  if prior_event.id is not null then return jsonb_build_object('entitlementKey',p_entitlement_key,'balance',coalesce((prior_event.metadata->>'balanceAfter')::integer,0),'consumed',abs(prior_event.unit_delta)); end if;
+  select * into snapshot from public.billing_entitlement_snapshots where user_id=viewer and entitlement_key=p_entitlement_key for update;
+  select * into prior_event from public.billing_entitlement_ledger where source_event_key=source_key;
+  if prior_event.id is not null then return jsonb_build_object('entitlementKey',p_entitlement_key,'balance',coalesce((prior_event.metadata->>'balanceAfter')::integer,0),'consumed',abs(prior_event.unit_delta)); end if;
+  if snapshot.user_id is null or snapshot.status not in ('active','grace_period','billing_retry') or snapshot.units<p_units then raise exception 'insufficient entitlement balance'; end if;
+  balance_after:=snapshot.units-p_units;
+  update public.billing_entitlement_snapshots set units=balance_after,updated_at=now() where user_id=viewer and entitlement_key=p_entitlement_key;
+  insert into public.billing_entitlement_ledger(user_id,receipt_id,entitlement_key,event_type,unit_delta,source_event_key,expires_at,metadata)
+  values(viewer,snapshot.source_receipt_id,p_entitlement_key,'consume',-p_units,source_key,snapshot.expires_at,jsonb_build_object('balanceAfter',balance_after));
+  return jsonb_build_object('entitlementKey',p_entitlement_key,'balance',balance_after,'consumed',p_units);
+end $$;
+
 create or replace function public.billing_status_transition_allowed(p_from text,p_to text)
 returns boolean language sql immutable set search_path=public,pg_temp as $$
   select case
@@ -251,9 +273,10 @@ begin
   delta:=case
     when p_status in ('verified','active') and product.product_class='spark_pack' and prior_status is not null then 0
     when p_status in ('verified','active') and prior_status in ('verified','active','grace_period','billing_retry','partially_refunded') then 0
-    when p_status in ('verified','active') then greatest(coalesce(p_units,product.units),0)
+    when p_status in ('verified','active') then product.units
     when p_status in ('grace_period','billing_retry') or prior_status=p_status then 0
-    else -greatest(coalesce(p_units,product.units),0)
+    when p_status='partially_refunded' then -least(greatest(coalesce(p_units,1),1),product.units)
+    else -product.units
   end;
   insert into public.billing_entitlement_ledger(user_id,receipt_id,entitlement_key,event_type,unit_delta,source_event_key,expires_at,metadata)
   values(resolved_user_id,receipt.id,product.entitlement_key,ledger_event,delta,p_platform||':'||p_external_event_id,p_expires_at,jsonb_build_object('platform',p_platform,'status',p_status));
@@ -283,11 +306,13 @@ revoke execute on function public.get_current_entitlements() from public,anon;
 revoke execute on function public.restore_store_purchases() from public,anon;
 revoke execute on function public.request_billing_refund(uuid,text,text) from public,anon;
 revoke execute on function public.prepare_store_purchase(text,text,text) from public,anon;
+revoke execute on function public.consume_billing_entitlement(text,integer,text) from public,anon;
 revoke execute on function public.billing_status_transition_allowed(text,text) from public,anon,authenticated;
 revoke execute on function public.process_billing_webhook(text,text,text,text,uuid,text,text,text,timestamptz,timestamptz,integer) from public,anon,authenticated;
 grant execute on function public.get_current_entitlements() to authenticated;
 grant execute on function public.restore_store_purchases() to authenticated;
 grant execute on function public.request_billing_refund(uuid,text,text) to authenticated;
 grant execute on function public.prepare_store_purchase(text,text,text) to authenticated;
+grant execute on function public.consume_billing_entitlement(text,integer,text) to authenticated;
 grant execute on function public.billing_status_transition_allowed(text,text) to service_role;
 grant execute on function public.process_billing_webhook(text,text,text,text,uuid,text,text,text,timestamptz,timestamptz,integer) to service_role;

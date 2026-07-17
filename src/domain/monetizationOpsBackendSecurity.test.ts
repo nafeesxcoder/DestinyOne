@@ -43,4 +43,12 @@ describe('monetization operations backend security', () => {
     expect(webhook).not.toContain('event.userId');
     expect(webhook).not.toContain('event.productKey');
   });
+
+  it('uses server catalog units for grants and consumes the Spark wallet through an idempotent RPC', () => {
+    expect(migration).toContain("when p_status in ('verified','active') then product.units");
+    expect(migration).toContain('create or replace function public.consume_billing_entitlement');
+    expect(migration).toContain("p_entitlement_key<>'spark_wallet'");
+    expect(migration).toContain("source_key:='member-consume:'");
+    expect(migration).toContain("snapshot.units<p_units");
+  });
 });

@@ -375,6 +375,10 @@ export type Database = {
         Args: { p_product_key: string; p_platform: 'apple_iap' | 'google_play'; p_idempotency_key: string };
         Returns: Json;
       };
+      consume_billing_entitlement: {
+        Args: { p_entitlement_key: string; p_units: number; p_idempotency_key: string };
+        Returns: Json;
+      };
       request_billing_refund: {
         Args: { p_receipt_id: string; p_reason: string; p_idempotency_key: string };
         Returns: Json;

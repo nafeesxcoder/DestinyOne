@@ -89,6 +89,7 @@ const objects = [
   ['rpc', 'restore_store_purchases'],
   ['rpc', 'request_billing_refund'],
   ['rpc', 'prepare_store_purchase'],
+  ['rpc', 'consume_billing_entitlement'],
 ];
 
 const rpcBodies = {
@@ -162,6 +163,11 @@ const rpcBodies = {
   prepare_store_purchase: {
     p_product_key: 'plus_monthly',
     p_platform: 'apple_iap',
+    p_idempotency_key: 'deployment-probe',
+  },
+  consume_billing_entitlement: {
+    p_entitlement_key: 'spark_wallet',
+    p_units: 1,
     p_idempotency_key: 'deployment-probe',
   },
 };

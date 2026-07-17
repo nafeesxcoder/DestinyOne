@@ -71,6 +71,7 @@ const requiredContracts = [
   'create or replace function public.restore_store_purchases',
   'create or replace function public.request_billing_refund',
   'create or replace function public.prepare_store_purchase',
+  'create or replace function public.consume_billing_entitlement',
   'create or replace function public.billing_status_transition_allowed',
   'create or replace function public.process_billing_webhook',
   'alter default privileges in schema public revoke all on tables from anon',
@@ -88,7 +89,7 @@ for (const functionName of edgeFunctions) {
 const databaseTest = readFileSync(testFile, 'utf8');
 const assertionPattern = /\bselect\s+(?:ok|is|isnt|like|unlike|throws_ok|lives_ok|has_[a-z_]+|hasnt_[a-z_]+|col_[a-z_]+|function_[a-z_]+|table_[a-z_]+|results_eq|set_eq|bag_eq|is_empty|isnt_empty)\s*\(/gi;
 const assertionCount = databaseTest.match(assertionPattern)?.length ?? 0;
-requireCondition(assertionCount >= 131, `Expected at least 131 pgTAP assertions, found ${assertionCount}.`);
+requireCondition(assertionCount >= 132, `Expected at least 132 pgTAP assertions, found ${assertionCount}.`);
 
 const publicFiles = ['.env.example', 'src/config/supabase.ts', 'src/lib/supabase.ts'];
 for (const file of publicFiles) {

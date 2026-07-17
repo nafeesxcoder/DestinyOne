@@ -32,6 +32,17 @@ export async function prepareStorePurchase(productKey: string, platform: 'apple_
   return data as PreparedStorePurchase;
 }
 
+export async function consumeSparkEntitlement(units: number, idempotencyKey: string) {
+  requireBillingBackend();
+  const { data, error } = await supabase.rpc('consume_billing_entitlement', {
+    p_entitlement_key: 'spark_wallet',
+    p_units: units,
+    p_idempotency_key: idempotencyKey,
+  });
+  if (error) throw error;
+  return data as { entitlementKey: 'spark_wallet'; balance: number; consumed: number };
+}
+
 export async function requestBillingRefund(receiptId: string, reason: string, idempotencyKey: string) {
   requireBillingBackend();
   const { data, error } = await supabase.rpc('request_billing_refund', {
