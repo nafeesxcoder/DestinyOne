@@ -62,23 +62,26 @@ const manifest = manifestResult.body && typeof manifestResult.body === 'object'
 const deployedTables = new Set(Array.isArray(manifest.tables) ? manifest.tables : []);
 const deployedFunctions = new Set(Array.isArray(manifest.functions) ? manifest.functions : []);
 const rlsDisabledTables = new Set(Array.isArray(manifest.rls_disabled_tables) ? manifest.rls_disabled_tables : []);
-const openApiPaths = openApiResult.body && typeof openApiResult.body.paths === 'object'
-  ? openApiResult.body.paths
-  : {};
+const manifestAnonymousTableExposures = new Set(
+  Array.isArray(manifest.anonymous_table_exposures) ? manifest.anonymous_table_exposures : [],
+);
+const manifestAnonymousRpcExposures = new Set(
+  Array.isArray(manifest.anonymous_rpc_exposures) ? manifest.anonymous_rpc_exposures : [],
+);
 
 const missingTables = deploymentContract.tables.filter((name) => !deployedTables.has(name));
 const missingRpcs = deploymentContract.rpcs.filter((name) => !deployedFunctions.has(name));
 const requiredTablesWithoutRls = deploymentContract.tables.filter((name) => rlsDisabledTables.has(name));
-const anonymousRpcExposures = deploymentContract.rpcs.filter((name) => Boolean(openApiPaths[`/rpc/${name}`]));
+const anonymousTableExposures = deploymentContract.tables.filter((name) => manifestAnonymousTableExposures.has(name));
+const anonymousRpcExposures = deploymentContract.rpcs.filter((name) => manifestAnonymousRpcExposures.has(name));
 
 const anonymousTableChecks = await Promise.all(deploymentContract.tables.map(async (name) => {
   const response = await fetch(`${url}/rest/v1/${name}?select=*&limit=0`, {
     headers: {apikey: anonKey},
     signal: AbortSignal.timeout(10_000),
   });
-  return {name, status: response.status, exposed: response.ok};
+  return {name, status: response.status};
 }));
-const anonymousTableExposures = anonymousTableChecks.filter((item) => item.exposed).map((item) => item.name);
 const unhealthyTableEndpoints = anonymousTableChecks.filter((item) => item.status >= 500).map((item) => item.name);
 
 const auth = authResult.body;

@@ -39,9 +39,11 @@ baseline; no production backend deployment is claimed by this document.
 Migration `020_complete_deployment_contract.sql` upgrades the stable metadata RPC
 that is executable only by `service_role`. `pnpm supabase:verify` uses that RPC
 to compare the complete hosted app/Edge-Function table, RPC and RLS inventory
-with the versioned v22 contract,
-then uses the anonymous OpenAPI surface and read-only `GET ... limit=0` probes
-to detect unintended anonymous exposure.
+with the versioned v25 contract. The service-only manifest reports actual
+anonymous table grants combined with RLS policies and actual anonymous function
+EXECUTE grants. OpenAPI and read-only `GET ... limit=0` probes are retained only
+for endpoint health, because an empty successful RLS response is not proof of
+anonymous data access.
 
 The verifier never calls member, safety, marketplace, growth or billing
 mutation RPCs. It fails closed when the URL, anonymous key, service-role key,

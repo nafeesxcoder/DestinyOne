@@ -8,7 +8,9 @@ export type TrustOpsGateId =
   | 'critical_escalation'
   | 'evidence_audit'
   | 'member_safety_actions'
-  | 'appeals_support';
+  | 'appeals_support'
+  | 'reviewer_access'
+  | 'incident_drill';
 
 export type TrustOpsInput = {
   queue: readonly ModerationQueueItem[];
@@ -24,6 +26,9 @@ export type TrustOpsInput = {
   reportBlockFlowReady: boolean;
   appealPathReady: boolean;
   supportContactReady: boolean;
+  reviewerRbacReady: boolean;
+  dualReviewReady: boolean;
+  incidentDrillPassed: boolean;
 };
 
 export type TrustOpsGate = {
@@ -74,6 +79,7 @@ export function buildTrustOpsSnapshot(input: TrustOpsInput): TrustOpsSnapshot {
   const evidenceReady = input.evidenceRetentionReady && input.blockAuditReady;
   const safetyActionsReady = input.reportBlockFlowReady && input.reportCount >= 0 && input.blockedCount >= 0;
   const appealsReady = input.appealPathReady && input.supportContactReady;
+  const reviewerAccessReady = input.reviewerRbacReady && input.dualReviewReady;
 
   const gates: TrustOpsGate[] = [
     {
@@ -127,6 +133,26 @@ export function buildTrustOpsSnapshot(input: TrustOpsInput): TrustOpsSnapshot {
       ready: appealsReady,
       started: input.appealPathReady || input.supportContactReady,
       nextStep: 'Publish support contact, appeal route and internal handoff notes for enforcement decisions.',
+    },
+    {
+      id: 'reviewer_access',
+      title: 'Reviewer access controls',
+      body: reviewerAccessReady
+        ? 'Reviewer roles are least-privilege and critical outcomes require a second qualified reviewer.'
+        : 'Staff access and dual review must be proven before sensitive enforcement begins.',
+      ready: reviewerAccessReady,
+      started: input.reviewerRbacReady || input.dualReviewReady,
+      nextStep: 'Provision named reviewer roles and require lead/legal approval for critical resolution and appeals.',
+    },
+    {
+      id: 'incident_drill',
+      title: 'Timed incident drill',
+      body: input.incidentDrillPassed
+        ? 'Scam, harassment and unsafe-date drills passed evidence, response, notification and appeal targets.'
+        : 'Operational playbooks still need a timed end-to-end drill with retained evidence.',
+      ready: input.incidentDrillPassed,
+      started: input.emergencyPlaybookReady,
+      nextStep: 'Run timed money-scam, harassment and unsafe-date drills and retain the reviewed evidence packet.',
     },
   ];
 

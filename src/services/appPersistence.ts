@@ -21,6 +21,7 @@ import {
   sendCurrentUserMessage,
   subscribeToChatMessages,
   submitIcebreakerAnswer,
+  submitMatchFeedback,
   submitMatchDecision,
   unmatchMember,
   uploadCurrentUserProfileMedia,
@@ -133,6 +134,11 @@ export async function persistDiscoverySignal(targetProfileId: string, signal: 'v
 export async function persistMatchDecision(targetProfileId: string, decision: 'interested' | 'pass') {
   if (!isBackendUuid(targetProfileId)) return { saved: false, reason: 'preview_id' } satisfies PersistenceResult;
   return persistSafely(() => submitMatchDecision(targetProfileId, decision));
+}
+
+export async function persistMatchFeedback(matchId: string, feedback: 'promising' | 'not_aligned' | 'met_in_person', useForMatching: boolean) {
+  if (!isBackendUuid(matchId)) return { saved: false, reason: 'preview_id' } satisfies PersistenceResult;
+  return persistSafely(() => submitMatchFeedback(matchId, feedback, useForMatching, `match-feedback-${Date.now()}`));
 }
 
 export async function persistIcebreakerAnswer(matchId: string, question: string, answer: string) {

@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest';
 
 const migration = `${readFileSync('supabase/migrations/014_matching_intelligence.sql', 'utf8')}\n${readFileSync('supabase/migrations/022_matching_quality_v2.sql', 'utf8')}`;
 const v2 = readFileSync('supabase/migrations/022_matching_quality_v2.sql', 'utf8');
+const evaluationGate = readFileSync('supabase/migrations/024_matching_evaluation_gate.sql', 'utf8');
+const backend = readFileSync('src/services/backend.ts', 'utf8');
+const persistence = readFileSync('src/services/appPersistence.ts', 'utf8');
+const app = readFileSync('App.tsx', 'utf8');
 
 describe('matching intelligence migration contract', () => {
   it('applies reciprocal hard filters before ranking', () => {
@@ -55,5 +59,24 @@ describe('matching intelligence migration contract', () => {
     expect(rankingBody).not.toContain("mf.feedback='not_aligned'");
     expect(rankingBody).toContain("weights->>'exposure_penalty'");
     expect(rankingBody).toContain("weights->>'shared_language'");
+  });
+
+  it('requires recent privacy-safe offline and shadow evidence before model promotion', () => {
+    expect(evaluationGate).toContain('create table if not exists public.matching_evaluation_runs');
+    expect(evaluationGate).toContain("evaluation_kind in ('offline', 'shadow')");
+    expect(evaluationGate).toContain("not (p_metrics ?& array['precision_at_5','eligible_coverage_rate','safety_exclusion_recall','max_group_exposure_gap'])");
+    expect(evaluationGate).toContain("key not in(\n       'precision_at_5','eligible_coverage_rate','safety_exclusion_recall','max_group_exposure_gap','score_drift'");
+    expect(evaluationGate).toContain("count(distinct evaluation_kind)");
+    expect(evaluationGate).toContain("created_at>=now()-interval '14 days'");
+    expect(evaluationGate).toContain("passed_evaluation_kinds<>2");
+    expect(evaluationGate).toContain('Recent passing offline and shadow evaluations are required');
+  });
+
+  it('wires explicit-consent outcome feedback from the member UI to the server RPC', () => {
+    expect(backend).toContain("supabase.rpc('submit_match_feedback'");
+    expect(persistence).toContain('submitMatchFeedback(matchId, feedback, useForMatching');
+    expect(app).toContain('useFeedbackForMatching,setUseFeedbackForMatching]=useState(false)');
+    expect(app).toContain('Use this outcome to improve my future introductions');
+    expect(app).toContain('It is never shown to {match.name}');
   });
 });

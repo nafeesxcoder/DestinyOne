@@ -21,7 +21,7 @@ This P1 gate separates “the backend structure is ready” from “production b
 
 The app has a strong Supabase-shaped backend foundation:
 
-- twenty-two ordered migrations for server-owned profile/chat writes, reciprocal matching, preferences, matches,
+- twenty-five ordered migrations for server-owned profile/chat writes, reciprocal matching, preferences, matches,
   audited reports/blocks/unmatch/live-location, safety check-ins, support tickets,
   gifts, date proposals, relationship learning, notifications, and private-media hardening
 - typed client integration
@@ -33,7 +33,8 @@ The app has a strong Supabase-shaped backend foundation:
   coverage, Edge Function entrypoints, and client secret boundaries
 - a manual GitHub production workflow with an environment approval gate, remote
   credential checks, migration dry run, reviewed push, Edge Function deployment,
-  and post-deploy schema/security verification
+  linked schema lint, the 184-assertion pgTAP suite, post-deploy verification,
+  and a commit-linked evidence artifact
 
 But production launch still needs:
 
@@ -58,9 +59,11 @@ But production launch still needs:
   project or reviewed baseline migration is required.
 - `pnpm backend:preflight` verifies source readiness without remote credentials.
 - `pnpm supabase:verify` reproduces the non-destructive deployment check and
-  fails for missing objects, anonymous access, or unhealthy endpoints.
-- The current expanded check finds 2 of 27 expected objects; both present legacy
-  tables reject anonymous reads, while all newer tables and RPCs are absent.
+  fails for missing objects, disabled RLS, anonymous policy/grant exposure, or
+  unhealthy endpoints.
+- The legacy audit found only `profiles` and `messages` from an older 27-object
+  inventory. It does not satisfy the current v25 contract of 75 tables and 56
+  RPCs; the protected workflow must produce fresh service-role evidence.
 
 ## Safe hosted deployment sequence
 
@@ -71,11 +74,14 @@ But production launch still needs:
    proving its full schema contract exists.
 5. Configure the GitHub `production` environment with required reviewers and:
    `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`,
-   `EXPO_PUBLIC_SUPABASE_URL`, and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+   `SUPABASE_SERVICE_ROLE_KEY`, `EXPO_PUBLIC_SUPABASE_URL`, and
+   `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
 6. Run **Supabase production gate** manually, type `DEPLOY`, and confirm that the
    legacy baseline was reviewed. The job performs a dry run before any push.
-7. Require the final hosted verifier to report every object present, zero
-   anonymous exposures, and zero unhealthy endpoints.
+7. Require linked lint and all 184 pgTAP assertions to pass, then require the
+   final hosted verifier to report every object present, zero anonymous
+   exposures, and zero unhealthy endpoints. Retain the commit-linked evidence
+   artifact from the workflow.
 
 The Admin Audit now keeps the schema gate incomplete until hosted verification,
 migration-history alignment, and target database tests are all proven.

@@ -26,6 +26,9 @@ const readyInput: TrustOpsInput = {
   reportBlockFlowReady: true,
   appealPathReady: true,
   supportContactReady: true,
+  reviewerRbacReady: true,
+  dualReviewReady: true,
+  incidentDrillPassed: true,
 };
 
 describe('trust ops readiness', () => {
@@ -57,5 +60,10 @@ describe('trust ops readiness', () => {
     expect(snapshot.status).toBe('Ready for staffed pilot');
     expect(snapshot.score).toBe(100);
     expect(snapshot.blockers).toEqual([]);
+  });
+
+  it('keeps launch blocked until reviewer access and timed drills are proven', () => {
+    const snapshot = buildTrustOpsSnapshot({...readyInput,dualReviewReady:false,incidentDrillPassed:false});
+    expect(snapshot.blockers.map((gate) => gate.id)).toEqual(expect.arrayContaining(['reviewer_access','incident_drill']));
   });
 });

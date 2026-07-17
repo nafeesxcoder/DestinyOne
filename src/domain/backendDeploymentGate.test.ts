@@ -45,8 +45,8 @@ describe('hosted backend deployment gate', () => {
     expect(verifier).toContain("import { deploymentContract } from './supabase-deployment-contract.mjs'");
     expect(preflight).toContain('for (const table of deploymentContract.tables)');
     expect(preflight).toContain('for (const rpc of deploymentContract.rpcs)');
-    expect(contract).toContain("id: 'destinyone-backend-v22'");
-    expect(contract).toContain('schemaVersion: 22');
+    expect(contract).toContain("id: 'destinyone-backend-v25'");
+    expect(contract).toContain('schemaVersion: 25');
   });
 
   it('deploys every privileged Edge Function before hosted verification', () => {
@@ -57,5 +57,13 @@ describe('hosted backend deployment gate', () => {
       'marketplace-booking-webhook',
       'store-billing-webhook',
     ]) expect(workflow).toContain(`functions deploy ${functionName}`);
+  });
+
+  it('lints, executes database security tests, and preserves commit-linked evidence', () => {
+    expect(workflow).toContain('supabase db lint --linked');
+    expect(workflow).toContain('supabase test db --linked');
+    expect(workflow).toContain('actions/upload-artifact@v4');
+    expect(workflow).toContain('supabase-production-evidence-${{ github.sha }}');
+    expect(workflow).toContain('supabase-production-evidence.json');
   });
 });

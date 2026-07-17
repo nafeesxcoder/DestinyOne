@@ -353,6 +353,7 @@ export async function clearMatchingLearning() {
 }
 
 export type MatchDecision = 'interested' | 'pass';
+export type MatchFeedback = 'promising' | 'not_aligned' | 'met_in_person';
 
 export async function submitMatchDecision(recipientId: string, decision: MatchDecision) {
   ensureBackendConfigured();
@@ -360,6 +361,19 @@ export async function submitMatchDecision(recipientId: string, decision: MatchDe
   const { data, error } = await supabase.rpc('submit_match_decision', {
     recipient_id: recipientId,
     decision,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function submitMatchFeedback(matchId: string, feedback: MatchFeedback, useForMatching: boolean, clientActionId: string) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('submit_match_feedback', {
+    p_match_id: matchId,
+    p_feedback: feedback,
+    p_use_for_matching: useForMatching,
+    p_client_action_id: clientActionId,
   });
   if (error) throw error;
   return data;
@@ -705,6 +719,18 @@ export async function submitSupportTicket(topic: SupportTopic, message: string, 
     source_screen: sourceScreen,
     metadata,
   }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function submitModerationAppeal(caseId: string, reason: string) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('submit_moderation_appeal', {
+    p_case_id: caseId,
+    p_reason: reason,
+    p_client_action_id: `appeal-${Date.now()}`,
+  });
   if (error) throw error;
   return data;
 }

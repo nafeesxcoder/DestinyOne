@@ -1,4 +1,5 @@
 node_modules/
+.pnpm-store/
 .expo/
 dist/
 .env
@@ -6,4 +7,3 @@ dist/
 .env.*.local
 *.log
 .DS_Store
-

@@ -1,12 +1,38 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(160);
+select plan(184);
 
 select has_function('public','get_backend_deployment_manifest',array[]::text[],'read-only deployment manifest exists');
 select function_privs_are('public','get_backend_deployment_manifest',array[]::text[],'service_role',array['EXECUTE'],'deployment manifest is service-role only');
 select ok(not has_function_privilege('anon','public.get_backend_deployment_manifest()','EXECUTE'),'anonymous users cannot inspect the deployment manifest');
 select ok(not has_function_privilege('authenticated','public.get_backend_deployment_manifest()','EXECUTE'),'members cannot inspect the deployment manifest');
+select ok(public.get_backend_deployment_manifest() ? 'anonymous_table_exposures','deployment manifest reports anonymous table policy exposure');
+select ok(public.get_backend_deployment_manifest() ? 'anonymous_rpc_exposures','deployment manifest reports anonymous function grants');
+
+select has_table('public','matching_evaluation_runs','matching promotion evidence is stored server-side');
+select has_column('public','matching_model_guardrails','minimum_precision_at_5','matching guardrails include offline precision');
+select has_column('public','matching_model_guardrails','minimum_eligible_coverage_rate','matching guardrails include eligible coverage');
+select has_column('public','matching_model_guardrails','minimum_safety_exclusion_recall','matching guardrails require safety exclusion recall');
+select has_function('public','record_matching_evaluation',array['text','text','text','integer','jsonb','text','text'],'aggregate matching evaluation RPC exists');
+select function_privs_are('public','record_matching_evaluation',array['text','text','text','integer','jsonb','text','text'],'service_role',array['EXECUTE'],'matching evaluation recording is service-only');
+select table_privs_are('public','matching_evaluation_runs','authenticated',array[]::text[],'members cannot read or forge model evaluation evidence');
+
+select has_table('public','trust_ops_reviewers','private reviewer registry exists');
+select has_table('public','moderation_cases','authoritative moderation cases exist');
+select has_table('public','moderation_case_events','append-only moderation event timeline exists');
+select has_table('public','member_enforcement_states','bounded member enforcement state exists');
+select has_table('public','moderation_appeals','member appeal lifecycle exists');
+select has_function('public','apply_moderation_action',array['uuid','text','uuid','text','text','jsonb'],'reviewer moderation action RPC exists');
+select has_function('public','submit_moderation_appeal',array['uuid','text','text'],'member appeal RPC exists');
+select has_function('public','resolve_moderation_appeal',array['uuid','text','uuid','text','text'],'appeal decision RPC exists');
+select function_privs_are('public','apply_moderation_action',array['uuid','text','uuid','text','text','jsonb'],'service_role',array['EXECUTE'],'moderation actions are service-only');
+select function_privs_are('public','submit_moderation_appeal',array['uuid','text','text'],'authenticated',array['EXECUTE'],'members can submit only their own eligible appeal');
+select function_privs_are('public','resolve_moderation_appeal',array['uuid','text','uuid','text','text'],'service_role',array['EXECUTE'],'appeal decisions are service-only');
+select table_privs_are('public','moderation_cases','authenticated',array[]::text[],'members cannot inspect moderation cases');
+select table_privs_are('public','moderation_case_events','authenticated',array[]::text[],'members cannot inspect reviewer notes or evidence events');
+select table_privs_are('public','moderation_appeals','authenticated',array[]::text[],'appeals mutate only through the bounded RPC');
+select has_trigger('public','reports','reports_create_moderation_case','reports automatically create Trust Ops cases');
 
 select has_table('public','billing_products','server-owned billing catalog exists');
 select has_table('public','billing_purchase_sessions','server-bound store purchase sessions exist');

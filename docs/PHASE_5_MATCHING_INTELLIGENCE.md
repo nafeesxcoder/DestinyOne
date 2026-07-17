@@ -41,6 +41,12 @@ short reasons and labels, never an internal percentage score.
   without silently relaxing hard preferences.
 - Model guardrails require minimum sample size, conversation/date floors,
   report/exposure ceilings, audited activation, and a service-only rollback.
+- Post-date outcome feedback is wired from the Relationship Coach through the
+  runtime service layer to the server RPC. Learning consent is explicit and
+  off by default; the other member never sees the reflection.
+- Model promotion now requires recent passing offline and shadow evaluations
+  for the same change ticket. Aggregate precision-at-5, eligible coverage,
+  safety-exclusion recall, and exposure-gap thresholds must all pass.
 
 ## Migration 014
 
@@ -62,10 +68,18 @@ engine, verified discovery boundary, repeat cooldown, safe pool status,
 positive-only consented learning, exposure balancing, model health thresholds,
 and an audited rollback RPC.
 
+## Migration 024
+
+`024_matching_evaluation_gate.sql` adds aggregate-only, service-owned matching
+evaluation evidence. It prevents a candidate model from activating until both
+offline and shadow evaluations pass within 14 days, requires 100% safety
+exclusion recall, and keeps evaluation datasets, scores, and approvals hidden
+from members.
+
 ## Current verification
 
 - TypeScript passes.
-- The transactional pgTAP matrix contains 160 assertions, including reciprocal
+- The transactional pgTAP matrix contains 169 assertions, including reciprocal
   rejection, hidden-score privileges, idempotent discovery learning, explicit
   outcome consent, and learning reset.
 - The Expo web export passes.
@@ -73,12 +87,16 @@ and an audited rollback RPC.
 - The configured hosted project remains behind the source migration chain, so
   this phase is not yet staging-validated or production-connected.
 
-## Gates before the score can rise above 4/10
+## Live evidence gates
 
-1. Apply migrations 001-014 to a clean development project and regenerate types.
+The source implementation is complete; the following evidence is still needed
+before calling the live matching system 10/10:
+
+1. Apply migrations 001-024 to a clean development project and regenerate types.
 2. Execute the pgTAP suite plus signed-media tests with real authenticated users.
 3. Backfill normalized matching attributes for every pilot member.
-4. Establish offline evaluation sets and minimum precision/coverage thresholds.
+4. Run versioned offline and shadow evaluation datasets through the new
+   promotion gate and preserve the evidence artifact.
 5. Run exposure and outcome audits across sufficiently large cohorts without
    exposing or optimizing directly on protected traits.
 6. Pilot in one city and measure qualified mutuals, meaningful conversations,

@@ -88,11 +88,11 @@ Last verified locally: 2026-07-16
 ## Required deployment sequence
 
 1. Create separate Supabase development, staging, and production projects.
-2. Link development first and apply migrations 001-017 in order.
+2. Link development first and apply migrations 001-025 in order.
 3. Regenerate `src/types/database.ts` from the linked schema and review the diff.
 4. Run positive and negative RLS tests with two members plus one unrelated and
    one blocked account.
-5. Deploy the four Edge Functions and set secrets only in Supabase.
+5. Deploy the five Edge Functions and set secrets only in Supabase.
 6. Configure email OTP, an SMS provider, rate limits, redirect/deep links, and
    abuse controls.
 7. Repeat migration and security validation in staging, then run physical iOS
@@ -107,8 +107,10 @@ supabase link --project-ref <development-project-ref>
 supabase db push --include-all
 supabase gen types typescript --linked > src/types/database.generated.ts
 supabase functions deploy create-gift-order
-supabase functions deploy create-date-reservation
+supabase functions deploy create-date-reservation-intent
 supabase functions deploy relationship-reminders
+supabase functions deploy marketplace-booking-webhook
+supabase functions deploy store-billing-webhook
 ```
 
 Do not overwrite the reviewed hand-maintained types blindly. Compare generated
@@ -131,14 +133,14 @@ Verify each row in staging using real authenticated sessions:
 ## Evidence and limits
 
 - Runtime, bootstrap parser, and SQL security contracts have automated tests.
-- Supabase CLI 2.109.1 is pinned, local config is initialized, and a 160-assertion
+- Supabase CLI 2.109.1 is pinned, local config is initialized, and a 184-assertion
   transactional pgTAP RLS suite is present.
 - A read-only hosted-project probe confirmed email, Google, and phone Auth are
   enabled and `twilio_verify` is configured.
-- Hosted schema v22 still requires the protected deployment workflow, reviewed
+- Hosted schema v25 still requires the protected deployment workflow, reviewed
   legacy baseline, service-role verification, and stored evidence artifact.
 - TypeScript and the complete local test suite pass.
-- Migrations 001-022 are source-ready but have not been applied to a linked Supabase
+- Migrations 001-025 are source-ready but have not been applied to a linked Supabase
   project in this workspace.
 - The pgTAP suite cannot run on this machine until Docker, OrbStack, Podman, or
   another Docker-compatible runtime is installed.

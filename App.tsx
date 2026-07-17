@@ -13,7 +13,7 @@ import { ChatMessage, CoupleChatSettings, DatePlanStatus, DiscoverySignal, Local
 import * as ImagePicker from 'expo-image-picker';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import * as Location from 'expo-location';
-import { allowsPreviewOtpFallback, backendMode, beginAuthentication, fetchDailyMatches, fetchMatchingPoolStatus, loadCurrentMemberBootstrap, requestAccountDeletion, submitSupportTicket, verifyAuthentication, type MatchingPoolStatus, type SupportTopic } from './src/services/backend';
+import { allowsPreviewOtpFallback, backendMode, beginAuthentication, fetchDailyMatches, fetchMatchingPoolStatus, loadCurrentMemberBootstrap, requestAccountDeletion, submitModerationAppeal, submitSupportTicket, verifyAuthentication, type MatchingPoolStatus, type SupportTopic } from './src/services/backend';
 import { matchReasons, rankMatches } from './src/domain/matching';
 import { canSendGift, spendCoins } from './src/domain/commerce';
 import { isEligibleMemberAge, isValidEmail, isValidPassword, isValidPhone } from './src/domain/validation';
@@ -23,7 +23,7 @@ import { appEnvironment, backendRuntime, isSupabaseConfigured, requiresRealBacke
 import { buildDateReservationSteps, createDateReservationIntent, dateReservationMode, dateReservationStatusCopy, estimateDateReservationQuote, formatPaymentMoney, paymentsConfigured, stripePublishableKey, type DateReservationQuote, type DateReservationStatus } from './src/services/payments';
 import { ApplePayReservationButton, StripePaymentProvider, checkApplePaySupport, confirmApplePayReservation } from './src/payments/stripe';
 import { buildGiftFulfillmentPlan, createPhysicalGiftOrder, digitalGiftWalletMode, estimateGiftOrderQuote, formatGiftMoney, giftOrderSummary, giftOrderingConfigured, physicalGiftOrderingMode, vouchRewardsMode, type GiftFulfillmentStatus, type GiftOrderQuote } from './src/services/gifts';
-import { fetchPersistedChatMessages, fetchPersistedRelationshipJourney, persistBlock, persistChatMessage, persistChatSettings, persistClearMatchingLearning, persistDatePlanStatus, persistDateProposal, persistDiscoverySignal, persistIcebreakerAnswer, persistLiveLocationShare, persistMatchDecision, persistMatchingPreferences, persistOnboardingProfile, persistPrivacySettings, persistProfileView, persistRelationshipJourneyEvent, persistRelationshipReflection, persistRelationshipReminder, persistReport, persistUnmatch, subscribePersistedChatMessages } from './src/services/appPersistence';
+import { fetchPersistedChatMessages, fetchPersistedRelationshipJourney, persistBlock, persistChatMessage, persistChatSettings, persistClearMatchingLearning, persistDatePlanStatus, persistDateProposal, persistDiscoverySignal, persistIcebreakerAnswer, persistLiveLocationShare, persistMatchDecision, persistMatchFeedback, persistMatchingPreferences, persistOnboardingProfile, persistPrivacySettings, persistProfileView, persistRelationshipJourneyEvent, persistRelationshipReflection, persistRelationshipReminder, persistReport, persistUnmatch, subscribePersistedChatMessages } from './src/services/appPersistence';
 import { conversationIdFor, profileIdFor } from './src/domain/matchIdentity';
 import { getLaunchReadinessSnapshot, productionDataModules, type AppDataModule } from './src/domain/appModel';
 import { buildModerationQueue, summarizeModerationQueue, type ModerationQueueItem, type ModerationStatus } from './src/domain/moderation';
@@ -466,6 +466,15 @@ function DestinyOneApp() {
     if(!confirmMemberMutation(result,'Activity not cleared','Your matching activity could not be cleared securely.'))return;
     setDiscoverySignals([]);
   };
+  const submitSelectedMatchFeedback=async(feedback:'promising'|'not_aligned'|'met_in_person',useForMatching:boolean)=>{
+    const result=await persistMatchFeedback(conversationIdFor(selected),feedback,useForMatching);
+    if(result.reason==='error'){
+      setAppNotice({title:'Feedback not saved',body:result.error??'Your private feedback could not be confirmed. Please try again.',icon:'cloud-offline-outline',tone:'ruby'});
+      return false;
+    }
+    setAppNotice({title:'Private reflection saved',body:useForMatching?'Your feedback can improve future introductions. Personal notes and internal scores are never shared with members.':'Your reflection was saved without using it for future matching.',icon:'checkmark-circle',tone:'gold'});
+    return true;
+  };
   const recordSafeCheckIn=(id:string)=>{
     if(memberDataRuntime.source==='preview'){
       setSafeCheckIns(current=>[...new Set([...current,id])]);
@@ -540,7 +549,7 @@ function DestinyOneApp() {
     {screen==='explore'&&<ExploreHub navigate={setScreen}/>} 
     {screen==='circle'&&<TrustedCircle vouches={vouches} coinBalance={coinBalance} rewardMode={vouchRewardsMode} onBack={()=>setScreen('explore')} onAddVouch={(quality)=>{if(vouchRewardsMode==='demo'&&vouches.length<3&&!vouches.includes(quality)){setVouches(current=>[...current,quality]);setCoinBalance(balance=>balance+100)}}}/>} 
     {screen==='discovery'&&<DiscoveryCenter filters={matchFilters} onFiltersChange={updateMatchFilters} signals={discoverySignals} smartDiscovery={smartDiscovery} crossedPaths={crossedPaths} onSmartChange={updateSmartDiscovery} onCrossedChange={setCrossedPaths} onClear={clearMatchingActivity} onBack={()=>setScreen('explore')}/>} 
-    {screen==='coach'&&<RelationshipCoach match={selected} preferences={{intent,vibes:vibeList,filters:matchFilters}} onBack={()=>setScreen('explore')} onOpenFilters={()=>setScreen('discovery')} onUseInChat={useCoachDraftInChat}/>} 
+    {screen==='coach'&&<RelationshipCoach match={selected} preferences={{intent,vibes:vibeList,filters:matchFilters}} onBack={()=>setScreen('explore')} onOpenFilters={()=>setScreen('discovery')} onUseInChat={useCoachDraftInChat} onSubmitFeedback={submitSelectedMatchFeedback}/>} 
     {screen==='events'&&<EventsHub defaultCity={profileDraft.city} onBack={()=>setScreen('home')} onOpenDatePlan={(place)=>{setDatePlanPreset(place??null);setScreen('datePlan')}} navigate={setScreen} />}
     {screen==='executive'&&<ExecutiveCircle navigate={setScreen} onBack={()=>setScreen('explore')} onOpenEvents={()=>setScreen('events')} onOpenPricing={()=>setScreen('pricing')} onOpenVerify={()=>setScreen('verifyHub')} onOpenDatePlan={()=>setScreen('datePlan')}/>} 
     {screen==='verifyHub'&&<VerificationHub verified={verified} selfieUri={selfieUri} hasVoiceIntro={!!voiceIntroUri} vouches={vouches} onBack={()=>setScreen('profile')} onVerify={()=>{setVerified(true);setAppNotice({title:'Trust badge upgraded',body:'Selfie verification is marked complete in this preview. Production will connect liveness and ID providers.',icon:'shield-checkmark',tone:'gold'})}} onOpenSafety={()=>setScreen('safety')}/>} 
@@ -1405,10 +1414,12 @@ const buildLiveMarketplaceOpsSnapshot=()=>buildMarketplaceOpsSnapshot({
   cityCoverage:launchMarketplaceCoverage,
 });
 
-function RelationshipCoach({match,preferences,onBack,onOpenFilters,onUseInChat}:{match:Match;preferences:{intent:string;vibes:string[];filters:MatchFilters};onBack:()=>void;onOpenFilters:()=>void;onUseInChat:(draft:string)=>void}){
+function RelationshipCoach({match,preferences,onBack,onOpenFilters,onUseInChat,onSubmitFeedback}:{match:Match;preferences:{intent:string;vibes:string[];filters:MatchFilters};onBack:()=>void;onOpenFilters:()=>void;onUseInChat:(draft:string)=>void;onSubmitFeedback:(feedback:'promising'|'not_aligned'|'met_in_person',useForMatching:boolean)=>Promise<boolean>}){
   const [selected,setSelected]=useState('First-message helper');
   const [topic,setTopic]=useState('family, emotional safety, and first-date clarity');
   const [saved,setSaved]=useState(false);
+  const [useFeedbackForMatching,setUseFeedbackForMatching]=useState(false);
+  const [feedbackSaved,setFeedbackSaved]=useState('');
   const reasons=match.reasons??matchReasons(match,preferences);
   const redFlags=['Asks to move off-app too fast','Pushes for exact location','Requests money, crypto or gift cards','Avoids verification or public places'];
   const output=selected==='First-message helper'
@@ -1419,10 +1430,14 @@ function RelationshipCoach({match,preferences,onBack,onOpenFilters,onUseInChat}:
         ? `After a date, ask yourself: Did I feel respected? Was intent clear? Did conversation feel calm or performative? Would I feel safe meeting again in public?`
         : `Safety scan for ${match.name}: keep early chat in-app, meet in public, avoid exact live location, and report any pressure around money, secrecy or fast off-app moves.`;
   const saveNote=()=>setSaved(true);
+  const submitFeedback=async(feedback:'promising'|'not_aligned'|'met_in_person',label:string)=>{
+    const confirmed=await onSubmitFeedback(feedback,useFeedbackForMatching);
+    if(confirmed)setFeedbackSaved(label);
+  };
   return <LinearGradient colors={['#27040A',colors.black,colors.black]} style={{flex:1}}><SafeAreaView style={shared.safe}><View style={coachStyles.header}><Pressable onPress={onBack} style={styles.backButton}><PremiumIcon name="arrow-back" tone="dark" size={42} iconSize={20}/></Pressable><Text style={[styles.cardTitle,{marginLeft:12}]}>AI Relationship Coach</Text></View><ScrollView contentContainerStyle={coachStyles.content} showsVerticalScrollIndicator={false}>
     <View style={coachStyles.hero}><PremiumIcon name="sparkles" tone="ruby" size={70} iconSize={32}/><Text style={launchStyles.scriptHero}>Helpful, never fake</Text><Text style={[shared.h1,{textAlign:'center'}]}>Make dating feel clearer.</Text><Text style={[shared.body,{textAlign:'center'}]}>Coach uses only DestinyOne profile inputs, filters and in-app signals. It helps you show up better — it does not pretend to be you.</Text></View>
     <View style={coachStyles.cardGrid}>{coachCards.map((card,index)=><Pressable key={card.title} onPress={()=>{setSelected(card.title);setSaved(false)}} style={[coachStyles.toolCard,selected===card.title&&coachStyles.toolCardOn]}><PremiumIcon name={card.icon} tone={selected===card.title?'gold':index%2?'plum':'ruby'} size={48} iconSize={22}/><Text style={coachStyles.toolTitle}>{card.title}</Text><Text style={coachStyles.toolBody}>{card.body}</Text></Pressable>)}</View>
-    <View style={coachStyles.outputCard}><Text style={styles.kicker}>WHAT SHOULD COACH FOCUS ON?</Text><TextInput value={topic} onChangeText={setTopic} placeholder="Example: family, faith, first-date clarity" placeholderTextColor="#6F6875" style={coachStyles.coachInput}/><Text style={styles.kicker}>COACH OUTPUT</Text><Text style={styles.cardTitle}>{selected}</Text>{selected==='Red-flag scan'?<View style={{gap:9}}>{redFlags.map(item=><View key={item} style={coachStyles.checkRow}><PremiumIcon name="shield-checkmark-outline" tone="gold" size={30} iconSize={14}/><Text style={coachStyles.checkText}>{item}</Text></View>)}</View>:<Text style={coachStyles.outputText}>“{output}”</Text>}<View style={coachStyles.coachActions}><Pressable onPress={saveNote} style={[coachStyles.rsvpButton,{flex:1}]}><Text style={coachStyles.rsvpText}>{saved?'Saved':'Save note'}</Text></Pressable><Pressable onPress={()=>onUseInChat(output)} style={[coachStyles.rsvpButton,{flex:1,backgroundColor:'#7A1024'}]}><Text style={coachStyles.rsvpText}>Use in chat</Text></Pressable></View>{saved&&<View style={coachStyles.savedNote}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><Text style={coachStyles.savedNoteText}>Coach note saved for this preview session. Production will store private notes securely.</Text></View>}</View>
+    <View style={coachStyles.outputCard}><Text style={styles.kicker}>WHAT SHOULD COACH FOCUS ON?</Text><TextInput value={topic} onChangeText={setTopic} placeholder="Example: family, faith, first-date clarity" placeholderTextColor="#6F6875" style={coachStyles.coachInput}/><Text style={styles.kicker}>COACH OUTPUT</Text><Text style={styles.cardTitle}>{selected}</Text>{selected==='Red-flag scan'?<View style={{gap:9}}>{redFlags.map(item=><View key={item} style={coachStyles.checkRow}><PremiumIcon name="shield-checkmark-outline" tone="gold" size={30} iconSize={14}/><Text style={coachStyles.checkText}>{item}</Text></View>)}</View>:<Text style={coachStyles.outputText}>“{output}”</Text>}{selected==='Post-date reflection'&&<View style={coachStyles.feedbackCard}><Text style={styles.cardTitle}>How did this connection feel?</Text><Text style={styles.helper}>Private outcome feedback is more useful than swipe behavior. It is never shown to {match.name}.</Text><View style={coachStyles.feedbackChoices}>{([{id:'promising',label:'Promising',icon:'heart-outline'},{id:'not_aligned',label:'Not aligned',icon:'remove-circle-outline'},{id:'met_in_person',label:'Met in person',icon:'people-outline'}] as const).map(item=><Pressable key={item.id} onPress={()=>void submitFeedback(item.id,item.label)} style={coachStyles.feedbackChoice}><Ionicons name={item.icon} size={17} color={colors.gold}/><Text style={coachStyles.feedbackChoiceText}>{item.label}</Text></Pressable>)}</View><Pressable accessibilityRole="checkbox" accessibilityState={{checked:useFeedbackForMatching}} onPress={()=>setUseFeedbackForMatching(value=>!value)} style={coachStyles.feedbackConsent}><Ionicons name={useFeedbackForMatching?'checkbox':'square-outline'} size={21} color={useFeedbackForMatching?colors.gold:colors.muted}/><Text style={coachStyles.feedbackConsentText}>Use this outcome to improve my future introductions</Text></Pressable>{!!feedbackSaved&&<Text style={coachStyles.feedbackSaved}>{feedbackSaved} saved privately</Text>}</View>}<View style={coachStyles.coachActions}><Pressable onPress={saveNote} style={[coachStyles.rsvpButton,{flex:1}]}><Text style={coachStyles.rsvpText}>{saved?'Saved':'Save note'}</Text></Pressable><Pressable onPress={()=>onUseInChat(output)} style={[coachStyles.rsvpButton,{flex:1,backgroundColor:'#7A1024'}]}><Text style={coachStyles.rsvpText}>Use in chat</Text></Pressable></View>{saved&&<View style={coachStyles.savedNote}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><Text style={coachStyles.savedNoteText}>Coach note saved for this preview session. Production will store private notes securely.</Text></View>}</View>
     <View style={coachStyles.outputCard}><Text style={styles.kicker}>WHY THIS MATCH</Text><Text style={styles.helper}>For {match.name}, the coach sees:</Text><View style={aiStyles.reasonRow}>{(reasons.length?reasons:['Serious intent','Values-led profile','Compatible lifestyle']).map(reason=><View key={reason} style={aiStyles.reasonPill}><MiniPremiumIcon name="sparkles" tone="gold" size={21} iconSize={10}/><Text style={aiStyles.reasonText}>{reason}</Text></View>)}</View><Text style={styles.helper}>No percentages are shown. The algorithm keeps scoring internal and explains matches in plain language.</Text></View>
     <View style={coachStyles.boundaryCard}><PremiumIcon name="lock-closed" tone="gold" size={44} iconSize={19}/><View style={{flex:1}}><Text style={styles.cardTitle}>Privacy boundary</Text><Text style={styles.helper}>Coach never reads phone search history, contacts, external chats or photos you did not choose.</Text></View></View>
     <Button label="Tune my match filters" variant="secondary" icon="options" onPress={onOpenFilters}/>
@@ -2054,7 +2069,7 @@ function TrustStep({title,body,done,icon}:{title:string;body:string;done:boolean
 function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport[];blockedCount:number;onBack:()=>void}){
   const [tab,setTab]=useState<'queue'|'reports'|'playbooks'|'audit'>('queue');
   const [caseStatus,setCaseStatus]=useState<Record<string,ModerationStatus>>({});
-  const [opsNote,setOpsNote]=useState('Trust Ops is ready in preview. Actions update local case status only.');
+  const [opsNote,setOpsNote]=useState('Preview actions update local case status only. Hosted reviewer access and drills are not yet verified.');
   const queue=buildModerationQueue(reports,blockedCount).map(item=>({...item,status:caseStatus[item.id]??item.status}));
   const summary=summarizeModerationQueue(queue);
   const dataSnapshot=getLaunchReadinessSnapshot(productionDataModules);
@@ -2072,13 +2087,16 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     reportBlockFlowReady:true,
     appealPathReady:true,
     supportContactReady:true,
+    reviewerRbacReady:false,
+    dualReviewReady:false,
+    incidentDrillPassed:false,
   });
   const backendLaunchSnapshot=buildBackendLaunchSnapshot({
     backendMode,
     appEnvironment,
     requiresRealBackend,
     supabaseConfigured:isSupabaseConfigured,
-    migrationCount:22,
+    migrationCount:25,
     edgeFunctionCount:5,
     dataModuleCount:dataSnapshot.totalModules,
     backendReadyModuleCount:dataSnapshot.backendReadyModules,
@@ -2388,7 +2406,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     <View style={adminOpsStyles.statusCard}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={30} iconSize={14}/><Text style={adminOpsStyles.statusText}>{opsNote}</Text></View>
     <View style={adminOpsStyles.tabRow}>{(['queue','reports','playbooks','audit'] as const).map(item=><Pressable key={item} onPress={()=>setTab(item)} style={[adminOpsStyles.tab,tab===item&&adminOpsStyles.tabOn]}><Text style={[adminOpsStyles.tabText,tab===item&&{color:colors.ivory}]}>{item==='queue'?'Queue':item==='reports'?'Reports':item==='playbooks'?'Playbooks':'Audit'}</Text></Pressable>)}</View>
     {tab==='queue'&&<View style={ventureStyles.section}><Text style={styles.sectionLabel}>LIVE REVIEW QUEUE</Text>{visibleQueue.map(item=><ModerationCaseCard key={item.id} item={item} onFreeze={()=>updateCase(item,'frozen','chat/payment abilities frozen pending review')} onEscalate={()=>updateCase(item,'escalated','escalated to senior Trust Ops')} onResolve={()=>updateCase(item,'resolved','case resolved with reviewer note')} onEvidence={()=>setOpsNote(`${item.member}: evidence packet includes ${item.evidence.join(', ')}`)}/>)}</View>}
-    {tab==='reports'&&<View style={ventureStyles.section}><Text style={styles.sectionLabel}>SESSION REPORTS</Text>{reports.length?reports.slice().reverse().map(report=><View key={report.id} style={adminOpsStyles.reportCard}><View style={shared.row}><MiniPremiumIcon name="flag-outline" tone="ruby" size={30} iconSize={14}/><Text style={[styles.cardTitle,{flex:1}]}>Report on {report.matchId}</Text><Text style={adminOpsStyles.timeText}>{new Date(report.createdAt).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}</Text></View><Text style={styles.helper}>{report.reason}</Text>{!!report.details&&<Text style={adminOpsStyles.reportDetails}>{report.details}</Text>}<View style={adminOpsStyles.reportFooter}><Text style={adminOpsStyles.footerText}>Saved locally now · Supabase reports table later</Text></View></View>):<View style={adminOpsStyles.emptyCard}><PremiumIcon name="shield-checkmark" tone="gold" size={46} iconSize={21}/><Text style={styles.cardTitle}>No local reports yet</Text><Text style={styles.helper}>Use any profile/chat safety menu → Report to create a live moderation item.</Text></View>}</View>}
+    {tab==='reports'&&<View style={ventureStyles.section}><Text style={styles.sectionLabel}>SESSION REPORTS</Text>{reports.length?reports.slice().reverse().map(report=><View key={report.id} style={adminOpsStyles.reportCard}><View style={shared.row}><MiniPremiumIcon name="flag-outline" tone="ruby" size={30} iconSize={14}/><Text style={[styles.cardTitle,{flex:1}]}>Report on {report.matchId}</Text><Text style={adminOpsStyles.timeText}>{new Date(report.createdAt).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}</Text></View><Text style={styles.helper}>{report.reason}</Text>{!!report.details&&<Text style={adminOpsStyles.reportDetails}>{report.details}</Text>}<View style={adminOpsStyles.reportFooter}><Text style={adminOpsStyles.footerText}>Preview session copy · production reports create a private Trust Ops case automatically</Text></View></View>):<View style={adminOpsStyles.emptyCard}><PremiumIcon name="shield-checkmark" tone="gold" size={46} iconSize={21}/><Text style={styles.cardTitle}>No local reports yet</Text><Text style={styles.helper}>Use any profile/chat safety menu → Report to create a live moderation item.</Text></View>}</View>}
     {tab==='playbooks'&&<View style={ventureStyles.section}><Text style={styles.sectionLabel}>AUTOMATION GUARDS</Text>{automationGuards.map(([title,body],index)=><ChecklistRow key={title} title={title} body={body} done={index<3}/>)}
       <View style={coachStyles.boundaryCard}><PremiumIcon name="warning" tone="gold" size={44} iconSize={19}/><View style={{flex:1}}><Text style={styles.cardTitle}>Human-first safety</Text><Text style={styles.helper}>AI can prioritize and freeze risky surfaces, but permanent bans, sensitive identity decisions and billing-impact actions need human review.</Text></View></View>
     </View>}
@@ -2832,6 +2850,8 @@ function trustOpsGateIcon(id: TrustOpsGate['id']): keyof typeof Ionicons.glyphMa
     evidence_audit: 'folder-open-outline',
     member_safety_actions: 'shield-checkmark-outline',
     appeals_support: 'headset-outline',
+    reviewer_access: 'key-outline',
+    incident_drill: 'stopwatch-outline',
   };
   return icons[id];
 }
@@ -2844,7 +2864,7 @@ function TrustOpsSlaCard({snapshot}:{snapshot:TrustOpsSnapshot}){
       <View style={{flex:1,marginLeft:10}}>
         <Text style={styles.kicker}>TRUST OPS SLA</Text>
         <Text style={adminOpsStyles.qualityTitle}>{snapshot.status} · {snapshot.score}%</Text>
-        <Text style={styles.helper}>{snapshot.readyCount}/{snapshot.total} safety operations gates ready. Backend tools can connect later, but the launch operating model is now explicit.</Text>
+        <Text style={styles.helper}>{snapshot.readyCount}/{snapshot.total} safety operations gates ready. Source controls exist; staffing, access and drill evidence still decide launch readiness.</Text>
       </View>
     </View>
     <View style={adminOpsStyles.qualityTrack}><View style={[adminOpsStyles.qualityFill,{width:`${snapshot.score}%`}]}/></View>
@@ -4238,6 +4258,7 @@ type SupportInfo = { title: string; body: string; icon: keyof typeof Ionicons.gl
 
 function SupportCenter({onBack}:{onBack:()=>void}){
   const [topic,setTopic]=useState('Safety');
+  const [caseId,setCaseId]=useState('');
   const [message,setMessage]=useState('');
   const [ticket,setTicket]=useState('');
   const [ticketNote,setTicketNote]=useState('');
@@ -4246,15 +4267,28 @@ function SupportCenter({onBack}:{onBack:()=>void}){
   const submit=async()=>{
     const trimmed=message.trim();
     if(!trimmed)return;
+    const isAppeal=topic==='Appeal';
+    if(isAppeal&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(caseId.trim())){
+      setSupportInfo({title:'Check the case ID',body:'Use the full case ID shown in your moderation decision notice.',icon:'alert-circle-outline',tone:'rose',bullets:['Case IDs protect appeals from being attached to the wrong decision','Do not include another member’s personal details','Contact Safety support if your notice is missing']});
+      return;
+    }
+    if(isAppeal&&trimmed.length<20){
+      setSupportInfo({title:'Add a little more detail',body:'Please use at least 20 characters so the reviewer can understand your appeal.',icon:'create-outline',tone:'rose'});
+      return;
+    }
     const ticketId=`D1-${Date.now().toString().slice(-6)}`;
     setSubmitting(true);
     try{
-      const saved=await submitSupportTicket(topic as SupportTopic, trimmed, { app:'DestinyOne', backendMode }, 'support_center');
-      const finalId=saved?.id ?? ticketId;
+      const saved=isAppeal
+        ? await submitModerationAppeal(caseId.trim(),trimmed)
+        : await submitSupportTicket(topic as SupportTopic, trimmed, { app:'DestinyOne', backendMode }, 'support_center');
+      const savedId=typeof saved==='string'?saved:typeof saved==='object'&&saved&&'id' in saved?String(saved.id):'';
+      const finalId=savedId||ticketId;
       setTicket(finalId);
-      setTicketNote(saved?'Saved in Supabase. Support can review this when backend session is active.':'Saved in preview. Supabase session is needed for real ticket storage.');
+      setTicketNote(saved?(isAppeal?'Appeal submitted to the independent review queue.':'Saved in Supabase. Support can review this when backend session is active.'):'Saved in preview. Supabase session is needed for real storage.');
       setMessage('');
-      setSupportInfo({title:'Support request created',body:`${finalId} · ${topic}`,icon:'checkmark-circle',tone:'gold',bullets:[saved?'Synced to support storage':'Saved in preview mode','You can keep using the app while support reviews it','Sensitive details stay inside the safety/support flow']});
+      if(isAppeal)setCaseId('');
+      setSupportInfo({title:isAppeal?'Appeal received':'Support request created',body:`${finalId} · ${topic}`,icon:'checkmark-circle',tone:'gold',bullets:[saved?(isAppeal?'Queued for a qualified reviewer':'Synced to support storage'):'Saved in preview mode',isAppeal?'Submitting an appeal does not expose the reporter’s identity':'You can keep using the app while support reviews it','Sensitive details stay inside the safety/support flow']});
     }catch(error){
       setTicket(ticketId);
       setTicketNote(error instanceof Error?error.message:'Backend ticket storage is not available yet. Saved locally in preview.');
@@ -4267,6 +4301,7 @@ function SupportCenter({onBack}:{onBack:()=>void}){
   const emailSupport=()=>Linking.openURL(`mailto:support@destinyone.app?subject=${encodeURIComponent(`DestinyOne ${topic} help`)}&body=${encodeURIComponent(message||'Hi DestinyOne team, I need help with ')}`).catch(()=>setSupportInfo({title:'Email support',body:'support@destinyone.app',icon:'mail-outline',tone:'gold',bullets:['Copy this email if your device cannot open mail automatically','Include your ticket ID if you already submitted one','Never send passwords or OTP codes']})); 
   const topics=[
     {label:'Safety',icon:'shield-checkmark-outline' as const,sla:'Priority review'},
+    {label:'Appeal',icon:'refresh-circle-outline' as const,sla:'Review a decision'},
     {label:'Billing',icon:'card-outline' as const,sla:'Payments & refunds'},
     {label:'Account',icon:'person-circle-outline' as const,sla:'Profile access'},
     {label:'Report a bug',icon:'bug-outline' as const,sla:'App issue'},
@@ -4280,7 +4315,7 @@ function SupportCenter({onBack}:{onBack:()=>void}){
     <View style={supportStyles.hero}><PremiumIcon name="headset" tone="ruby" size={68} iconSize={31}/><View style={supportStyles.liveStatus}><View style={supportStyles.liveDot}/><Text style={supportStyles.liveText}>Support preview online</Text></View><Text style={[shared.h1,{textAlign:'center'}]}>We’re here when something feels off.</Text><Text style={[shared.body,{textAlign:'center'}]}>Choose a topic, send a note, or use safety actions. Production connects this page to tickets, moderation and billing support.</Text></View>
     {ticket?<View style={supportStyles.ticketCard}><PremiumIcon name="checkmark-circle" tone="gold" size={44} iconSize={20}/><View style={{flex:1}}><Text style={styles.cardTitle}>Latest ticket: {ticket}</Text><Text style={styles.helper}>{ticketNote||'Saved locally in this preview. Backend step will store tickets in Supabase and notify the support team.'}</Text></View></View>:null}
     <View style={supportStyles.topicGrid}>{topics.map(item=><Pressable key={item.label} onPress={()=>setTopic(item.label)} style={[supportStyles.topicCard,topic===item.label&&supportStyles.topicCardOn]}><PremiumIcon name={item.icon} tone={topic===item.label?'gold':'rose'} size={44} iconSize={20}/><Text style={supportStyles.topicText}>{item.label}</Text><Text style={supportStyles.topicSla}>{item.sla}</Text></Pressable>)}</View>
-    <View style={shared.card}><View style={shared.row}><View style={{flex:1}}><Text style={styles.cardTitle}>Tell us what happened</Text><Text style={styles.helper}>Selected queue: {topic}</Text></View><MiniPremiumIcon name="lock-closed" tone="gold" size={30} iconSize={14}/></View><TextInput value={message} onChangeText={setMessage} placeholder="Write your message..." placeholderTextColor="#6F6875" multiline style={supportStyles.messageBox}/><Button disabled={!message.trim()||submitting} label={submitting?'Creating ticket…':'Submit support request'} icon="send" onPress={()=>void submit()}/></View>
+    <View style={shared.card}><View style={shared.row}><View style={{flex:1}}><Text style={styles.cardTitle}>{topic==='Appeal'?'Request an independent review':'Tell us what happened'}</Text><Text style={styles.helper}>Selected queue: {topic}</Text></View><MiniPremiumIcon name="lock-closed" tone="gold" size={30} iconSize={14}/></View>{topic==='Appeal'?<><Text style={styles.sectionLabel}>CASE ID</Text><TextInput value={caseId} onChangeText={setCaseId} autoCapitalize="none" placeholder="Case ID from your decision notice" placeholderTextColor="#6F6875" style={supportStyles.appealCaseInput}/><Text style={styles.helper}>Only the member affected by an eligible resolved case can appeal. A qualified lead or legal reviewer decides the outcome.</Text></>:null}<TextInput value={message} onChangeText={setMessage} placeholder={topic==='Appeal'?'Explain why the decision should be reviewed...':'Write your message...'} placeholderTextColor="#6F6875" multiline style={supportStyles.messageBox}/><Button disabled={!message.trim()||submitting||(topic==='Appeal'&&!caseId.trim())} label={submitting?'Submitting…':topic==='Appeal'?'Submit appeal':'Submit support request'} icon={topic==='Appeal'?'refresh-circle-outline':'send'} onPress={()=>void submit()}/></View>
     <View style={supportStyles.quickGrid}>
       <SupportQuickCard icon="shield-checkmark-outline" title="Safety guide" body="Dating safety, boundaries and reporting." onPress={()=>setSupportInfo({title:'Safety guide',body:'Small habits make first meetings safer.',icon:'shield-checkmark-outline',tone:'gold',bullets:['Meet in public for early dates','Keep early conversations inside DestinyOne','Use date check-ins and share plans with someone trusted','Report pressure, threats, fake identity or money requests']})}/>
       <SupportQuickCard icon="card-outline" title="Billing help" body="Subscriptions, restore purchase and refunds." onPress={()=>setSupportInfo({title:'Billing help',body:'Payments are designed to stay store-compliant and restorable.',icon:'card-outline',tone:'gold',bullets:['Subscriptions and Spark packs use Apple/Google in-app billing','Members can restore purchases from their store account','Real-world date holds use secure payment partners after venue confirmation','Refund policies follow app-store and payment-provider rules']})}/>
@@ -4947,6 +4982,13 @@ const coachStyles=StyleSheet.create({
   coachActions:{flexDirection:'row',gap:10},
   savedNote:{padding:10,borderRadius:16,backgroundColor:'rgba(88,201,128,.10)',borderWidth:1,borderColor:'rgba(88,201,128,.28)',flexDirection:'row',alignItems:'center',gap:8},
   savedNoteText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.5,lineHeight:15,color:'#A7E6BA'},
+  feedbackCard:{gap:10,padding:13,borderRadius:18,backgroundColor:'rgba(212,175,55,.06)',borderWidth:1,borderColor:'rgba(212,175,55,.20)'},
+  feedbackChoices:{flexDirection:'row',flexWrap:'wrap',gap:8},
+  feedbackChoice:{minHeight:42,paddingHorizontal:11,borderRadius:16,backgroundColor:'rgba(255,255,255,.05)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',flexDirection:'row',alignItems:'center',gap:6},
+  feedbackChoiceText:{fontFamily:'Poppins_600SemiBold',fontSize:10.5,color:colors.ivory},
+  feedbackConsent:{minHeight:44,flexDirection:'row',alignItems:'center',gap:9},
+  feedbackConsentText:{flex:1,fontFamily:'Poppins_400Regular',fontSize:10.5,lineHeight:15,color:'#D8C2C7'},
+  feedbackSaved:{fontFamily:'Poppins_700Bold',fontSize:10.5,color:'#A7E6BA'},
   checkRow:{flexDirection:'row',alignItems:'center',gap:8,padding:10,borderRadius:15,backgroundColor:'rgba(255,255,255,.05)'},
   checkText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:11.5,color:colors.ivory},
   boundaryCard:{padding:15,borderRadius:20,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.24)',flexDirection:'row',alignItems:'center',gap:12},
@@ -5064,6 +5106,7 @@ const supportStyles=StyleSheet.create({
   topicCardOn:{borderColor:colors.gold,backgroundColor:'#2A170A'},
   topicText:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
   topicSla:{fontFamily:'Poppins_400Regular',fontSize:9.5,color:colors.muted},
+  appealCaseInput:{height:52,borderRadius:16,borderWidth:1,borderColor:colors.line,backgroundColor:colors.surface2,color:colors.ivory,paddingHorizontal:13,fontFamily:'Poppins_400Regular',fontSize:12,marginTop:8},
   messageBox:{minHeight:115,borderRadius:18,borderWidth:1,borderColor:colors.line,backgroundColor:colors.surface2,color:colors.ivory,padding:13,fontFamily:'Poppins_400Regular',fontSize:13,textAlignVertical:'top',marginVertical:13},
   quickRow:{gap:10},
   quickGrid:{flexDirection:'row',flexWrap:'wrap',gap:10},
