@@ -59,6 +59,7 @@ import { primaryNavigation } from './src/domain/featureFocus';
 import { memberNeedsOnboarding } from './src/domain/memberBootstrap';
 import { canCommitMemberMutation, evaluateMemberDataRuntime, memberMutationFailureMessage, type MemberMutationResult } from './src/domain/memberDataRuntime';
 import { buildDailyIntroductionDeck } from './src/domain/dailyIntroductions';
+import { buildAlignmentBridge, buildIntentPassport, type AlignmentBridgeItem, type IntentPassportInput } from './src/domain/intentPassport';
 
 type Screen = 'splash'|'welcome'|'auth'|'otp'|'verify'|'profileSetup'|'vibes'|'intent'|'alignment'|'home'|'explore'|'circle'|'discovery'|'detail'|'mutual'|'icebreaker'|'chat'|'datePlan'|'safety'|'likes'|'profile'|'pricing'|'support'|'coach'|'events'|'executive'|'verifyHub'|'admin';
 
@@ -535,7 +536,7 @@ function DestinyOneApp() {
     {screen==='vibes'&&<Vibes value={vibeList} onChange={setVibeList} onNext={()=>setScreen('intent')}/>} 
     {screen==='intent'&&<Intent value={intent} onChange={setIntent} onNext={()=>setScreen('alignment')}/>} 
     {screen==='alignment'&&<Alignment value={alignment} onChange={setAlignment} onNext={completeOnboarding}/>} 
-    {screen==='home'&&<HomeClean items={visibleMatches} matchLoadState={matchLoadState} matchingPoolStatus={matchingPoolStatus} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={setScreen}/>} 
+    {screen==='home'&&<HomeClean items={visibleMatches} matchLoadState={matchLoadState} matchingPoolStatus={matchingPoolStatus} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} alignment={alignment} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={setScreen}/>} 
     {screen==='explore'&&<ExploreHub navigate={setScreen}/>} 
     {screen==='circle'&&<TrustedCircle vouches={vouches} coinBalance={coinBalance} rewardMode={vouchRewardsMode} onBack={()=>setScreen('explore')} onAddVouch={(quality)=>{if(vouchRewardsMode==='demo'&&vouches.length<3&&!vouches.includes(quality)){setVouches(current=>[...current,quality]);setCoinBalance(balance=>balance+100)}}}/>} 
     {screen==='discovery'&&<DiscoveryCenter filters={matchFilters} onFiltersChange={updateMatchFilters} signals={discoverySignals} smartDiscovery={smartDiscovery} crossedPaths={crossedPaths} onSmartChange={updateSmartDiscovery} onCrossedChange={setCrossedPaths} onClear={clearMatchingActivity} onBack={()=>setScreen('explore')}/>} 
@@ -544,7 +545,7 @@ function DestinyOneApp() {
     {screen==='executive'&&<ExecutiveCircle navigate={setScreen} onBack={()=>setScreen('explore')} onOpenEvents={()=>setScreen('events')} onOpenPricing={()=>setScreen('pricing')} onOpenVerify={()=>setScreen('verifyHub')} onOpenDatePlan={()=>setScreen('datePlan')}/>} 
     {screen==='verifyHub'&&<VerificationHub verified={verified} selfieUri={selfieUri} hasVoiceIntro={!!voiceIntroUri} vouches={vouches} onBack={()=>setScreen('profile')} onVerify={()=>{setVerified(true);setAppNotice({title:'Trust badge upgraded',body:'Selfie verification is marked complete in this preview. Production will connect liveness and ID providers.',icon:'shield-checkmark',tone:'gold'})}} onOpenSafety={()=>setScreen('safety')}/>} 
     {screen==='admin'&&<AdminModerationPanel reports={reports} blockedCount={blockedIds.length} onBack={()=>setScreen('profile')}/>} 
-    {screen==='detail'&&<Detail match={selected} preferences={{intent,vibes:vibeList,filters:matchFilters}} back={()=>setScreen('home')} interested={()=>chooseInterested(selected)} onRose={()=>openRose(selected)} onProfileView={()=>notifyProfileView(selected)} onPrivateBlock={()=>setDetailSafetyOpen(true)}/>} 
+    {screen==='detail'&&<Detail match={selected} preferences={{intent,vibes:vibeList,filters:matchFilters}} alignment={alignment} back={()=>setScreen('home')} interested={()=>chooseInterested(selected)} onRose={()=>openRose(selected)} onProfileView={()=>notifyProfileView(selected)} onPrivateBlock={()=>setDetailSafetyOpen(true)}/>} 
     {screen==='mutual'&&<Mutual match={selected} next={()=>setScreen('icebreaker')} back={()=>setScreen('home')}/>} 
     {screen==='icebreaker'&&<Icebreaker match={selected} question={icebreakerQuestion} onSubmit={answerIcebreaker}/>} 
     {screen==='chat'&&<Chat match={selected} messages={chatMessages[selected.id]??[]} reflection={relationshipReflections[selected.id]} reminder={relationshipReminders[selected.id]} settings={chatSettings[selected.id]??{nickname:'',theme:'Ruby Velvet'}} initialDraft={chatDrafts[selected.id]??''} onDraftConsumed={()=>setChatDrafts(current=>{const next={...current};delete next[selected.id];return next})} onSettingsChange={updateSelectedChatSettings} onDateStatus={(messageId,status)=>updateDatePlanStatus(selected.id,messageId,status)} onReflection={(messageId,choice)=>saveReflection(selected.id,messageId,choice)} onLearningConsent={(enabled)=>updateRelationshipLearningConsent(selected.id,enabled)} onReminder={(messageId,enabled)=>updateRelationshipReminder(selected.id,messageId,enabled)} onJourneyEvent={recordJourneyEvent} coinBalance={coinBalance} roseAvailability={roseAvailability} onRose={()=>openRose(selected)} onSend={(message)=>appendChatMessage(selected,message)} onSpendCoins={(coins)=>setCoinBalance(balance=>spendCoins(balance,coins))} onReport={reportSelected} onBlock={async()=>{if(await blockMatch(selected))setScreen('home')}} onUnmatch={async()=>{if(await unmatchMatch(selected))setScreen('home')}} navigate={setScreen}/>} 
@@ -907,7 +908,7 @@ function Alignment({value,onChange,onNext}:{value:Record<string,string>;onChange
   </FormPage>
 }
 
-function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,preferences,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{items:Match[];matchLoadState:MemberMatchLoadState;matchingPoolStatus:MatchingPoolStatus|null;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
+function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,preferences,alignment,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{items:Match[];matchLoadState:MemberMatchLoadState;matchingPoolStatus:MatchingPoolStatus|null;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};alignment:Record<string,string>;signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
   const {width}=useWindowDimensions();
   const useMatchGrid=width>=900;
   const compactHome=width<430;
@@ -919,7 +920,7 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
     if(nudge.actionScreen==='detail'&&featured){openDetail(featured);return}
     navigate(nudge.actionScreen);
   };
-  const preferenceChips=[preferences.intent||'Marriage minded',preferences.filters.lookingFor,`${preferences.filters.minAge}-${preferences.filters.maxAge}`];
+  const passportInput={intent:preferences.intent,alignment};
   const poolNeedsVerification=matchingPoolStatus?.status==='verification_required';
   const poolNeedsPreferences=matchingPoolStatus?.status==='preferences_incomplete';
   const poolMessage=matchingPoolStatus?.suggestions[0]??'No verified profiles meet your preferences right now. We will refresh your introductions as the community grows.';
@@ -942,9 +943,11 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
         </View>
         <View style={homeCleanStyles.heroCopy}>
           <Text style={homeCleanStyles.heroTitle}>Chosen around your future.</Text>
-          <View style={homeCleanStyles.chipWrap}>{preferenceChips.map(chip=><View key={chip} style={homeCleanStyles.cleanChip}><Text numberOfLines={1} style={homeCleanStyles.cleanChipText}>{chip}</Text></View>)}</View>
+          <Text style={homeCleanStyles.heroBody}>Five thoughtful introductions. Clear intent before chemistry, with room for a real conversation.</Text>
         </View>
       </View>
+
+      <IntentPassportCard input={passportInput} compact onEdit={()=>navigate('alignment')}/>
 
       {crossedPaths&&<Pressable onPress={()=>navigate('discovery')} style={homeCleanStyles.crossedMini}>
         <MiniPremiumIcon name="location" tone="gold" size={32} iconSize={15}/>
@@ -976,6 +979,20 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
     </ScrollView>
     <BottomNav active="home" navigate={navigate}/>
   </SafeAreaView></LinearGradient>
+}
+
+function IntentPassportCard({input,compact=false,onEdit}:{input:IntentPassportInput;compact?:boolean;onEdit:()=>void}){
+  const passport=buildIntentPassport(input);
+  const visibleFields=compact?passport.fields.slice(0,3):passport.fields;
+  return <View style={[passportStyles.card,compact&&passportStyles.cardCompact]}>
+    <View style={passportStyles.header}>
+      <MiniPremiumIcon name="finger-print-outline" tone="gold" size={compact?34:40} iconSize={compact?16:19}/>
+      <View style={{flex:1}}><Text style={styles.sectionLabel}>MY INTENT PASSPORT</Text><Text style={passportStyles.summary}>{passport.summary}</Text></View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Edit Intent Passport" onPress={onEdit} style={passportStyles.edit}><Ionicons name="create-outline" size={16} color={colors.gold}/></Pressable>
+    </View>
+    <View style={passportStyles.fieldGrid}>{visibleFields.map(field=><View key={field.id} style={passportStyles.field}><Text style={passportStyles.fieldLabel}>{field.label}</Text><Text numberOfLines={2} style={[passportStyles.fieldValue,!field.complete&&passportStyles.fieldPrivate]}>{field.value}</Text></View>)}</View>
+    {compact&&<Text style={passportStyles.privacy}>Shared deliberately. Never shown as a compatibility percentage.</Text>}
+  </View>
 }
 
 function ExploreHub({navigate}:{navigate:(screen:Screen)=>void}){
@@ -3265,13 +3282,30 @@ function MatchCard({match,reasons,onPress,onInterested,onSkip,onRose,compact=fal
   </Animated.View>
 }
 
-function Detail({match,preferences,back,interested,onRose,onProfileView,onPrivateBlock}:{match:Match;preferences:{intent:string;vibes:string[];filters:MatchFilters};back:()=>void;interested:()=>void;onRose:()=>void;onProfileView:()=>void;onPrivateBlock:()=>void}){
+function Detail({match,preferences,alignment,back,interested,onRose,onProfileView,onPrivateBlock}:{match:Match;preferences:{intent:string;vibes:string[];filters:MatchFilters};alignment:Record<string,string>;back:()=>void;interested:()=>void;onRose:()=>void;onProfileView:()=>void;onPrivateBlock:()=>void}){
   const reasons=match.reasons??matchReasons(match,preferences);
   useEffect(()=>{
     const timer=setTimeout(onProfileView,5000);
     return()=>clearTimeout(timer);
   },[match.id,onProfileView]);
-  return <View style={{flex:1}}><ScrollView contentContainerStyle={{paddingBottom:120}}><View style={styles.hero}><Image source={{uri:match.photo}} style={styles.fill}/><LinearGradient colors={['rgba(11,11,15,.35)','transparent',colors.black]} style={StyleSheet.absoluteFill}/><SafeAreaView><View style={shared.row}><Pressable onPress={back} style={styles.circleBtn}><PremiumIcon name="arrow-back" tone="dark" size={44} iconSize={21}/></Pressable><View style={shared.spacer}/><Pressable onPress={onPrivateBlock} style={styles.detailBlockButton}><PremiumIcon name="ban-outline" tone="ruby" size={40} iconSize={18}/></Pressable></View></SafeAreaView><View style={styles.heroText}><Chip label={match.match} gold/><View style={shared.row}><Text style={styles.detailName}>{match.name}, {match.age}</Text><MiniPremiumIcon name="shield-checkmark" tone="plum" size={34} iconSize={16}/></View><Text style={styles.matchMeta}>{match.profession}  ·  {match.city}</Text><Chip label={match.intent}/></View></View><View style={styles.detailBody}>{reasons.length>0&&<View style={aiStyles.detailAi}><View style={shared.row}><MiniPremiumIcon name="sparkles" tone="gold" size={38} iconSize={18}/><Text style={[styles.cardTitle,{marginLeft:8}]}>Why AI surfaced {match.name}</Text></View><View style={aiStyles.reasonRow}>{reasons.map(reason=><View key={reason} style={aiStyles.reasonPill}><Text style={aiStyles.reasonText}>{reason}</Text></View>)}</View><Text style={styles.helper}>Based only on your DestinyOne answers and in-app activity.</Text></View>}<View style={styles.profileViewNotice}><MiniPremiumIcon name="eye-outline" tone="gold" size={36} iconSize={17}/><Text style={[styles.helper,{flex:1}]}>If you spend 5+ seconds here, {match.name} receives a tasteful profile-view notification. Swipe previews stay private.</Text></View><TrustBadges match={match}/><View style={styles.voice}><PremiumIcon name="play" tone="ruby" size={42} iconSize={19}/><View style={{flex:1}}><Text style={shared.label}>Voice introduction</Text><View style={styles.wave}>{[8,17,12,24,15,9,20,12,6,15,20,9].map((h,i)=><View key={i} style={{height:h,width:3,backgroundColor:colors.purpleLight,borderRadius:2}}/>)}</View></View><Text style={styles.helper}>0:24</Text></View><Info title="About me" body={match.about}/><Info title="What I value" body={match.values}/><Info title="The future I’m building" body={match.goals}/><LifeAlignment match={match}/><View style={styles.privateBlockCard}><PremiumIcon name="shield" tone="ruby" size={44} iconSize={21}/><View style={{flex:1}}><Text style={styles.cardTitle}>Private block</Text><Text style={styles.helper}>If someone bothers you, block them quietly. They won’t be notified and they disappear from your app.</Text></View><Pressable onPress={onPrivateBlock} style={styles.privateBlockAction}><Text style={styles.privateBlockText}>Block</Text></Pressable></View><Text style={styles.sectionLabel}>THEIR VIBE</Text><View style={styles.chipRow}>{match.vibes.map(x=><Chip key={x} label={x} selected/>)}</View></View></ScrollView><View style={styles.fixedAction}><Pressable onPress={back} style={styles.nope}><PremiumIcon name="close" tone="dark" size={52} iconSize={24}/></Pressable><Pressable onPress={onRose} style={aiStyles.fixedRose}><PremiumIcon name="sparkles" tone="gold" size={34} iconSize={16}/></Pressable><View style={{flex:1}}><Button label="Explore a serious connection" icon="heart" onPress={interested}/></View></View></View>
+  return <View style={{flex:1}}><ScrollView contentContainerStyle={{paddingBottom:120}}><View style={styles.hero}><Image source={{uri:match.photo}} style={styles.fill}/><LinearGradient colors={['rgba(11,11,15,.35)','transparent',colors.black]} style={StyleSheet.absoluteFill}/><SafeAreaView><View style={shared.row}><Pressable onPress={back} style={styles.circleBtn}><PremiumIcon name="arrow-back" tone="dark" size={44} iconSize={21}/></Pressable><View style={shared.spacer}/><Pressable onPress={onPrivateBlock} style={styles.detailBlockButton}><PremiumIcon name="ban-outline" tone="ruby" size={40} iconSize={18}/></Pressable></View></SafeAreaView><View style={styles.heroText}><Chip label={match.match} gold/><View style={shared.row}><Text style={styles.detailName}>{match.name}, {match.age}</Text><MiniPremiumIcon name="shield-checkmark" tone="plum" size={34} iconSize={16}/></View><Text style={styles.matchMeta}>{match.profession}  ·  {match.city}</Text><Chip label={match.intent}/></View></View><View style={styles.detailBody}><AlignmentBridge match={match} input={{intent:preferences.intent,alignment}}/>{reasons.length>0&&<View style={aiStyles.detailAi}><View style={shared.row}><MiniPremiumIcon name="sparkles" tone="gold" size={38} iconSize={18}/><Text style={[styles.cardTitle,{marginLeft:8}]}>Why AI surfaced {match.name}</Text></View><View style={aiStyles.reasonRow}>{reasons.map(reason=><View key={reason} style={aiStyles.reasonPill}><Text style={aiStyles.reasonText}>{reason}</Text></View>)}</View><Text style={styles.helper}>Based only on your DestinyOne answers and in-app activity.</Text></View>}<View style={styles.profileViewNotice}><MiniPremiumIcon name="eye-outline" tone="gold" size={36} iconSize={17}/><Text style={[styles.helper,{flex:1}]}>If you spend 5+ seconds here, {match.name} receives a tasteful profile-view notification. Swipe previews stay private.</Text></View><TrustBadges match={match}/><View style={styles.voice}><PremiumIcon name="play" tone="ruby" size={42} iconSize={19}/><View style={{flex:1}}><Text style={shared.label}>Voice introduction</Text><View style={styles.wave}>{[8,17,12,24,15,9,20,12,6,15,20,9].map((h,i)=><View key={i} style={{height:h,width:3,backgroundColor:colors.purpleLight,borderRadius:2}}/>)}</View></View><Text style={styles.helper}>0:24</Text></View><Info title="About me" body={match.about}/><Info title="What I value" body={match.values}/><Info title="The future I’m building" body={match.goals}/><LifeAlignment match={match}/><View style={styles.privateBlockCard}><PremiumIcon name="shield" tone="ruby" size={44} iconSize={21}/><View style={{flex:1}}><Text style={styles.cardTitle}>Private block</Text><Text style={styles.helper}>If someone bothers you, block them quietly. They won’t be notified and they disappear from your app.</Text></View><Pressable onPress={onPrivateBlock} style={styles.privateBlockAction}><Text style={styles.privateBlockText}>Block</Text></Pressable></View><Text style={styles.sectionLabel}>THEIR VIBE</Text><View style={styles.chipRow}>{match.vibes.map(x=><Chip key={x} label={x} selected/>)}</View></View></ScrollView><View style={styles.fixedAction}><Pressable onPress={back} style={styles.nope}><PremiumIcon name="close" tone="dark" size={52} iconSize={24}/></Pressable><Pressable onPress={onRose} style={aiStyles.fixedRose}><PremiumIcon name="sparkles" tone="gold" size={34} iconSize={16}/></Pressable><View style={{flex:1}}><Button label="Explore a serious connection" icon="heart" onPress={interested}/></View></View></View>
+}
+
+function AlignmentBridge({match,input}:{match:Match;input:IntentPassportInput}){
+  const bridge=buildAlignmentBridge(input,match);
+  return <View style={passportStyles.bridge}>
+    <View style={passportStyles.bridgeHeader}><PremiumIcon name="git-compare-outline" tone="gold" size={44} iconSize={20}/><View style={{flex:1}}><Text style={styles.sectionLabel}>THE ALIGNMENT BRIDGE</Text><Text style={passportStyles.bridgeTitle}>Clarity before chemistry.</Text></View><View style={passportStyles.alignedPill}><Text style={passportStyles.alignedCount}>{bridge.alignedCount}</Text><Text style={passportStyles.alignedLabel}>clear</Text></View></View>
+    <Text style={passportStyles.bridgeIntro}>Compare future essentials in plain language. Differences are conversation topics, not rejection scores.</Text>
+    <View style={passportStyles.bridgeList}>{bridge.items.map(item=><AlignmentBridgeRow key={item.id} item={item} matchName={match.name}/>)}</View>
+    <View style={passportStyles.promptCard}><MiniPremiumIcon name="chatbubble-ellipses-outline" tone="rose" size={34} iconSize={16}/><View style={{flex:1}}><Text style={passportStyles.promptLabel}>A thoughtful first question</Text><Text style={passportStyles.promptText}>{bridge.conversationPrompt}</Text></View></View>
+    {bridge.hasPrivateFields&&<Text style={passportStyles.privacy}>Unshared answers stay private. Complete your Intent Passport to compare them.</Text>}
+  </View>
+}
+
+function AlignmentBridgeRow({item,matchName}:{item:AlignmentBridgeItem;matchName:string}){
+  const icon=item.status==='aligned'?'checkmark-circle':item.status==='discuss'?'chatbubble-ellipses':'lock-closed';
+  const tone:PremiumIconTone=item.status==='aligned'?'gold':item.status==='discuss'?'rose':'dark';
+  return <View style={passportStyles.bridgeRow}><MiniPremiumIcon name={icon} tone={tone} size={30} iconSize={14}/><View style={{flex:1}}><Text style={passportStyles.bridgeLabel}>{item.label}</Text><Text style={passportStyles.bridgeValues} numberOfLines={2}>You: {item.you}</Text><Text style={passportStyles.bridgeValues} numberOfLines={2}>{matchName}: {item.them}</Text></View><Text style={[passportStyles.status,item.status==='aligned'&&passportStyles.statusAligned]}>{item.status==='aligned'?'ALIGNED':item.status==='discuss'?'DISCUSS':'PRIVATE'}</Text></View>
 }
 
 function Mutual({match,next,back}:{match:Match;next:()=>void;back:()=>void}){return <LinearGradient colors={['#2E0710',colors.black,colors.black]} style={styles.center}><SafeAreaView style={[shared.safe,{alignItems:'center',justifyContent:'center',gap:26}]}><Text style={styles.kicker}>A NEW BEGINNING</Text><View style={styles.matchFaces}><Image source={{uri:match.photo}} style={[styles.face,{left:0}]}/><View style={styles.matchHeart}><PremiumIcon name="heart" tone="ruby" size={58} iconSize={28}/></View><View style={[styles.face,{right:0,backgroundColor:'#3A1820',alignItems:'center',justifyContent:'center'}]}><Text style={[styles.avatarText,{fontSize:38}]}>A</Text></View></View><View style={{alignItems:'center',gap:10}}><Text style={styles.bigMatch}>It’s a Match</Text><Text style={[shared.body,{textAlign:'center',maxWidth:310}]}>You and {match.name} both felt something worth exploring.</Text></View><View style={[shared.card,{width:'100%',gap:12}]}><View style={shared.row}><PremiumIcon name="chatbubbles-outline" tone="gold" size={44} iconSize={20}/><Text style={[shared.label,{marginLeft:9}]}>One little step before hello</Text></View><Text style={shared.body}>Answer an icebreaker. When you both answer, your chat opens.</Text></View><View style={{width:'100%',gap:8}}><Button label="Break the ice" icon="sparkles" onPress={next}/><Button label="Keep browsing" variant="ghost" onPress={back}/></View></SafeAreaView></LinearGradient>}
@@ -4742,6 +4776,36 @@ const marketplaceBrandStyles=StyleSheet.create({
   heroCompact:{paddingHorizontal:18,paddingVertical:16,gap:7,borderRadius:8},
   titleCompact:{fontSize:30,lineHeight:36},
   bodyCompact:{fontSize:13,lineHeight:19},
+});
+
+const passportStyles=StyleSheet.create({
+  card:{gap:13,padding:15,borderRadius:8,backgroundColor:'#160A0C',borderWidth:1,borderColor:'rgba(212,175,55,.24)'},
+  cardCompact:{padding:13,gap:10},
+  header:{flexDirection:'row',alignItems:'center',gap:10},
+  summary:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory,marginTop:2},
+  edit:{width:34,height:34,borderRadius:17,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.20)'},
+  fieldGrid:{flexDirection:'row',flexWrap:'wrap',gap:7},
+  field:{flexGrow:1,flexBasis:'30%',minWidth:96,minHeight:54,paddingHorizontal:10,paddingVertical:8,borderRadius:8,backgroundColor:'rgba(255,255,255,.035)',borderWidth:1,borderColor:'rgba(255,255,255,.07)'},
+  fieldLabel:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:colors.muted},
+  fieldValue:{fontFamily:'Poppins_700Bold',fontSize:10.2,lineHeight:14,color:'#F3E3E6',marginTop:3},
+  fieldPrivate:{color:'#9A858A'},
+  privacy:{fontFamily:'Poppins_400Regular',fontSize:9.2,lineHeight:13.5,color:'#A99298'},
+  bridge:{gap:13,padding:16,borderRadius:8,backgroundColor:'#1B0D0A',borderWidth:1,borderColor:'rgba(212,175,55,.30)'},
+  bridgeHeader:{flexDirection:'row',alignItems:'center',gap:10},
+  bridgeTitle:{fontFamily:'Poppins_700Bold',fontSize:18,color:colors.ivory,marginTop:2},
+  bridgeIntro:{fontFamily:'Poppins_400Regular',fontSize:11.5,lineHeight:17,color:'#D3BEC2'},
+  alignedPill:{width:48,height:48,borderRadius:24,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(212,175,55,.11)',borderWidth:1,borderColor:'rgba(212,175,55,.30)'},
+  alignedCount:{fontFamily:'Poppins_700Bold',fontSize:17,color:colors.gold},
+  alignedLabel:{fontFamily:'Poppins_600SemiBold',fontSize:7.5,color:'#E6D09A'},
+  bridgeList:{gap:7},
+  bridgeRow:{minHeight:72,padding:10,borderRadius:8,backgroundColor:'rgba(255,255,255,.035)',borderWidth:1,borderColor:'rgba(255,255,255,.07)',flexDirection:'row',alignItems:'center',gap:9},
+  bridgeLabel:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
+  bridgeValues:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:13.5,color:'#C7B0B5',marginTop:2},
+  status:{fontFamily:'Poppins_700Bold',fontSize:7.5,letterSpacing:.7,color:colors.pinkSoft},
+  statusAligned:{color:colors.gold},
+  promptCard:{padding:12,borderRadius:8,backgroundColor:'rgba(229,9,47,.075)',borderWidth:1,borderColor:'rgba(229,9,47,.20)',flexDirection:'row',alignItems:'center',gap:10},
+  promptLabel:{fontFamily:'Poppins_700Bold',fontSize:10,color:colors.pinkSoft},
+  promptText:{fontFamily:'Poppins_600SemiBold',fontSize:11,lineHeight:16,color:colors.ivory,marginTop:2},
 });
 
 const growthLoopStyles=StyleSheet.create({

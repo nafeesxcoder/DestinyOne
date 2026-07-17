@@ -82,6 +82,31 @@ Primary product references reviewed:
 - Added an off-by-default anonymous analytics control plus a five-event Relationship Path taxonomy with an allowlist for non-identifying properties only.
 - Added four domain tests for consent gating, signal mapping, reminder eligibility and analytics redaction. The suite now covers 111 tests across 29 files.
 
+## Fourth implementation batch: Intent Passport and Alignment Bridge
+
+- Added **My Intent Passport**, a member-controlled summary of commitment, marriage pace, children, family role and relocation.
+- Added **The Alignment Bridge** to match detail so members can compare future essentials before deciding on chemistry.
+- Classifies each topic as `aligned`, `discuss` or `private`; a difference is never presented as failure or a rejection score.
+- Generates one respectful conversation prompt from the first meaningful difference, giving the mutual icebreaker and chat a more serious starting point.
+- Never invents missing answers. Incomplete Intent Passport fields remain visibly `Not shared yet`.
+- Continues the no-percentage rule: the interface shows clear topics, not a pseudo-scientific compatibility score.
+- Added four domain tests covering incomplete data, completion, explainability without percentages and difference-led prompts.
+
+## 2026 competitive refresh
+
+- Hinge's private post-date feedback and Bumble's emerging guided Dates experience confirm that moving from match to meeting is becoming category-standard.
+- Bumble now combines daily compatible discovery, ID verification and Share Date, so verification and generic compatibility alone are not a durable differentiator.
+- Shaadi already offers detailed preferences and two-way matching, while Dil Mil emphasizes South Asian discovery, global matching and community chat.
+- DestinyOne's distinct system is therefore the connected journey: **member-owned future intent → explainable daily introduction → mutual conversation → safe in-app date → private learning → Trusted Circle when ready**.
+
+Research references refreshed July 16, 2026:
+
+- https://help.hinge.co/hc/en-us/articles/360010692913-What-is-We-Met
+- https://support.bumble.com/hc/en-us/articles/34865026348701-Using-Dates-powered-by-Bee
+- https://bumble.com/en/the-buzz/bumble-dating-features
+- https://www.shaadi.com/info/customer-relations/faq/match-making
+- https://dilmil.co/
+
 ## Success metrics
 
 - Profile completion to first meaningful match.
