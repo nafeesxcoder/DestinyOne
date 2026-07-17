@@ -20,5 +20,6 @@ describe('monetization readiness wiring', () => {
   it('anchors checkout sheets inside a full-screen modal root', () => {
     expect(app).toContain('<View style={pricingStyles.checkoutModalRoot}><Pressable style={chatStyles.modalBackdrop}');
     expect(app).toContain('checkoutModalRoot:{flex:1}');
+    expect(app).toContain("animationType={Platform.OS==='web'?'fade':'slide'}");
   });
 });
