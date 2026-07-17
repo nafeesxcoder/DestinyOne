@@ -49,6 +49,13 @@ export type MonetizationOperationsInput = {
   taxConfigurationReady: boolean;
   fraudReviewReady: boolean;
   financeReconciliationReady: boolean;
+  catalogVerificationReady: boolean;
+  renewalOwnershipReady: boolean;
+  restoreSessionReady: boolean;
+  boundedReversalReady: boolean;
+  refundAuditReady: boolean;
+  financeProvenanceReady: boolean;
+  protectedFreeCapabilitiesReady: boolean;
   unitEconomics: UnitEconomicsInput;
 };
 
@@ -61,6 +68,9 @@ export type MonetizationOperationsSnapshot = {
   contributionMarginPercent: number;
   blockers: string[];
   nextBestStep: string;
+  sourceControlScore: number;
+  sourceControlReady: number;
+  sourceControlTotal: number;
 };
 
 const transitions: Record<PurchaseLifecycleStatus, readonly PurchaseLifecycleStatus[]> = {
@@ -115,6 +125,10 @@ export function buildMonetizationOperationsSnapshot(input: MonetizationOperation
   if (!input.refundWorkflowReady || !input.fraudReviewReady) blockers.push('Refund, chargeback and fraud operations');
   if (!input.taxConfigurationReady || !input.financeReconciliationReady) blockers.push('Tax and finance reconciliation');
 
+  const sourceControls = [input.webhookSignatureVerificationReady,input.immutableLedgerReady,input.restoreReady,input.gracePeriodReady,input.refundWorkflowReady,input.fraudReviewReady,input.catalogVerificationReady,input.renewalOwnershipReady,input.restoreSessionReady,input.boundedReversalReady,input.refundAuditReady,input.financeProvenanceReady,input.protectedFreeCapabilitiesReady];
+  const sourceControlReady = sourceControls.filter(Boolean).length;
+  const sourceControlScore = Math.round((sourceControlReady/sourceControls.length)*10);
+
   const verifiedReceiptRate = input.liveReceiptCount > 0 ? Math.round((input.verifiedReceiptCount / input.liveReceiptCount) * 100) : 0;
   const liveEvidence = input.liveReceiptCount > 0 && input.verifiedReceiptCount > 0;
   const ready = blockers.length === 0 && liveEvidence && input.unresolvedChargebackCount === 0;
@@ -127,6 +141,9 @@ export function buildMonetizationOperationsSnapshot(input: MonetizationOperation
     contributionMarginPercent: economics.contributionMarginPercent,
     blockers,
     nextBestStep: blockers[0] ? `Connect and validate: ${blockers[0]}.` : 'Run controlled iOS and Android purchase, renewal, restore, refund and chargeback tests.',
+    sourceControlScore,
+    sourceControlReady,
+    sourceControlTotal: sourceControls.length,
   };
 }
 

@@ -2100,7 +2100,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     appEnvironment,
     requiresRealBackend,
     supabaseConfigured:isSupabaseConfigured,
-    migrationCount:28,
+    migrationCount:29,
     edgeFunctionCount:5,
     dataModuleCount:dataSnapshot.totalModules,
     backendReadyModuleCount:dataSnapshot.backendReadyModules,
@@ -2160,6 +2160,13 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     taxConfigurationReady:false,
     fraudReviewReady:true,
     financeReconciliationReady:false,
+    catalogVerificationReady:true,
+    renewalOwnershipReady:true,
+    restoreSessionReady:true,
+    boundedReversalReady:true,
+    refundAuditReady:true,
+    financeProvenanceReady:true,
+    protectedFreeCapabilitiesReady:true,
     unitEconomics:{grossRevenueCents:0,storeAndProcessorFeesCents:0,taxesCents:0,refundsCents:0,chargebacksCents:0,marketplaceCostCents:0,supportCostCents:0,acquisitionCostCents:0},
   });
   const pilotReadinessSnapshot=buildPilotReadinessSnapshot({
@@ -2556,12 +2563,12 @@ function MonetizationOperationsCard({snapshot}:{snapshot:MonetizationOperationsS
     <View style={adminOpsStyles.areaGrid}>
       <View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Receipts</Text><Text style={adminOpsStyles.areaScore}>{snapshot.liveReceiptCount}</Text></View>
       <View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Verified</Text><Text style={adminOpsStyles.areaScore}>{snapshot.verifiedReceiptRate}%</Text></View>
-      <View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Margin</Text><Text style={adminOpsStyles.areaScore}>{snapshot.contributionMarginPercent}%</Text></View>
-      <View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Blockers</Text><Text style={adminOpsStyles.areaScore}>{snapshot.blockers.length}</Text></View>
+      <View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Source</Text><Text style={adminOpsStyles.areaScore}>{snapshot.sourceControlScore}/10</Text></View>
+      <View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Controls</Text><Text style={adminOpsStyles.areaScore}>{snapshot.sourceControlReady}/{snapshot.sourceControlTotal}</Text></View>
     </View>
     <View style={adminOpsStyles.nextOpsCard}><MiniPremiumIcon name="navigate-circle-outline" tone="gold" size={30} iconSize={14}/><Text style={adminOpsStyles.nextOpsText}>{snapshot.nextBestStep}</Text></View>
     <View style={adminOpsStyles.qualityRows}>
-      {['Apple/Google digital billing','Signed idempotent webhooks','Immutable entitlement ledger','Grace, refund and chargeback reversal','Tax, support and contribution margin'].map((item,index)=><View key={item} style={adminOpsStyles.qualityRow}><MiniPremiumIcon name={index>1?'checkmark-circle':'ellipse-outline'} tone={index>1?'gold':'ruby'} size={28} iconSize={13}/><View style={{flex:1}}><Text style={adminOpsStyles.qualityRowTitle}>{item}</Text><Text style={adminOpsStyles.qualityRowBody}>{index>1?'Source contract implemented; live operational evidence is still required.':'Provider account, credentials and end-to-end transaction evidence are pending.'}</Text></View></View>)}
+      {['Verified store catalog + renewal ownership','Signed retryable webhooks + bounded reversal','Restore sessions + immutable entitlement ledger','Qualified refund audit + finance provenance','Safety, report, block and privacy remain free'].map(item=><View key={item} style={adminOpsStyles.qualityRow}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><View style={{flex:1}}><Text style={adminOpsStyles.qualityRowTitle}>{item}</Text><Text style={adminOpsStyles.qualityRowBody}>Source control implemented; live provider and finance evidence is still required.</Text></View></View>)}
     </View>
   </View>
 }

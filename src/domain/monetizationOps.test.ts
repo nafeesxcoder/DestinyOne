@@ -33,11 +33,15 @@ describe('monetization operations', () => {
       googleProviderConnected: false, realWorldProcessorConnected: false, webhookSignatureVerificationReady: true,
       immutableLedgerReady: true, restoreReady: true, gracePeriodReady: true, refundWorkflowReady: true,
       taxConfigurationReady: false, fraudReviewReady: true, financeReconciliationReady: false,
+      catalogVerificationReady: true, renewalOwnershipReady: true, restoreSessionReady: true,
+      boundedReversalReady: true, refundAuditReady: true, financeProvenanceReady: true,
+      protectedFreeCapabilitiesReady: true,
       unitEconomics: { grossRevenueCents: 0, storeAndProcessorFeesCents: 0, taxesCents: 0, refundsCents: 0, chargebacksCents: 0, marketplaceCostCents: 0, supportCostCents: 0, acquisitionCostCents: 0 },
     });
     expect(snapshot.status).toBe('Source model only');
     expect(snapshot.evidencePercent).toBe(0);
     expect(snapshot.liveReceiptCount).toBe(0);
+    expect(snapshot.sourceControlScore).toBe(10);
   });
 
   it('forbids preview entitlement changes in production', () => {

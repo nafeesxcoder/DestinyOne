@@ -17,7 +17,7 @@ const migrationFiles = readdirSync(migrationDir)
   .sort();
 const versions = migrationFiles.map((name) => Number(name.match(/^(\d{3})_[a-z0-9_]+\.sql$/)?.[1] ?? -1));
 
-requireCondition(migrationFiles.length >= 28, 'Expected at least 28 ordered migrations.');
+requireCondition(migrationFiles.length >= 29, 'Expected at least 29 ordered migrations.');
 requireCondition(versions.every((version) => version > 0), 'Migration names must use NNN_snake_case.sql.');
 requireCondition(versions.every((version, index) => version === index + 1), 'Migration versions must be contiguous from 001.');
 
@@ -88,6 +88,12 @@ const requiredContracts = [
   'create table if not exists public.billing_refund_cases',
   'create table if not exists public.billing_daily_finance_snapshots',
   'create table if not exists public.golden_spark_sends',
+  'create table if not exists public.billing_catalog_versions',
+  'create table if not exists public.billing_restore_sessions',
+  'create table if not exists public.billing_ops_reviewers',
+  'create table if not exists public.billing_refund_case_events',
+  'create table if not exists public.billing_reconciliation_cases',
+  'create table if not exists public.billing_finance_ingestion_runs',
   'create or replace function public.get_current_member_bootstrap',
   'create or replace function public.send_match_message',
   'create or replace function public.submit_member_report',
@@ -130,6 +136,13 @@ const requiredContracts = [
   'create or replace function public.send_golden_spark',
   'create or replace function public.billing_status_transition_allowed',
   'create or replace function public.process_billing_webhook',
+  'create or replace function public.record_billing_catalog_version',
+  'create or replace function public.begin_store_restore',
+  'create or replace function public.complete_store_restore',
+  'create or replace function public.review_billing_refund',
+  'create or replace function public.record_billing_finance_snapshot',
+  'create or replace function public.reconcile_billing_operations',
+  'create or replace function public.resolve_billing_reconciliation_case',
   'create or replace function public.get_backend_deployment_manifest',
   'alter default privileges in schema public revoke all on tables from anon',
   'alter default privileges in schema public revoke execute on functions from public',

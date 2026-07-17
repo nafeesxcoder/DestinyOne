@@ -324,6 +324,12 @@ export type Database = {
       growth_cohort_ingestion_runs: Table<{
         id: string; snapshot_date: string; source_name: string; source_run_id: string; payload_hash: string; row_count: number; recorded_at: string;
       }>;
+      billing_catalog_versions: Table<{ id: string; product_key: string; environment: 'sandbox' | 'production'; storefront: string; amount_cents: number; currency: string; provider_catalog_hash: string; effective_from: string; approved_by: string; idempotency_key: string; created_at: string }>;
+      billing_restore_sessions: Table<{ id: string; user_id: string; platform: 'apple_iap' | 'google_play'; status: 'prepared' | 'provider_syncing' | 'verified' | 'failed' | 'expired'; idempotency_key: string; expires_at: string; verified_at: string | null; created_at: string; updated_at: string }>;
+      billing_ops_reviewers: Table<{ id: string; user_id: string; role: 'billing_support' | 'finance' | 'risk' | 'executive'; status: 'active' | 'inactive'; created_at: string; updated_at: string }>;
+      billing_refund_case_events: Table<{ id: number; refund_case_id: string; event_type: string; actor_id: string | null; amount_cents: number | null; note: string | null; idempotency_key: string; created_at: string }>;
+      billing_reconciliation_cases: Table<{ id: string; case_key: string; case_type: string; severity: 'normal' | 'high' | 'critical'; status: 'open' | 'investigating' | 'resolved' | 'dismissed'; receipt_id: string | null; user_id: string | null; evidence: Json; resolution_note: string | null; resolved_by: string | null; resolution_idempotency_key: string | null; created_at: string; resolved_at: string | null }>;
+      billing_finance_ingestion_runs: Table<{ id: string; snapshot_date: string; platform: 'apple_iap' | 'google_play' | 'real_world_processor'; source_run_id: string; payload_hash: string; recorded_at: string }>;
     };
     Views: Record<never, never>;
     Functions: {
@@ -471,6 +477,13 @@ export type Database = {
       record_growth_cohort_snapshot: { Args: { p_snapshot_date: string; p_source_name: string; p_source_run_id: string; p_payload_hash: string; p_rows: Json }; Returns: Json };
       get_current_entitlements: { Args: Record<string, never>; Returns: Json };
       restore_store_purchases: { Args: Record<string, never>; Returns: Json };
+      begin_store_restore: { Args: { p_platform: 'apple_iap' | 'google_play'; p_idempotency_key: string }; Returns: Json };
+      complete_store_restore: { Args: { p_restore_session_id: string; p_verified_count: number; p_error?: string | null }; Returns: Json };
+      record_billing_catalog_version: { Args: { p_product_key: string; p_environment: 'sandbox' | 'production'; p_storefront: string; p_amount_cents: number; p_currency: string; p_provider_catalog_hash: string; p_effective_from: string; p_approved_by: string; p_idempotency_key: string }; Returns: Json };
+      review_billing_refund: { Args: { p_case_id: string; p_reviewer_id: string; p_decision: string; p_amount_cents: number; p_note: string; p_idempotency_key: string }; Returns: Json };
+      record_billing_finance_snapshot: { Args: { p_snapshot_date: string; p_platform: string; p_city_key: string; p_source_run_id: string; p_payload_hash: string; p_metrics: Json }; Returns: Json };
+      reconcile_billing_operations: { Args: { p_stale_minutes?: number }; Returns: number };
+      resolve_billing_reconciliation_case: { Args: { p_case_id: string; p_reviewer_id: string; p_status: 'resolved' | 'dismissed'; p_note: string; p_idempotency_key: string }; Returns: Json };
       prepare_store_purchase: {
         Args: { p_product_key: string; p_platform: 'apple_iap' | 'google_play'; p_idempotency_key: string };
         Returns: Json;

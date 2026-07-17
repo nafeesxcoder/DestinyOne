@@ -18,7 +18,14 @@ export async function restoreStorePurchases() {
   requireBillingBackend();
   const { data, error } = await supabase.rpc('restore_store_purchases');
   if (error) throw error;
-  return data as { restored?: RestoredEntitlement[]; receiptVerificationRequired?: boolean; asOf?: string } | null;
+  return data as { restored?: RestoredEntitlement[]; providerSyncRequired?: boolean; asOf?: string } | null;
+}
+
+export async function beginStoreRestore(platform: 'apple_iap' | 'google_play', idempotencyKey: string) {
+  requireBillingBackend();
+  const { data, error } = await supabase.rpc('begin_store_restore', { p_platform: platform, p_idempotency_key: idempotencyKey });
+  if (error) throw error;
+  return data as { restoreSessionId: string; platform: string; status: string; expiresAt: string; providerSyncRequired: true };
 }
 
 export async function prepareStorePurchase(productKey: string, platform: 'apple_iap' | 'google_play', idempotencyKey: string) {

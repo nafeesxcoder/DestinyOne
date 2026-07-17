@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(245);
+select plan(258);
 
 select has_function('public','get_backend_deployment_manifest',array[]::text[],'read-only deployment manifest exists');
 select function_privs_are('public','get_backend_deployment_manifest',array[]::text[],'service_role',array['EXECUTE'],'deployment manifest is service-role only');
@@ -50,13 +50,26 @@ select has_function('public','prepare_store_purchase',array['text','text','text'
 select has_function('public','consume_billing_entitlement',array['text','integer','text'],'idempotent Spark consumption RPC exists');
 select has_function('public','send_golden_spark',array['uuid','text','text'],'atomic Golden Spark RPC exists');
 select function_privs_are('public','billing_status_transition_allowed',array['text','text'],'service_role',array['EXECUTE'],'billing transition guard is service-only');
-select function_privs_are('public','process_billing_webhook',array['text','text','text','text','uuid','text','text','text','timestamp with time zone','timestamp with time zone','integer'],'service_role',array['EXECUTE'],'billing processor is service-only');
+select function_privs_are('public','process_billing_webhook',array['text','text','text','text','uuid','text','text','text','text','integer','text','text','text','timestamp with time zone','timestamp with time zone','timestamp with time zone','integer'],'service_role',array['EXECUTE'],'billing processor is service-only');
 select table_privs_are('public','billing_purchase_receipts','authenticated',array[]::text[],'members cannot query raw purchase receipts');
 select table_privs_are('public','billing_entitlement_ledger','authenticated',array[]::text[],'members cannot mutate or query the raw ledger');
 select table_privs_are('public','billing_webhook_receipts','authenticated',array[]::text[],'members cannot read provider webhook payload hashes');
 select table_privs_are('public','billing_daily_finance_snapshots','authenticated',array[]::text[],'members cannot read finance operations');
 select ok(not has_table_privilege('authenticated','public.billing_entitlement_snapshots','INSERT'),'members cannot self-grant entitlements');
 select ok(not has_table_privilege('authenticated','public.golden_spark_sends','INSERT'),'members cannot bypass Spark allowance or wallet debit');
+select has_table('public','billing_catalog_versions','immutable provider catalog evidence exists');
+select has_table('public','billing_restore_sessions','provider restore sessions exist');
+select has_table('public','billing_ops_reviewers','qualified billing reviewers exist');
+select has_table('public','billing_refund_case_events','immutable refund timeline exists');
+select has_table('public','billing_reconciliation_cases','billing reconciliation cases exist');
+select has_table('public','billing_finance_ingestion_runs','finance ingestion provenance exists');
+select has_function('public','record_billing_catalog_version',array['text','text','text','integer','text','text','timestamp with time zone','uuid','text'],'catalog verification RPC exists');
+select has_function('public','begin_store_restore',array['text','text'],'member restore preparation RPC exists');
+select has_function('public','complete_store_restore',array['uuid','integer','text'],'provider restore completion RPC exists');
+select has_function('public','review_billing_refund',array['uuid','uuid','text','integer','text','text'],'qualified refund review RPC exists');
+select has_function('public','record_billing_finance_snapshot',array['date','text','text','text','text','jsonb'],'finance provenance RPC exists');
+select has_function('public','reconcile_billing_operations',array['integer'],'billing reconciliation RPC exists');
+select has_function('public','resolve_billing_reconciliation_case',array['uuid','uuid','text','text','text'],'qualified reconciliation review RPC exists');
 
 select has_table('public','growth_attribution_touches','private attribution touches exist');
 select has_table('public','growth_events','consented funnel events exist');

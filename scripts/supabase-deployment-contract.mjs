@@ -1,6 +1,6 @@
 export const deploymentContract = {
-  id: 'destinyone-backend-v28',
-  schemaVersion: 28,
+  id: 'destinyone-backend-v29',
+  schemaVersion: 29,
   tables: [
     'profiles',
     'user_preferences',
@@ -91,6 +91,12 @@ export const deploymentContract = {
     'billing_refund_cases',
     'billing_daily_finance_snapshots',
     'golden_spark_sends',
+    'billing_catalog_versions',
+    'billing_restore_sessions',
+    'billing_ops_reviewers',
+    'billing_refund_case_events',
+    'billing_reconciliation_cases',
+    'billing_finance_ingestion_runs',
   ],
   rpcs: [
     'daily_matches',
@@ -163,6 +169,13 @@ export const deploymentContract = {
     'consume_billing_entitlement',
     'send_golden_spark',
     'process_billing_webhook',
+    'record_billing_catalog_version',
+    'begin_store_restore',
+    'complete_store_restore',
+    'review_billing_refund',
+    'record_billing_finance_snapshot',
+    'reconcile_billing_operations',
+    'resolve_billing_reconciliation_case',
     'get_backend_deployment_manifest',
   ],
 };
