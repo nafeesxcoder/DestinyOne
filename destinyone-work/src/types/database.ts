@@ -346,6 +346,11 @@ export type Database = {
       billing_reconciliation_cases: Table<{ id: string; case_key: string; case_type: string; severity: 'normal' | 'high' | 'critical'; status: 'open' | 'investigating' | 'resolved' | 'dismissed'; receipt_id: string | null; user_id: string | null; evidence: Json; resolution_note: string | null; resolved_by: string | null; resolution_idempotency_key: string | null; created_at: string; resolved_at: string | null }>;
       billing_finance_ingestion_runs: Table<{ id: string; snapshot_date: string; platform: 'apple_iap' | 'google_play' | 'real_world_processor'; source_run_id: string; payload_hash: string; recorded_at: string }>;
       referral_base_passes: Table<{ id: string; user_id: string; referral_conversion_id: string; reward_ledger_id: string; status: 'active' | 'revoked'; starts_at: string; expires_at: string; revoked_at: string | null; created_at: string; updated_at: string }>;
+      member_experience_modes: Table<{ user_id: string; mode: 'seeking' | 'couple'; updated_at: string }>;
+      couple_connections: Table<{ id: string; status: 'active' | 'paused' | 'disconnected'; created_by: string; created_at: string; updated_at: string; disconnected_at: string | null }>;
+      couple_connection_members: Table<{ user_id: string; connection_id: string; joined_at: string }>;
+      couple_connection_requests: Table<{ id: string; requester_id: string; recipient_id: string; status: 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired'; client_request_id: string; expires_at: string; responded_at: string | null; created_at: string }>;
+      couple_phone_search_audit: Table<{ id: number; searcher_id: string; target_phone_hash: string; result_found: boolean; client_request_id: string; created_at: string }>;
     };
     Views: Record<never, never>;
     Functions: {
@@ -517,6 +522,15 @@ export type Database = {
         Args: { p_receipt_id: string; p_reason: string; p_idempotency_key: string };
         Returns: Json;
       };
+      save_couple_mode_profile: { Args: { p_first_name: string; p_birth_date: string; p_city: string; p_profession: string }; Returns: void };
+      set_couple_mode_enabled: { Args: { p_enabled: boolean }; Returns: void };
+      search_couple_partner_by_phone: { Args: { p_phone_e164: string; p_client_request_id: string }; Returns: Json };
+      send_couple_connection_request: { Args: { p_recipient_id: string; p_client_request_id: string }; Returns: Json };
+      get_couple_connection_hub: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      respond_couple_connection_request: { Args: { p_request_id: string; p_accept: boolean; p_client_request_id: string }; Returns: Json };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;
