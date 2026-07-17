@@ -33,6 +33,7 @@ import { buildCityDensitySnapshot, resolveLaunchMarket, type CityDensitySnapshot
 import { buildGrowthEngineSnapshot, growthFunnelEvents, type GrowthEngineSnapshot } from './src/domain/growthEngine';
 import { annualSavingsLabel, billingPeriodLabel, buildPaymentEntitlementSnapshot, buildRestorePreview, checkoutSteps, executivePlan, formatMoney, membershipEntitlementSummary, membershipPlans, membershipPriceLabel, sparkPacks, type BillingCycle, type PaymentEntitlementGate, type PaymentEntitlementSnapshot, type ProductKind } from './src/domain/monetization';
 import { buildMonetizationOperationsSnapshot, previewEntitlementAllowed, type MonetizationOperationsSnapshot } from './src/domain/monetizationOps';
+import { buildPilotReadinessSnapshot, type PilotReadinessSnapshot } from './src/domain/pilotReadiness';
 import { restoreStorePurchases, sendGoldenSpark } from './src/services/billing';
 import { buildReportActionPlan, buildSafetyChecklist, safetyReadinessScore, scanMessageSafety, type MessageSafetyScan, type SafetyChecklistItem } from './src/domain/safety';
 import { buildProductQualitySnapshot, type ProductQualityItem } from './src/domain/productQuality';
@@ -2046,6 +2047,22 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     financeReconciliationReady:false,
     unitEconomics:{grossRevenueCents:0,storeAndProcessorFeesCents:0,taxesCents:0,refundsCents:0,chargebacksCents:0,marketplaceCostCents:0,supportCostCents:0,acquisitionCostCents:0},
   });
+  const pilotReadinessSnapshot=buildPilotReadinessSnapshot({
+    pilotCity:'Toronto',
+    hostedBackendVerified:false,
+    authDeliveryVerified:false,
+    securityTestsExecuted:false,
+    iosDeviceJourneyPassed:false,
+    androidDeviceJourneyPassed:false,
+    trustOpsStaffed:false,
+    incidentDrillPassed:false,
+    liquidityWeeksVerified:0,
+    requiredLiquidityWeeks:8,
+    providerSandboxVerified:false,
+    observabilityAlertDrillPassed:false,
+    publicLegalUrlsVerified:false,
+    rollbackDrillPassed:false,
+  });
   const notificationSnapshot=buildNotificationReadinessSnapshot({
     appEnvironment,
     backendConnected:backendMode==='supabase',
@@ -2283,7 +2300,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     {tab==='playbooks'&&<View style={ventureStyles.section}><Text style={styles.sectionLabel}>AUTOMATION GUARDS</Text>{automationGuards.map(([title,body],index)=><ChecklistRow key={title} title={title} body={body} done={index<3}/>)}
       <View style={coachStyles.boundaryCard}><PremiumIcon name="warning" tone="gold" size={44} iconSize={19}/><View style={{flex:1}}><Text style={styles.cardTitle}>Human-first safety</Text><Text style={styles.helper}>AI can prioritize and freeze risky surfaces, but permanent bans, sensitive identity decisions and billing-impact actions need human review.</Text></View></View>
     </View>}
-    {tab==='audit'&&<View style={ventureStyles.section}><BackendLaunchGateCard snapshot={backendLaunchSnapshot}/><CityDensityReadinessCard snapshot={cityDensitySnapshot}/><GrowthEngineReadinessCard snapshot={growthEngineSnapshot}/><MonetizationOperationsCard snapshot={monetizationOperationsSnapshot}/><PaymentEntitlementGateCard snapshot={paymentEntitlementSnapshot}/><NotificationReadinessCard snapshot={notificationSnapshot}/><GiftFulfillmentReadinessCard snapshot={giftFulfillmentSnapshot}/><PlacesReservationReadinessCard snapshot={placesReservationSnapshot}/><ObservabilityReadinessCard snapshot={observabilitySnapshot}/><AbuseFraudReadinessCard snapshot={abuseFraudSnapshot}/><TrustOpsSlaCard snapshot={trustOpsSnapshot}/><LegalStoreOpsCard snapshot={legalOpsSnapshot}/><P1OperationsCard snapshot={p1Snapshot}/><ProductQualityCard snapshot={qualitySnapshot}/><InteractionQualityCard snapshot={interactionSnapshot}/><PolicyComplianceCard snapshot={policyComplianceSnapshot}/><StoreReviewCard snapshot={storeReviewSnapshot}/><ReleaseReadinessCard snapshot={releaseSnapshot}/><Text style={styles.sectionLabel}>AUDIT READINESS</Text>{([
+    {tab==='audit'&&<View style={ventureStyles.section}><PilotReadinessCard snapshot={pilotReadinessSnapshot}/><BackendLaunchGateCard snapshot={backendLaunchSnapshot}/><CityDensityReadinessCard snapshot={cityDensitySnapshot}/><GrowthEngineReadinessCard snapshot={growthEngineSnapshot}/><MonetizationOperationsCard snapshot={monetizationOperationsSnapshot}/><PaymentEntitlementGateCard snapshot={paymentEntitlementSnapshot}/><NotificationReadinessCard snapshot={notificationSnapshot}/><GiftFulfillmentReadinessCard snapshot={giftFulfillmentSnapshot}/><PlacesReservationReadinessCard snapshot={placesReservationSnapshot}/><ObservabilityReadinessCard snapshot={observabilitySnapshot}/><AbuseFraudReadinessCard snapshot={abuseFraudSnapshot}/><TrustOpsSlaCard snapshot={trustOpsSnapshot}/><LegalStoreOpsCard snapshot={legalOpsSnapshot}/><P1OperationsCard snapshot={p1Snapshot}/><ProductQualityCard snapshot={qualitySnapshot}/><InteractionQualityCard snapshot={interactionSnapshot}/><PolicyComplianceCard snapshot={policyComplianceSnapshot}/><StoreReviewCard snapshot={storeReviewSnapshot}/><ReleaseReadinessCard snapshot={releaseSnapshot}/><Text style={styles.sectionLabel}>AUDIT READINESS</Text>{([
       ['Reviewer notes','Every freeze, escalation and resolution needs reviewer ID + note.'],
       ['Evidence packet','Reports, chat IDs, gift/payment events, profile edits and block graph stay linked.'],
       ['Member notification','Warnings and support outcomes are sent without exposing reporter identity.'],
@@ -2295,6 +2312,17 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
 
 function AdminOpsStat({value,label}:{value:string;label:string}){
   return <View style={adminOpsStyles.stat}><Text style={adminOpsStyles.statValue}>{value}</Text><Text style={adminOpsStyles.statLabel}>{label}</Text></View>
+}
+
+function PilotReadinessCard({snapshot}:{snapshot:PilotReadinessSnapshot}){
+  const ready=snapshot.status==='Ready for controlled city pilot';
+  return <View style={adminOpsStyles.backendLaunchCard}>
+    <View style={shared.row}><PremiumIcon name={ready?'rocket':'flag-outline'} tone={ready?'gold':'ruby'} size={54} iconSize={25}/><View style={{flex:1,marginLeft:10}}><Text style={styles.kicker}>{snapshot.pilotCity.toUpperCase()} CONTROLLED PILOT GATE</Text><Text style={adminOpsStyles.qualityTitle}>{snapshot.status} · {snapshot.evidencePercent}%</Text><Text style={styles.helper}>Only hosted, staffed, device-tested and live operational evidence advances this gate.</Text></View></View>
+    <View style={adminOpsStyles.qualityTrack}><View style={[adminOpsStyles.qualityFill,{width:`${snapshot.evidencePercent}%`}]}/></View>
+    <View style={adminOpsStyles.areaGrid}><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Evidence</Text><Text style={adminOpsStyles.areaScore}>{snapshot.readyCount}/{snapshot.total}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Devices</Text><Text style={adminOpsStyles.areaScore}>{snapshot.deviceJourneysPassed}/2</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Liquidity</Text><Text style={adminOpsStyles.areaScore}>{snapshot.liquidityWeeksVerified}/{snapshot.requiredLiquidityWeeks}w</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Blockers</Text><Text style={adminOpsStyles.areaScore}>{snapshot.blockers.length}</Text></View></View>
+    <View style={adminOpsStyles.nextOpsCard}><MiniPremiumIcon name="navigate-circle-outline" tone="gold" size={30} iconSize={14}/><Text style={adminOpsStyles.nextOpsText}>{snapshot.nextBestStep}</Text></View>
+    <View style={adminOpsStyles.qualityRows}>{snapshot.gates.map(gate=><View key={gate.id} style={adminOpsStyles.qualityRow}><MiniPremiumIcon name={gate.ready?'checkmark-circle':'ellipse-outline'} tone={gate.ready?'gold':'ruby'} size={28} iconSize={13}/><View style={{flex:1}}><View style={shared.row}><Text style={[adminOpsStyles.qualityRowTitle,{flex:1}]}>{gate.title}</Text><Text style={adminOpsStyles.nextTiny}>{gate.owner}</Text></View><Text style={adminOpsStyles.qualityRowBody}>{gate.body}</Text>{!gate.ready&&<Text style={adminOpsStyles.nextTiny}>Next: {gate.nextStep}</Text>}</View></View>)}</View>
+  </View>
 }
 
 function CityDensityReadinessCard({snapshot}:{snapshot:CityDensitySnapshot}){

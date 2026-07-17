@@ -1,6 +1,6 @@
 # DestinyOne production scorecard
 
-Last baseline: 2026-07-16
+Last baseline: 2026-07-16 (Phase 10 controlled-pilot gate added)
 
 This is the source of truth for the journey from a polished prototype to a
 production dating business. A score describes verified capability, not the
@@ -155,9 +155,9 @@ every gate in that category has current evidence.
 
 ## Current automated evidence
 
-- TypeScript: passing on 2026-07-15.
-- Domain/service tests: rerun through the full release gate after each phase; monetization operations adds billing-rail, purchase-session, lifecycle, wallet debit, Golden Spark and unit-economics coverage while the pgTAP contract reaches 135 assertions.
-- Expo web export: passing on 2026-07-15.
+- TypeScript: passing on 2026-07-16.
+- Domain/service tests: rerun through the full release gate after each phase; the Phase 10 controlled-pilot contract keeps hosted, device, staffing, city-liquidity, provider, monitoring, legal and rollback evidence separate from source readiness.
+- Expo web export: passing on 2026-07-16.
 - These checks prove source health only. They do not prove production providers,
   real-device behavior, operational staffing, city liquidity, or unit economics.
 
