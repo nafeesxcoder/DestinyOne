@@ -54,6 +54,7 @@ const objects = [
   ['table', 'growth_reward_ledger'],
   ['table', 'growth_daily_cohort_snapshots'],
   ['table', 'billing_products'],
+  ['table', 'billing_purchase_sessions'],
   ['table', 'billing_purchase_receipts'],
   ['table', 'billing_entitlement_ledger'],
   ['table', 'billing_entitlement_snapshots'],
@@ -87,6 +88,7 @@ const objects = [
   ['rpc', 'get_current_entitlements'],
   ['rpc', 'restore_store_purchases'],
   ['rpc', 'request_billing_refund'],
+  ['rpc', 'prepare_store_purchase'],
 ];
 
 const rpcBodies = {
@@ -155,6 +157,11 @@ const rpcBodies = {
   request_billing_refund: {
     p_receipt_id: '00000000-0000-4000-8000-000000000000',
     p_reason: 'deployment probe request',
+    p_idempotency_key: 'deployment-probe',
+  },
+  prepare_store_purchase: {
+    p_product_key: 'plus_monthly',
+    p_platform: 'apple_iap',
     p_idempotency_key: 'deployment-probe',
   },
 };

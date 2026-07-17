@@ -371,6 +371,10 @@ export type Database = {
       assign_growth_experiment: { Args: { p_experiment_key: string }; Returns: Json };
       get_current_entitlements: { Args: Record<string, never>; Returns: Json };
       restore_store_purchases: { Args: Record<string, never>; Returns: Json };
+      prepare_store_purchase: {
+        Args: { p_product_key: string; p_platform: 'apple_iap' | 'google_play'; p_idempotency_key: string };
+        Returns: Json;
+      };
       request_billing_refund: {
         Args: { p_receipt_id: string; p_reason: string; p_idempotency_key: string };
         Returns: Json;

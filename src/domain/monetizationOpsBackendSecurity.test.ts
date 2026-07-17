@@ -28,9 +28,19 @@ describe('monetization operations backend security', () => {
   });
 
   it('rejects transaction ownership changes, invalid transitions and duplicate Spark grants', () => {
-    expect(migration).toContain("existing.user_id<>p_user_id or existing.product_key<>p_product_key");
+    expect(migration).toContain("existing.user_id<>resolved_user_id or existing.product_key<>resolved_product_key");
     expect(migration).toContain('billing_status_transition_allowed(prior_status,p_status)');
     expect(migration).toContain("product.product_class='spark_pack' and prior_status is not null then 0");
     expect(webhook).toContain("processed!==true");
+  });
+
+  it('derives member and product from a server-created purchase session', () => {
+    expect(migration).toContain('create table if not exists public.billing_purchase_sessions');
+    expect(migration).toContain('create or replace function public.prepare_store_purchase');
+    expect(migration).toContain('resolved_user_id:=purchase_session.user_id');
+    expect(migration).toContain('resolved_product_key:=purchase_session.product_key');
+    expect(webhook).toContain('purchaseSessionId');
+    expect(webhook).not.toContain('event.userId');
+    expect(webhook).not.toContain('event.productKey');
   });
 });

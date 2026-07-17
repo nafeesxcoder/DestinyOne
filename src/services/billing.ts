@@ -1,6 +1,7 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 export type RestoredEntitlement = { key: string; status: string; units: number; expiresAt?: string | null };
+export type PreparedStorePurchase = { purchaseSessionId: string; externalProductId: string; platform: 'apple_iap' | 'google_play'; expiresAt: string };
 
 function requireBillingBackend() {
   if (!isSupabaseConfigured) throw new Error('Secure billing backend is not connected. No entitlement was changed.');
@@ -18,6 +19,17 @@ export async function restoreStorePurchases() {
   const { data, error } = await supabase.rpc('restore_store_purchases');
   if (error) throw error;
   return data as { restored?: RestoredEntitlement[]; receiptVerificationRequired?: boolean; asOf?: string } | null;
+}
+
+export async function prepareStorePurchase(productKey: string, platform: 'apple_iap' | 'google_play', idempotencyKey: string) {
+  requireBillingBackend();
+  const { data, error } = await supabase.rpc('prepare_store_purchase', {
+    p_product_key: productKey,
+    p_platform: platform,
+    p_idempotency_key: idempotencyKey,
+  });
+  if (error) throw error;
+  return data as PreparedStorePurchase;
 }
 
 export async function requestBillingRefund(receiptId: string, reason: string, idempotencyKey: string) {

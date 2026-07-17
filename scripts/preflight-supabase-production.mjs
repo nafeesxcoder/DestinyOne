@@ -46,6 +46,7 @@ const requiredContracts = [
   'create table if not exists public.growth_referral_conversions',
   'create table if not exists public.growth_daily_cohort_snapshots',
   'create table if not exists public.billing_purchase_receipts',
+  'create table if not exists public.billing_purchase_sessions',
   'create table if not exists public.billing_entitlement_ledger',
   'create table if not exists public.billing_entitlement_snapshots',
   'create table if not exists public.billing_webhook_receipts',
@@ -69,6 +70,7 @@ const requiredContracts = [
   'create or replace function public.get_current_entitlements',
   'create or replace function public.restore_store_purchases',
   'create or replace function public.request_billing_refund',
+  'create or replace function public.prepare_store_purchase',
   'create or replace function public.billing_status_transition_allowed',
   'create or replace function public.process_billing_webhook',
   'alter default privileges in schema public revoke all on tables from anon',
@@ -86,7 +88,7 @@ for (const functionName of edgeFunctions) {
 const databaseTest = readFileSync(testFile, 'utf8');
 const assertionPattern = /\bselect\s+(?:ok|is|isnt|like|unlike|throws_ok|lives_ok|has_[a-z_]+|hasnt_[a-z_]+|col_[a-z_]+|function_[a-z_]+|table_[a-z_]+|results_eq|set_eq|bag_eq|is_empty|isnt_empty)\s*\(/gi;
 const assertionCount = databaseTest.match(assertionPattern)?.length ?? 0;
-requireCondition(assertionCount >= 129, `Expected at least 129 pgTAP assertions, found ${assertionCount}.`);
+requireCondition(assertionCount >= 131, `Expected at least 131 pgTAP assertions, found ${assertionCount}.`);
 
 const publicFiles = ['.env.example', 'src/config/supabase.ts', 'src/lib/supabase.ts'];
 for (const file of publicFiles) {

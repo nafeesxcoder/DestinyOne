@@ -7,6 +7,7 @@ DestinyOne now has a fail-closed source contract for paid access. Digital member
 ## Implemented
 
 - Purchase lifecycle covering pending store, verified, active, grace, billing retry, expiry, partial/full refund, chargeback and revocation
+- Rate-limited server-created purchase sessions bind member, product and store platform before checkout; webhook payloads cannot choose the entitlement owner
 - Server-only signed webhook processor with idempotent provider event receipts
 - Provider transaction identifiers stored only as SHA-256 hashes
 - Append-only entitlement ledger and member-safe current entitlement snapshots

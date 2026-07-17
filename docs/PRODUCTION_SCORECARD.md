@@ -156,7 +156,7 @@ every gate in that category has current evidence.
 ## Current automated evidence
 
 - TypeScript: passing on 2026-07-15.
-- Domain/service tests: rerun through the full release gate after each phase; monetization operations adds billing-rail, lifecycle, entitlement and unit-economics coverage while the pgTAP contract reaches 129 assertions.
+- Domain/service tests: rerun through the full release gate after each phase; monetization operations adds billing-rail, purchase-session, lifecycle, entitlement and unit-economics coverage while the pgTAP contract reaches 131 assertions.
 - Expo web export: passing on 2026-07-15.
 - These checks prove source health only. They do not prove production providers,
   real-device behavior, operational staffing, city liquidity, or unit economics.
