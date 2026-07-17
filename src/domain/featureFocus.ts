@@ -2,7 +2,7 @@ export const primaryNavigation=[
   {label:'Matches',target:'home',purpose:'qualified_introductions'},
   {label:'Discover',target:'explore',purpose:'supporting_paths'},
   {label:'Chat',target:'chat',purpose:'meaningful_conversation'},
-  {label:'Dates',target:'events',purpose:'accepted_real_dates'},
+  {label:'Executive',target:'executive',purpose:'private_professional_matching'},
   {label:'Profile',target:'profile',purpose:'trust_and_control'},
 ] as const;
 
@@ -52,7 +52,7 @@ export const featureSurfaceBudgets:Record<FeatureSurface,number>={
 export const featureCatalog=[
   {id:'daily_matches',tier:'core',entry:'home'},
   {id:'chat_relationship_path',tier:'core',entry:'chat'},
-  {id:'date_marketplace',tier:'core',entry:'events'},
+  {id:'date_marketplace',tier:'core',entry:'explore'},
   {id:'verification_profile',tier:'core',entry:'profile'},
   {id:'likes',tier:'supporting',entry:'explore'},
   {id:'filters',tier:'supporting',entry:'explore'},
@@ -66,7 +66,7 @@ export const featureCatalog=[
 export function buildFeatureFocusSnapshot(){
   const primaryTargets=new Set(primaryNavigation.map(item=>item.target));
   const core=featureCatalog.filter(item=>item.tier==='core');
-  const mainNavigationExperiments=primaryNavigation.filter(item=>!['qualified_introductions','supporting_paths','meaningful_conversation','accepted_real_dates','trust_and_control'].includes(item.purpose));
+  const mainNavigationExperiments=primaryNavigation.filter(item=>!['qualified_introductions','supporting_paths','meaningful_conversation','private_professional_matching','trust_and_control'].includes(item.purpose));
   return {
     primaryTabCount:primaryNavigation.length,
     mainNavigationExperiments,

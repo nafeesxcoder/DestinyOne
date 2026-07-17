@@ -9,7 +9,7 @@ import { useFonts as useSatisfy, Satisfy_400Regular } from '@expo-google-fonts/s
 import { Brand, Button, Chip, Field, SectionTitle, StepBar, shared } from './src/components';
 import { Match, matches, profileCities, religions, vibes } from './src/data';
 import { colors, radius } from './src/theme';
-import { ChatMessage, CoupleChatSettings, DatePlanStatus, DiscoverySignal, LocalReport, MatchFilters, ProfileDraft, RelationshipReflectionChoice, RelationshipReflectionRecord, RelationshipReminderRecord, RoseLedger, clearAppState, defaultMatchFilters, initialPersistedState, loadAppState, saveAppState } from './src/storage';
+import { ChatMessage, CoupleChatSettings, DatePlanStatus, DiscoverySignal, LocalReport, MatchFilters, ProfileDraft, RelationshipReflectionChoice, RelationshipReflectionRecord, RelationshipReminderRecord, RoseLedger, clearAppState, defaultCoupleChatSettings, defaultMatchFilters, initialPersistedState, loadAppState, saveAppState } from './src/storage';
 import * as ImagePicker from 'expo-image-picker';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import * as Location from 'expo-location';
@@ -560,7 +560,7 @@ function DestinyOneApp() {
     {screen==='detail'&&<Detail match={selected} preferences={{intent,vibes:vibeList,filters:matchFilters}} alignment={alignment} back={()=>setScreen('home')} interested={()=>chooseInterested(selected)} onRose={()=>openRose(selected)} onProfileView={()=>notifyProfileView(selected)} onPrivateBlock={()=>setDetailSafetyOpen(true)}/>} 
     {screen==='mutual'&&<Mutual match={selected} next={()=>setScreen('icebreaker')} back={()=>setScreen('home')}/>} 
     {screen==='icebreaker'&&<Icebreaker match={selected} question={icebreakerQuestion} onSubmit={answerIcebreaker}/>} 
-    {screen==='chat'&&<Chat match={selected} messages={chatMessages[selected.id]??[]} reflection={relationshipReflections[selected.id]} reminder={relationshipReminders[selected.id]} settings={chatSettings[selected.id]??{nickname:'',theme:'Ruby Velvet'}} initialDraft={chatDrafts[selected.id]??''} onDraftConsumed={()=>setChatDrafts(current=>{const next={...current};delete next[selected.id];return next})} onSettingsChange={updateSelectedChatSettings} onDateStatus={(messageId,status)=>updateDatePlanStatus(selected.id,messageId,status)} onReflection={(messageId,choice)=>saveReflection(selected.id,messageId,choice)} onLearningConsent={(enabled)=>updateRelationshipLearningConsent(selected.id,enabled)} onReminder={(messageId,enabled)=>updateRelationshipReminder(selected.id,messageId,enabled)} onJourneyEvent={recordJourneyEvent} coinBalance={coinBalance} roseAvailability={roseAvailability} onRose={()=>openRose(selected)} onSend={(message)=>appendChatMessage(selected,message)} onSpendCoins={(coins)=>setCoinBalance(balance=>spendCoins(balance,coins))} onReport={reportSelected} onBlock={async()=>{if(await blockMatch(selected))setScreen('home')}} onUnmatch={async()=>{if(await unmatchMatch(selected))setScreen('home')}} navigate={setScreen}/>} 
+    {screen==='chat'&&<Chat match={selected} messages={chatMessages[selected.id]??[]} reflection={relationshipReflections[selected.id]} reminder={relationshipReminders[selected.id]} settings={{...defaultCoupleChatSettings,...chatSettings[selected.id]}} initialDraft={chatDrafts[selected.id]??''} onDraftConsumed={()=>setChatDrafts(current=>{const next={...current};delete next[selected.id];return next})} onSettingsChange={updateSelectedChatSettings} onDateStatus={(messageId,status)=>updateDatePlanStatus(selected.id,messageId,status)} onReflection={(messageId,choice)=>saveReflection(selected.id,messageId,choice)} onLearningConsent={(enabled)=>updateRelationshipLearningConsent(selected.id,enabled)} onReminder={(messageId,enabled)=>updateRelationshipReminder(selected.id,messageId,enabled)} onJourneyEvent={recordJourneyEvent} coinBalance={coinBalance} roseAvailability={roseAvailability} onRose={()=>openRose(selected)} onSend={(message)=>appendChatMessage(selected,message)} onSpendCoins={(coins)=>setCoinBalance(balance=>spendCoins(balance,coins))} onReport={reportSelected} onBlock={async()=>{if(await blockMatch(selected))setScreen('home')}} onUnmatch={async()=>{if(await unmatchMatch(selected))setScreen('home')}} navigate={setScreen}/>} 
     {screen==='datePlan'&&<DatePlanner match={selected} preset={datePlanPreset} onBack={()=>setScreen('events')} onSend={async(message)=>{const sent=await appendChatMessage(selected,message);if(sent)setScreen('chat');return sent}}/>}
     {screen==='safety'&&<SafetyCenter reports={reports} blockedCount={blockedIds.length} datePlans={Object.values(chatMessages).flat().filter(message=>message.type==='date')} safeCheckIns={safeCheckIns} onCheckIn={recordSafeCheckIn} onDeleteAccount={deleteAccount} onBack={()=>setScreen('profile')}/>} 
     {screen==='likes'&&<Likes openPricing={()=>setScreen('pricing')} navigate={setScreen}/>} 
@@ -1996,7 +1996,7 @@ function ExecutiveCircle({navigate,onBack,onOpenEvents,onOpenPricing,onOpenVerif
       <Button label="Plan a VIP date" icon="restaurant" variant="secondary" onPress={onOpenDatePlan}/>
       <Button label="Upgrade to Executive annual" icon="diamond" variant="gold" onPress={onOpenPricing}/>
     </View>}
-  </ScrollView><BottomNav active="explore" navigate={navigate}/></SafeAreaView></LinearGradient>
+  </ScrollView><BottomNav active="executive" navigate={navigate}/></SafeAreaView></LinearGradient>
 }
 
 function MetricPill({label,value,icon}:{label:string;value:string;icon:keyof typeof Ionicons.glyphMap}){
@@ -2104,7 +2104,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     appEnvironment,
     requiresRealBackend,
     supabaseConfigured:isSupabaseConfigured,
-    migrationCount:30,
+    migrationCount:31,
     edgeFunctionCount:5,
     dataModuleCount:dataSnapshot.totalModules,
     backendReadyModuleCount:dataSnapshot.backendReadyModules,
@@ -3533,7 +3533,6 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
   const [replyTarget,setReplyTarget]=useState<ChatMessage|null>(null);
   const [messageReactions,setMessageReactions]=useState<Record<string,string>>({});
   const [starredMessages,setStarredMessages]=useState<string[]>([]);
-  const [disappearingMessages,setDisappearingMessages]=useState(false);
   const [journeyOpen,setJourneyOpen]=useState(false);
   const [sending,setSending]=useState(false);
   const recorder=useAudioRecorder(RecordingPresets.HIGH_QUALITY,(status)=>{
@@ -3628,10 +3627,12 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
     if(id==='snap'){setSnapOpen(true);return}
     if(id==='face'){setFaceEmojiOpen(true);return}
     if(id==='spark'){setShowAttachments(false);onRose();return}
-    if(id==='disappearing'){setDisappearingMessages(value=>!value);setShowAttachments(false);return}
+    if(id==='disappearing'){onSettingsChange({...settings,retentionMode:settings.retentionMode==='keep'?'24_hours':'keep'});setShowAttachments(false);return}
     if(id==='back')setAttachmentPage('main');
   };
   const activeTheme=coupleThemes.find(theme=>theme.name===settings.theme)??coupleThemes[0]!;
+  const disappearingMessages=settings.retentionMode!=='keep';
+  const retentionShort=settings.retentionMode==='after_seen'?'After seen':settings.retentionMode==='24_hours'?'24h':settings.retentionMode==='7_days'?'7d':'Keep';
   const displayName=settings.nickname.trim()||match.name;
   const messageSafety=scanMessageSafety(text);
   const normalizedSearch=searchQuery.trim().toLowerCase();
@@ -3650,7 +3651,7 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
       <Pressable accessibilityRole="button" accessibilityLabel="Chat options" hitSlop={8} onPress={()=>setOptionsOpen(true)} style={chatStyles.headerAction}><Ionicons name="ellipsis-vertical" size={20} color={colors.muted}/></Pressable>
     </View>
     {searchOpen&&<View style={chatStyles.searchBar}><Ionicons name="search-outline" size={18} color={colors.muted}/><TextInput accessibilityLabel="Search this conversation" autoFocus value={searchQuery} onChangeText={setSearchQuery} placeholder="Search this conversation" placeholderTextColor="#806D7D" style={chatStyles.searchInput}/><Text style={chatStyles.searchCount}>{normalizedSearch?`${visibleMessages.length} found`:''}</Text><Pressable accessibilityRole="button" accessibilityLabel="Close message search" onPress={()=>{setSearchOpen(false);setSearchQuery('')}}><Ionicons name="close" size={20} color={colors.muted}/></Pressable></View>}
-    <View style={chatStyles.contextBar}><Pressable accessibilityRole="button" accessibilityLabel="Open relationship path" onPress={()=>{const dateStatus=latestDateMessage?.date?.planStatus??(latestDateMessage?'proposed':'none');const journey=buildRelationshipJourney({alignmentComplete:true,conversationUnlocked:true,dateStatus,reflection:reflection?.choice??null});onJourneyEvent('relationship_path_opened',{stage:journey.currentStage?.id??'complete'});setJourneyOpen(true)}} style={chatStyles.privateContext}><Ionicons name="heart-circle-outline" size={14} color={colors.gold}/><Text style={chatStyles.privateContextText}>{disappearingMessages?'24h · Path':'Relationship path'}</Text></Pressable><View style={shared.spacer}/><Pressable accessibilityRole="button" accessibilityLabel="Open Date Marketplace" onPress={()=>navigate('events')} style={chatStyles.contextAction}><Ionicons name="calendar-outline" size={14} color={colors.gold}/><Text style={chatStyles.contextActionText}>Date</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Reply coach" onPress={()=>setShowCoach(value=>!value)} style={[chatStyles.contextAction,showCoach&&chatStyles.contextActionOn]}><Ionicons name="sparkles-outline" size={14} color={showCoach?colors.gold:colors.muted}/><Text style={chatStyles.contextActionText}>Coach</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Search messages" onPress={()=>{setSearchOpen(value=>!value);setSearchQuery('')}} style={chatStyles.contextIcon}><Ionicons name="search-outline" size={17} color={colors.muted}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Chat theme" onPress={()=>setSettingsOpen(true)} style={chatStyles.contextIcon}><Ionicons name="color-palette-outline" size={17} color={colors.muted}/></Pressable></View>
+    <View style={chatStyles.contextBar}><Pressable accessibilityRole="button" accessibilityLabel="Open relationship path" onPress={()=>{const dateStatus=latestDateMessage?.date?.planStatus??(latestDateMessage?'proposed':'none');const journey=buildRelationshipJourney({alignmentComplete:true,conversationUnlocked:true,dateStatus,reflection:reflection?.choice??null});onJourneyEvent('relationship_path_opened',{stage:journey.currentStage?.id??'complete'});setJourneyOpen(true)}} style={chatStyles.privateContext}><Ionicons name="heart-circle-outline" size={14} color={colors.gold}/><Text style={chatStyles.privateContextText}>{disappearingMessages?`${retentionShort} · Path`:'Relationship path'}</Text></Pressable><View style={shared.spacer}/><Pressable accessibilityRole="button" accessibilityLabel="Open Date Marketplace" onPress={()=>navigate('events')} style={chatStyles.contextAction}><Ionicons name="calendar-outline" size={14} color={colors.gold}/><Text style={chatStyles.contextActionText}>Date</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Reply coach" onPress={()=>setShowCoach(value=>!value)} style={[chatStyles.contextAction,showCoach&&chatStyles.contextActionOn]}><Ionicons name="sparkles-outline" size={14} color={showCoach?colors.gold:colors.muted}/><Text style={chatStyles.contextActionText}>Coach</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Search messages" onPress={()=>{setSearchOpen(value=>!value);setSearchQuery('')}} style={chatStyles.contextIcon}><Ionicons name="search-outline" size={17} color={colors.muted}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Chat settings" onPress={()=>setSettingsOpen(true)} style={chatStyles.contextIcon}><Ionicons name="settings-outline" size={17} color={colors.muted}/></Pressable></View>
     {showCoach&&<View style={[coachStyles.chatCoach,chatStyles.coachPanel]}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:7}}>{chatCoachSuggestions.map(item=><Pressable key={item.label} onPress={()=>{setText(item.message(match));setShowCoach(false)}} style={[coachStyles.suggestionChip,{borderColor:'rgba(255,255,255,.10)',backgroundColor:'rgba(255,255,255,.045)'}]}><Text style={coachStyles.suggestionText}>{item.label}</Text></Pressable>)}</ScrollView><Pressable onPress={()=>navigate('coach')} style={chatStyles.coachOpen}><Text style={chatStyles.coachOpenText}>Open coach</Text></Pressable></View>}
     {!!chatError&&<Pressable onPress={()=>setChatError('')} style={chatStyles.errorBanner}><Text style={chatStyles.errorText}>{chatError}</Text><MiniPremiumIcon name="close" tone="dark" size={28} iconSize={13}/></Pressable>}
     <ScrollView ref={messagesRef} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'on-drag'} onContentSizeChange={()=>messagesRef.current?.scrollToEnd({animated:true})} contentContainerStyle={[styles.messages,chatPremiumStyles.messages]}>
@@ -3671,7 +3672,7 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
         <SafetyNudge scan={messageSafety} onOpenSafety={()=>navigate('safety')}/>
       )}
       {showAttachments&&<View style={[chatStyles.attachmentTray,chatWidth>=600&&chatStyles.attachmentTrayWide]}>
-        {(attachmentPage==='main'?chatPrimaryAttachments:chatMoreAttachments).map(item=><Attachment key={item.id} icon={item.icon as keyof typeof Ionicons.glyphMap} label={item.id==='disappearing'?(disappearingMessages?'24h On':'24h Off'):item.label} color={item.color} onPress={()=>openAttachment(item.id)}/>) }
+        {(attachmentPage==='main'?chatPrimaryAttachments:chatMoreAttachments).map(item=><Attachment key={item.id} icon={item.icon as keyof typeof Ionicons.glyphMap} label={item.id==='disappearing'?(disappearingMessages?`${retentionShort} On`:'Timer Off'):item.label} color={item.color} onPress={()=>openAttachment(item.id)}/>) }
       </View>}
       {showEmoji&&<View style={chatStyles.emojiPanel}><View style={chatStyles.emojiHeader}><Text style={chatStyles.emojiTitle}>Emojis</Text><Text style={chatStyles.emojiCount}>{quickEmojis.length} daily-use</Text></View><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={chatStyles.emojiTray}>{quickEmojis.map((emoji,index)=><Pressable key={`${emoji}-${index}`} style={chatStyles.emojiButton} onPress={()=>setText(value=>value+emoji)}><Text style={chatStyles.emoji}>{emoji}</Text></Pressable>)}</ScrollView></View>}
       {replyTarget&&<View style={chatStyles.replyPreview}><View style={chatStyles.replyAccent}/><View style={{flex:1}}><Text style={chatStyles.replyTitle}>Replying to your message</Text><Text numberOfLines={1} style={chatStyles.replyText}>{messageSummary(replyTarget)}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Cancel reply" onPress={()=>setReplyTarget(null)}><Ionicons name="close" size={20} color={colors.muted}/></Pressable></View>}
@@ -3685,7 +3686,7 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
     <FaceEmojiStudio visible={faceEmojiOpen} onClose={()=>setFaceEmojiOpen(false)} onSend={sendFaceEmoji}/>
     <CallModal mode={callMode} match={match} onClose={()=>setCallMode(null)}/>
     <CoupleSettingsSheet visible={settingsOpen} match={match} settings={settings} onChange={onSettingsChange} onClose={()=>setSettingsOpen(false)}/>
-    <ChatOptionsSheet visible={optionsOpen} disappearing={disappearingMessages} onClose={()=>setOptionsOpen(false)} onSearch={()=>{setOptionsOpen(false);setSearchOpen(true);setSearchQuery('')}} onDate={()=>{setOptionsOpen(false);navigate('events')}} onTheme={()=>{setOptionsOpen(false);setSettingsOpen(true)}} onDisappearing={()=>{setDisappearingMessages(value=>!value);setOptionsOpen(false)}} onSafety={()=>{setOptionsOpen(false);setSafetyOpen(true)}}/>
+    <ChatOptionsSheet visible={optionsOpen} retentionLabel={retentionShort} screenshotAlerts={settings.screenshotAlerts} onClose={()=>setOptionsOpen(false)} onSearch={()=>{setOptionsOpen(false);setSearchOpen(true);setSearchQuery('')}} onDate={()=>{setOptionsOpen(false);navigate('events')}} onSettings={()=>{setOptionsOpen(false);setSettingsOpen(true)}} onSafety={()=>{setOptionsOpen(false);setSafetyOpen(true)}}/>
     <SafetyActions visible={safetyOpen} match={match} onClose={()=>setSafetyOpen(false)} onSafetyCenter={()=>{setSafetyOpen(false);navigate('safety')}} onReport={(reason,details)=>{onReport(reason,details);setSafetyOpen(false)}} onBlock={()=>{setSafetyOpen(false);onBlock()}} onUnmatch={()=>{setSafetyOpen(false);onUnmatch()}}/>
     <RelationshipJourneySheet visible={journeyOpen} match={match} dateMessage={latestDateMessage} reflection={reflection?.choice??null} useForMatching={reflection?.useForMatching??false} reminderEnabled={reminder?.enabled??false} onDateStatus={(status)=>{if(latestDateMessage)onDateStatus(latestDateMessage.id,status)}} onReflection={(choice)=>{if(latestDateMessage)onReflection(latestDateMessage.id,choice)}} onLearningConsent={onLearningConsent} onReminder={(enabled)=>{if(latestDateMessage)onReminder(latestDateMessage.id,enabled)}} onRespectfulClose={()=>{setJourneyOpen(false);setSafetyOpen(true)}} onClose={()=>setJourneyOpen(false)} onDate={()=>{setJourneyOpen(false);navigate('events')}} onCircle={()=>{setJourneyOpen(false);navigate('circle')}}/>
   </SafeAreaView></LinearGradient>
@@ -3808,12 +3809,13 @@ function Attachment({icon,label,color,onPress}:{icon:keyof typeof Ionicons.glyph
   return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={chatStyles.attachment}><PremiumIcon name={icon} tone={tone} size={44} iconSize={19}/><Text style={chatStyles.attachmentLabel}>{label}</Text></Pressable>
 }
 
-function ChatOptionsSheet({visible,disappearing,onClose,onSearch,onDate,onTheme,onDisappearing,onSafety}:{visible:boolean;disappearing:boolean;onClose:()=>void;onSearch:()=>void;onDate:()=>void;onTheme:()=>void;onDisappearing:()=>void;onSafety:()=>void}){
+function ChatOptionsSheet({visible,retentionLabel,screenshotAlerts,onClose,onSearch,onDate,onSettings,onSafety}:{visible:boolean;retentionLabel:string;screenshotAlerts:boolean;onClose:()=>void;onSearch:()=>void;onDate:()=>void;onSettings:()=>void;onSafety:()=>void}){
   const options=[
     {label:'Search conversation',body:'Find messages, dates and shared items.',icon:'search-outline' as const,onPress:onSearch},
     {label:'Date Marketplace',body:'Browse nearby places, packages and events.',icon:'calendar-outline' as const,onPress:onDate},
-    {label:'Chat theme',body:'Choose a private DestinyOne couple theme.',icon:'color-palette-outline' as const,onPress:onTheme},
-    {label:disappearing?'Turn off 24h messages':'Disappearing messages',body:disappearing?'New messages currently disappear after 24 hours.':'Turn on a 24-hour privacy timer for new messages.',icon:'timer-outline' as const,onPress:onDisappearing},
+    {label:'Chat appearance',body:'Nickname and private DestinyOne couple theme.',icon:'color-palette-outline' as const,onPress:onSettings},
+    {label:`Disappearing messages · ${retentionLabel}`,body:'Choose after seen, 24 hours, 7 days, or keep messages.',icon:'timer-outline' as const,onPress:onSettings},
+    {label:`Screenshot alerts · ${screenshotAlerts?'On':'Off'}`,body:'Supported native captures notify both people; web capture can be undetectable.',icon:'scan-outline' as const,onPress:onSettings},
     {label:'Safety and privacy',body:'Report, block, unmatch or open the Safety Center.',icon:'shield-checkmark-outline' as const,onPress:onSafety},
   ];
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={chatStyles.sheet}><SheetHeader title="Chat options" subtitle="Conversation tools and privacy" onClose={onClose}/><View style={chatStyles.optionList}>{options.map(option=><Pressable accessibilityRole="button" accessibilityLabel={option.label} key={option.label} onPress={option.onPress} style={chatStyles.optionRow}><MiniPremiumIcon name={option.icon} tone={option.label.includes('Date')||option.label.includes('24h')?'gold':'rose'} size={36} iconSize={16}/><View style={{flex:1}}><Text style={chatStyles.optionTitle}>{option.label}</Text><Text style={chatStyles.optionBody}>{option.body}</Text></View><Ionicons name="chevron-forward" size={17} color={colors.muted}/></Pressable>)}</View></SafeAreaView></Modal>
@@ -3959,7 +3961,32 @@ function CoupleSettingsSheet({visible,match,settings,onChange,onClose}:{visible:
   const activeTheme=coupleThemes.find(theme=>theme.name===settings.theme)??coupleThemes[0]!;
   const saveNickname=()=>{onChange({...settings,nickname:nickname.trim(),theme:settings.theme||coupleThemes[0]!.name});setStatus(nickname.trim()?`${match.name} now appears as ${nickname.trim()} in this chat.`:'Nickname removed for this match.');};
   const chooseTheme=(theme:typeof coupleThemes[number])=>{onChange({...settings,theme:theme.name});setStatus(`${theme.name} theme applied.`)};
-  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,{maxHeight:'90%'}]}><SheetHeader title="Couple profile" subtitle="Nickname, vibe and theme for this match" onClose={onClose}/><LinearGradient colors={[activeTheme.accent,activeTheme.panel]} start={{x:0,y:0}} end={{x:1,y:1}} style={coupleStyles.preview}><Image source={{uri:match.photo}} style={coupleStyles.previewAvatar}/><View style={{flex:1}}><Text style={coupleStyles.previewName}>{nickname.trim()||match.name}</Text><Text style={coupleStyles.previewMeta}>{match.name} · {activeTheme.name}</Text></View><PremiumIcon name="heart" tone="gold" size={44} iconSize={19}/></LinearGradient><View style={coupleStyles.section}><Text style={styles.sectionLabel}>NICKNAME</Text><View style={coupleStyles.nicknameRow}><TextInput value={nickname} onChangeText={setNickname} placeholder={`Nickname for ${match.name}`} placeholderTextColor="#806D7D" style={coupleStyles.nicknameInput}/><Pressable onPress={saveNickname} style={coupleStyles.saveButton}><Text style={coupleStyles.saveText}>Save</Text></Pressable></View><Text style={styles.helper}>Only you see this nickname unless you choose to share it later.</Text></View><View style={coupleStyles.section}><View style={shared.row}><Text style={styles.sectionLabel}>10 DEFAULT COUPLE THEMES</Text><View style={shared.spacer}/><Pressable onPress={()=>setStatus('Custom theme builder will unlock custom colors, emoji wallpaper and couple avatars. Preview includes 10 premium defaults now.')} style={premiumButtonStyles.smallGhost}><Text style={discoveryStyles.manageText}>Custom</Text></Pressable></View><View style={coupleStyles.themeGrid}>{coupleThemes.map(theme=><Pressable key={theme.name} onPress={()=>chooseTheme(theme)} style={[coupleStyles.themeCard,settings.theme===theme.name&&{borderColor:theme.accent,backgroundColor:theme.soft}]}><LinearGradient colors={[theme.accent,theme.panel]} style={coupleStyles.themeDot}/><Text style={coupleStyles.themeName}>{theme.name}</Text>{settings.theme===theme.name&&<MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/>}</Pressable>)}</View></View>{!!status&&<View style={coupleStyles.statusCard}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><Text style={coupleStyles.statusText}>{status}</Text></View>}<Text style={chatStyles.billingNote}>Themes save locally in preview. Production will sync them securely between devices after mutual match.</Text></SafeAreaView></Modal>
+  const retentionOptions=[
+    {value:'keep' as const,label:'Keep messages',body:'Messages stay until someone deletes them.'},
+    {value:'after_seen' as const,label:'Delete after seen',body:'New messages disappear once the recipient has seen them.'},
+    {value:'24_hours' as const,label:'24 hours',body:'New messages disappear 24 hours after sending.'},
+    {value:'7_days' as const,label:'7 days',body:'New messages disappear after one week.'},
+  ];
+  const chooseRetention=(retentionMode:CoupleChatSettings['retentionMode'])=>{
+    onChange({...settings,retentionMode});
+    setStatus(retentionMode==='keep'?'Messages will be kept.':'Privacy timer updated for new messages. Existing messages keep their current policy.');
+  };
+  const toggleScreenshotAlerts=()=>{
+    onChange({...settings,screenshotAlerts:!settings.screenshotAlerts});
+    setStatus(!settings.screenshotAlerts?'Screenshot alerts turned on where the device supports detection.':'Screenshot alerts turned off for this chat.');
+  };
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,{maxHeight:'92%'}]}>
+    <SheetHeader title="Chat settings" subtitle="Appearance, disappearing messages and capture alerts" onClose={onClose}/>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={coupleStyles.scrollContent}>
+      <LinearGradient colors={[activeTheme.accent,activeTheme.panel]} start={{x:0,y:0}} end={{x:1,y:1}} style={coupleStyles.preview}><Image source={{uri:match.photo}} style={coupleStyles.previewAvatar}/><View style={{flex:1}}><Text style={coupleStyles.previewName}>{nickname.trim()||match.name}</Text><Text style={coupleStyles.previewMeta}>{match.name} · {activeTheme.name}</Text></View><PremiumIcon name="heart" tone="gold" size={44} iconSize={19}/></LinearGradient>
+      <View style={coupleStyles.section}><Text style={styles.sectionLabel}>NICKNAME</Text><View style={coupleStyles.nicknameRow}><TextInput value={nickname} onChangeText={setNickname} placeholder={`Nickname for ${match.name}`} placeholderTextColor="#806D7D" style={coupleStyles.nicknameInput}/><Pressable onPress={saveNickname} style={coupleStyles.saveButton}><Text style={coupleStyles.saveText}>Save</Text></Pressable></View><Text style={styles.helper}>Only you see this nickname.</Text></View>
+      <View style={coupleStyles.section}><Text style={styles.sectionLabel}>MESSAGE PRIVACY</Text>{retentionOptions.map(option=><Pressable accessibilityRole="radio" accessibilityState={{checked:settings.retentionMode===option.value}} key={option.value} onPress={()=>chooseRetention(option.value)} style={[coupleStyles.privacyChoice,settings.retentionMode===option.value&&coupleStyles.privacyChoiceOn]}><MiniPremiumIcon name={settings.retentionMode===option.value?'checkmark-circle':'ellipse-outline'} tone={settings.retentionMode===option.value?'gold':'dark'} size={34} iconSize={16}/><View style={{flex:1}}><Text style={coupleStyles.privacyTitle}>{option.label}</Text><Text style={coupleStyles.privacyBody}>{option.body}</Text></View></Pressable>)}</View>
+      <View style={coupleStyles.section}><Text style={styles.sectionLabel}>SCREENSHOT ALERTS</Text><Pressable accessibilityRole="switch" accessibilityState={{checked:settings.screenshotAlerts}} onPress={toggleScreenshotAlerts} style={coupleStyles.captureCard}><PremiumIcon name="scan-outline" tone={settings.screenshotAlerts?'gold':'dark'} size={44} iconSize={20}/><View style={{flex:1}}><Text style={coupleStyles.privacyTitle}>Notify both people</Text><Text style={coupleStyles.privacyBody}>When a supported native device reports a capture, DestinyOne records the event and alerts the other person.</Text></View><View style={[coupleStyles.toggle,settings.screenshotAlerts&&coupleStyles.toggleOn]}><View style={[coupleStyles.toggleKnob,settings.screenshotAlerts&&coupleStyles.toggleKnobOn]}/></View></Pressable><View style={coupleStyles.limitCard}><MiniPremiumIcon name="information-circle-outline" tone="rose" size={30} iconSize={14}/><Text style={coupleStyles.limitText}>Web browsers and some operating-system capture methods cannot be detected reliably. DestinyOne will never show a false “screenshot taken” alert.</Text></View></View>
+      <View style={coupleStyles.section}><View style={shared.row}><Text style={styles.sectionLabel}>COUPLE THEME</Text><View style={shared.spacer}/><Pressable onPress={()=>setStatus('Custom colors and wallpaper will be available after secure sync is connected.')} style={premiumButtonStyles.smallGhost}><Text style={discoveryStyles.manageText}>Custom</Text></Pressable></View><View style={coupleStyles.themeGrid}>{coupleThemes.map(theme=><Pressable key={theme.name} onPress={()=>chooseTheme(theme)} style={[coupleStyles.themeCard,settings.theme===theme.name&&{borderColor:theme.accent,backgroundColor:theme.soft}]}><LinearGradient colors={[theme.accent,theme.panel]} style={coupleStyles.themeDot}/><Text style={coupleStyles.themeName}>{theme.name}</Text>{settings.theme===theme.name&&<MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/>}</Pressable>)}</View></View>
+      {!!status&&<View style={coupleStyles.statusCard}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><Text style={coupleStyles.statusText}>{status}</Text></View>}
+      <Text style={chatStyles.billingNote}>Preview settings save on this device. Production timers and supported capture events are enforced by the server for mutual matches.</Text>
+    </ScrollView>
+  </SafeAreaView></Modal>
 }
 
 function SnapStudio({visible,onClose,onSend}:{visible:boolean;onClose:()=>void;onSend:(uri:string,filter:string,sticker:string,viewOnce:boolean)=>void}){
@@ -4485,7 +4512,7 @@ function LifeAlignment({match}:{match:Match}){const rows=[['diamond-outline','Ma
 function BottomNav({active,navigate}:{active:string;navigate:(s:Screen)=>void}){
   const {width}=useWindowDimensions();
   const compact=width<=360;
-  const navigationMeta:Record<typeof primaryNavigation[number]['target'],{icon:keyof typeof Ionicons.glyphMap;tone:PremiumIconTone}>={home:{icon:'heart',tone:'ruby'},explore:{icon:'compass',tone:'gold'},chat:{icon:'chatbubble',tone:'ruby'},events:{icon:'calendar',tone:'gold'},profile:{icon:'person',tone:'dark'}};
+  const navigationMeta:Record<typeof primaryNavigation[number]['target'],{icon:keyof typeof Ionicons.glyphMap;tone:PremiumIconTone}>={home:{icon:'heart',tone:'ruby'},explore:{icon:'compass',tone:'gold'},chat:{icon:'chatbubble',tone:'ruby'},executive:{icon:'briefcase',tone:'gold'},profile:{icon:'person',tone:'dark'}};
   return <View accessibilityRole="tablist" style={bottomNavStyles.nav}><View style={bottomNavStyles.navScroller}>{primaryNavigation.map(({label,target})=>{
     const {icon,tone}=navigationMeta[target];
     const selected=active===target;
@@ -4605,6 +4632,7 @@ const gameStyles=StyleSheet.create({
 });
 
 const coupleStyles=StyleSheet.create({
+  scrollContent:{gap:16,paddingBottom:18},
   preview:{minHeight:92,borderRadius:26,padding:14,flexDirection:'row',alignItems:'center',gap:12,overflow:'hidden',borderWidth:1,borderColor:'rgba(255,255,255,.16)'},
   previewAvatar:{width:58,height:58,borderRadius:29,borderWidth:2,borderColor:'rgba(255,255,255,.35)'},
   previewName:{fontFamily:'Poppins_700Bold',fontSize:18,color:colors.ivory},
@@ -4620,6 +4648,17 @@ const coupleStyles=StyleSheet.create({
   themeName:{flex:1,fontFamily:'Poppins_700Bold',fontSize:10.5,color:colors.ivory},
   statusCard:{padding:10,borderRadius:16,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.24)',flexDirection:'row',alignItems:'center',gap:8},
   statusText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.5,lineHeight:15,color:'#F0DCA6'},
+  privacyChoice:{minHeight:68,padding:12,borderRadius:18,backgroundColor:'rgba(255,255,255,.04)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',flexDirection:'row',alignItems:'center',gap:10},
+  privacyChoiceOn:{backgroundColor:'rgba(212,175,55,.09)',borderColor:'rgba(212,175,55,.34)'},
+  privacyTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
+  privacyBody:{fontFamily:'Poppins_400Regular',fontSize:10,lineHeight:15,color:'#CDB5BB',marginTop:2},
+  captureCard:{padding:13,borderRadius:20,backgroundColor:'#1D090E',borderWidth:1,borderColor:'rgba(212,175,55,.22)',flexDirection:'row',alignItems:'center',gap:11},
+  toggle:{width:44,height:26,borderRadius:13,padding:3,backgroundColor:'rgba(255,255,255,.13)'},
+  toggleOn:{backgroundColor:'#8F1028'},
+  toggleKnob:{width:20,height:20,borderRadius:10,backgroundColor:'#A9959B'},
+  toggleKnobOn:{alignSelf:'flex-end',backgroundColor:colors.ivory},
+  limitCard:{padding:11,borderRadius:16,backgroundColor:'rgba(229,9,47,.06)',borderWidth:1,borderColor:'rgba(229,9,47,.18)',flexDirection:'row',alignItems:'flex-start',gap:8},
+  limitText:{flex:1,fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:'#D7B8C0'},
 });
 
 const privacyStyles=StyleSheet.create({

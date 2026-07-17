@@ -3,7 +3,7 @@ import { buildFeatureFocusSnapshot, chatMoreAttachments, chatPrimaryAttachments,
 
 describe('feature focus',()=>{
   it('keeps the mobile navigation to five stable primary destinations',()=>{
-    expect(primaryNavigation.map(item=>item.label)).toEqual(['Matches','Discover','Chat','Dates','Profile']);
+    expect(primaryNavigation.map(item=>item.label)).toEqual(['Matches','Discover','Chat','Executive','Profile']);
   });
 
   it('keeps every core feature on a primary destination',()=>{

@@ -62,7 +62,7 @@ But production launch still needs:
   fails for missing objects, disabled RLS, anonymous policy/grant exposure, or
   unhealthy endpoints.
 - The legacy audit found only `profiles` and `messages` from an older 27-object
-  inventory. It does not satisfy the current v30 contract of 96 tables and 79
+  inventory. It does not satisfy the current v31 contract of 97 tables and 81
   RPCs; the protected workflow must produce fresh service-role evidence.
 
 ## Safe hosted deployment sequence

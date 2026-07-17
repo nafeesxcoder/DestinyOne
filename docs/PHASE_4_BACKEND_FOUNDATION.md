@@ -88,7 +88,7 @@ Last verified locally: 2026-07-16
 ## Required deployment sequence
 
 1. Create separate Supabase development, staging, and production projects.
-2. Link development first and apply migrations 001-030 in order.
+2. Link development first and apply migrations 001-031 in order.
 3. Regenerate `src/types/database.ts` from the linked schema and review the diff.
 4. Run positive and negative RLS tests with two members plus one unrelated and
    one blocked account.
@@ -140,7 +140,7 @@ Verify each row in staging using real authenticated sessions:
 - Hosted schema v28 still requires the protected deployment workflow, reviewed
   legacy baseline, service-role verification, and stored evidence artifact.
 - TypeScript and the complete local test suite pass.
-- Migrations 001-030 are source-ready but have not been applied to a linked Supabase
+- Migrations 001-031 are source-ready but have not been applied to a linked Supabase
   project in this workspace.
 - The pgTAP suite cannot run on this machine until Docker, OrbStack, Podman, or
   another Docker-compatible runtime is installed.

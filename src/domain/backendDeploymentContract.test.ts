@@ -40,11 +40,11 @@ describe('complete backend deployment contract', () => {
   it('keeps a unique, explicitly versioned production inventory', () => {
     const tables = contractNames('tables');
     const rpcs = contractNames('rpcs');
-    expect(contractSource).toContain("id: 'destinyone-backend-v30'");
-    expect(contractSource).toContain('schemaVersion: 30');
+    expect(contractSource).toContain("id: 'destinyone-backend-v31'");
+    expect(contractSource).toContain('schemaVersion: 31');
     expect(new Set(tables).size).toBe(tables.length);
     expect(new Set(rpcs).size).toBe(rpcs.length);
-    expect(tables.length).toBe(96);
-    expect(rpcs.length).toBe(79);
+    expect(tables.length).toBe(97);
+    expect(rpcs.length).toBe(81);
   });
 });

@@ -782,7 +782,7 @@ export async function markNotificationRead(notificationId: string) {
   return true;
 }
 
-export async function saveChatSettings(matchId: string, settings: { nickname?: string; theme?: string }) {
+export async function saveChatSettings(matchId: string, settings: { nickname?: string; theme?: string; retentionMode?: 'keep' | 'after_seen' | '24_hours' | '7_days'; screenshotAlerts?: boolean }) {
   ensureBackendConfigured();
   if (!isSupabaseConfigured) return null;
   const userId = await requireCurrentUserId();
@@ -791,6 +791,8 @@ export async function saveChatSettings(matchId: string, settings: { nickname?: s
     user_id: userId,
     nickname: settings.nickname ?? null,
     theme: settings.theme ?? 'Ruby Velvet',
+    retention_mode: settings.retentionMode ?? 'keep',
+    screenshot_alerts: settings.screenshotAlerts ?? true,
     updated_at: new Date().toISOString(),
   }).select().single();
   if (error) throw error;

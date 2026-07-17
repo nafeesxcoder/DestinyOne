@@ -58,6 +58,9 @@ export type MessageRow = {
   media_path: string | null;
   metadata: Json;
   read_at: string | null;
+  expires_at: string | null;
+  deleted_at: string | null;
+  deletion_reason: 'after_seen' | 'timer' | 'member_deleted' | null;
   created_at: string;
 };
 
@@ -220,8 +223,20 @@ export type Database = {
         user_id: string;
         nickname: string | null;
         theme: string;
+        retention_mode: 'keep' | 'after_seen' | '24_hours' | '7_days';
+        screenshot_alerts: boolean;
         updated_at: string;
-      }, { match_id: string; user_id: string; nickname?: string | null; theme?: string; updated_at?: string }>;
+      }, { match_id: string; user_id: string; nickname?: string | null; theme?: string; retention_mode?: 'keep' | 'after_seen' | '24_hours' | '7_days'; screenshot_alerts?: boolean; updated_at?: string }>;
+      chat_privacy_events: Table<{
+        id: string;
+        match_id: string;
+        message_id: string | null;
+        actor_id: string;
+        event_type: 'screenshot_detected' | 'messages_deleted';
+        detection_source: 'native_capture_api' | 'member_reported' | 'server_retention';
+        client_event_id: string;
+        created_at: string;
+      }>;
       live_location_shares: Table<{
         id: string;
         match_id: string;

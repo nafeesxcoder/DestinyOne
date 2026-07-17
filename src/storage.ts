@@ -84,6 +84,15 @@ export type RoseLedger = {
 export type CoupleChatSettings = {
   nickname: string;
   theme: string;
+  retentionMode: 'keep' | 'after_seen' | '24_hours' | '7_days';
+  screenshotAlerts: boolean;
+};
+
+export const defaultCoupleChatSettings: CoupleChatSettings = {
+  nickname: '',
+  theme: 'Ruby Velvet',
+  retentionMode: 'keep',
+  screenshotAlerts: true,
 };
 
 export type ProfileDraft = {

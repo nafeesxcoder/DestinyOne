@@ -1,6 +1,6 @@
 export const deploymentContract = {
-  id: 'destinyone-backend-v30',
-  schemaVersion: 30,
+  id: 'destinyone-backend-v31',
+  schemaVersion: 31,
   tables: [
     'profiles',
     'user_preferences',
@@ -27,6 +27,7 @@ export const deploymentContract = {
     'support_tickets',
     'support_ticket_events',
     'chat_settings',
+    'chat_privacy_events',
     'live_location_shares',
     'push_tokens',
     'relationship_reflections',
@@ -178,6 +179,8 @@ export const deploymentContract = {
     'reconcile_billing_operations',
     'resolve_billing_reconciliation_case',
     'get_current_referral_pass',
+    'mark_match_messages_seen',
+    'record_chat_screenshot',
     'get_backend_deployment_manifest',
   ],
 };
