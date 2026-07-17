@@ -39,7 +39,7 @@ baseline; no production backend deployment is claimed by this document.
 Migration `020_complete_deployment_contract.sql` upgrades the stable metadata RPC
 that is executable only by `service_role`. `pnpm supabase:verify` uses that RPC
 to compare the complete hosted app/Edge-Function table, RPC and RLS inventory
-with the versioned v21 contract,
+with the versioned v22 contract,
 then uses the anonymous OpenAPI surface and read-only `GET ... limit=0` probes
 to detect unintended anonymous exposure.
 

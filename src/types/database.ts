@@ -158,7 +158,8 @@ export type Database = {
       matching_model_versions: Table<{ version: string; status: 'active' | 'retired'; weights: Json; notes: string | null; activated_at: string | null; created_at: string }>;
       daily_match_recommendations: Table<{ id: string; user_id: string; target_id: string; match_id: string; recommendation_day: string; rank: number; label: MatchRow['label']; reasons: string[]; model_version: string; score_internal: number; created_at: string }>;
       match_feedback: Table<{ id: string; user_id: string; match_id: string; feedback: 'promising' | 'not_aligned' | 'met_in_person'; use_for_matching: boolean; client_action_id: string; created_at: string; updated_at: string }>;
-      matching_model_events: Table<{ id: string; model_version: string; action: 'activated' | 'quality_snapshot'; actor_id: string | null; metrics: Json; created_at: string }>;
+      matching_model_events: Table<{ id: string; model_version: string; action: 'activated' | 'quality_snapshot' | 'rollback'; actor_id: string | null; metrics: Json; created_at: string }>;
+      matching_model_guardrails: Table<{ model_version: string; minimum_recommendations: number; minimum_conversation_rate: number; minimum_date_acceptance_rate: number; maximum_report_rate: number; maximum_exposure_gap: number; created_at: string; updated_at: string }>;
       subscriptions: Table<{ user_id: string; plan: 'free' | 'plus'; status: string; provider: string | null; provider_customer_id: string | null; expires_at: string | null; updated_at: string }>;
       coin_ledger: Table<{ id: string; user_id: string; amount: number; reason: string; reference_id: string | null; created_at: string }>;
       blocks: Table<{ blocker_id: string; blocked_id: string; created_at: string }>;
@@ -286,6 +287,10 @@ export type Database = {
           model_version: string;
         }>;
       };
+      get_matching_pool_status: { Args: Record<string, never>; Returns: Json };
+      activate_matching_model: { Args: { p_version: string; p_metrics?: Json }; Returns: void };
+      record_matching_quality_snapshot: { Args: { p_metrics: Json }; Returns: Json };
+      rollback_matching_model: { Args: { p_version: string; p_reason: string; p_change_ticket: string }; Returns: void };
       save_matching_preferences: { Args: { p_preferences: Json; p_attributes?: Json }; Returns: Json };
       submit_match_feedback: { Args: { p_match_id: string; p_feedback: 'promising' | 'not_aligned' | 'met_in_person'; p_use_for_matching: boolean; p_client_action_id: string }; Returns: Json };
       clear_matching_learning: { Args: Record<string, never>; Returns: void };

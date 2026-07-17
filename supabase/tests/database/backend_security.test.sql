@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(147);
+select plan(160);
 
 select has_function('public','get_backend_deployment_manifest',array[]::text[],'read-only deployment manifest exists');
 select function_privs_are('public','get_backend_deployment_manifest',array[]::text[],'service_role',array['EXECUTE'],'deployment manifest is service-role only');
@@ -72,6 +72,13 @@ select has_function(
 select has_function('public','save_matching_preferences',array['jsonb','jsonb'],'validated matching-preference RPC exists');
 select has_function('public','record_discovery_signal',array['uuid','text','text'],'server-owned discovery signal RPC exists');
 select has_function('public','submit_match_feedback',array['uuid','text','boolean','text'],'consented match-feedback RPC exists');
+select has_function('public','get_matching_pool_status',array[]::text[],'safe matching pool status RPC exists');
+select has_function('public','rollback_matching_model',array['text','text','text'],'audited model rollback RPC exists');
+select has_table('public','matching_model_guardrails','model health guardrails exist');
+select function_privs_are('public','get_matching_pool_status',array[]::text[],'authenticated',array['EXECUTE'],'members can read only their own pool status');
+select function_privs_are('public','rollback_matching_model',array['text','text','text'],'service_role',array['EXECUTE'],'model rollback is service-only');
+select ok(not has_function_privilege('authenticated','public.rank_matching_candidates(uuid)','EXECUTE'),'members cannot probe internal candidate scores');
+select table_privs_are('public','matching_model_guardrails','authenticated',array[]::text[],'members cannot read model operations thresholds');
 select has_function('public','clear_matching_learning',array[]::text[],'matching-learning reset RPC exists');
 select has_table('public','profile_match_attributes','private reciprocal match attributes exist');
 select has_table('public','matching_preferences','private detailed matching preferences exist');
@@ -288,6 +295,25 @@ select lives_ok(
   )$$,
   'matching preferences save through the validated RPC'
 );
+select is(
+  (select count(*)::integer from public.daily_matches(5)),
+  0,
+  'unverified members cannot enter discovery'
+);
+select is(
+  public.get_matching_pool_status()->>'status',
+  'verification_required',
+  'pool status gives an actionable verification boundary'
+);
+reset role;
+update public.profiles set verified=true where id in(
+  '00000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-000000000004',
+  '00000000-0000-4000-8000-000000000005'
+);
+set local role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claim.role','authenticated',true);
 select lives_ok(
   $$select * from public.daily_matches(5)$$,
   'server generates a reciprocal daily recommendation deck'
@@ -308,8 +334,17 @@ select ok(
 );
 select is(
   (select model_version from public.daily_matches(5) limit 1),
-  'intentional-v1',
+  'intentional-v2',
   'recommendation records the active rollback-safe model version'
+);
+select ok(
+  'A language in common'=any((select reasons from public.daily_matches(5) limit 1)),
+  'recommendation can explain a shared language without exposing a score'
+);
+select is(
+  public.get_matching_pool_status()->>'status',
+  'sparse',
+  'small verified pools stay explicit instead of silently relaxing hard preferences'
 );
 select is(
   (select count(*)::integer from public.daily_match_recommendations where user_id='00000000-0000-4000-8000-000000000001'),
@@ -387,6 +422,15 @@ select is(
   (select use_for_matching from public.match_feedback where client_action_id='feedback-action-0001'),
   false,
   'learning reset revokes match-feedback consent'
+);
+select lives_ok(
+  $$select public.submit_match_decision('00000000-0000-4000-8000-000000000004','interested')$$,
+  'member can choose a profile from the current verified deck'
+);
+select is(
+  (public.get_matching_pool_status()->>'eligible_count')::integer,
+  0,
+  'an already-chosen profile does not recycle into the eligible pool'
 );
 select lives_ok(
   $$select public.submit_member_report(

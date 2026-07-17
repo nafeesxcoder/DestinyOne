@@ -267,6 +267,32 @@ export async function fetchDailyMatches(limit = 5) {
   return parsed.filter((match): match is NonNullable<typeof match> => match !== null);
 }
 
+export type MatchingPoolStatus = {
+  status: 'ready' | 'sparse' | 'empty' | 'profile_incomplete' | 'verification_required' | 'preferences_incomplete';
+  eligibleCount: number;
+  dailyLimit: number;
+  repeatCooldownDays: number;
+  suggestions: string[];
+};
+
+export async function fetchMatchingPoolStatus(): Promise<MatchingPoolStatus | null> {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('get_matching_pool_status');
+  if (error) throw error;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('The matching pool returned an invalid status.');
+  const value = data as Record<string, unknown>;
+  const validStatuses: MatchingPoolStatus['status'][] = ['ready','sparse','empty','profile_incomplete','verification_required','preferences_incomplete'];
+  if (!validStatuses.includes(value.status as MatchingPoolStatus['status'])) throw new Error('The matching pool returned an invalid status.');
+  return {
+    status: value.status as MatchingPoolStatus['status'],
+    eligibleCount: Math.max(0,Number(value.eligible_count)||0),
+    dailyLimit: Math.max(1,Math.min(5,Number(value.daily_limit)||5)),
+    repeatCooldownDays: Math.max(1,Math.min(30,Number(value.repeat_cooldown_days)||14)),
+    suggestions: Array.isArray(value.suggestions)?value.suggestions.filter((item):item is string=>typeof item==='string'&&item.trim().length>0).slice(0,3):[],
+  };
+}
+
 function intentFilterToDatabase(intent: string) {
   const value = intent.toLowerCase();
   if (value.includes('leading') || (value.includes('long') && value.includes('marriage'))) return 'long_term_to_marriage';

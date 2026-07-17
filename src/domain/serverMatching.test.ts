@@ -22,7 +22,7 @@ const row: ServerDailyMatchRow = {
   photo_paths: ['member/photo/one.jpg'],
   match_label: 'Exceptional',
   reasons: ['Same relationship intent', 'Family expectations align'],
-  model_version: 'intentional-v1',
+  model_version: 'intentional-v2',
 };
 
 describe('server daily match parser', () => {
@@ -34,7 +34,7 @@ describe('server daily match parser', () => {
       matchId: row.match_id,
       match: 'Exceptional Match',
       reasons: row.reasons,
-      modelVersion: 'intentional-v1',
+      modelVersion: 'intentional-v2',
     });
   });
 
@@ -45,4 +45,3 @@ describe('server daily match parser', () => {
     expect(parseServerDailyMatch(row, [])).toBeNull();
   });
 });
-

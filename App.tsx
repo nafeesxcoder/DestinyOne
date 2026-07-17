@@ -13,7 +13,7 @@ import { ChatMessage, CoupleChatSettings, DatePlanStatus, DiscoverySignal, Local
 import * as ImagePicker from 'expo-image-picker';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import * as Location from 'expo-location';
-import { allowsPreviewOtpFallback, backendMode, beginAuthentication, fetchDailyMatches, loadCurrentMemberBootstrap, requestAccountDeletion, submitSupportTicket, verifyAuthentication, type SupportTopic } from './src/services/backend';
+import { allowsPreviewOtpFallback, backendMode, beginAuthentication, fetchDailyMatches, fetchMatchingPoolStatus, loadCurrentMemberBootstrap, requestAccountDeletion, submitSupportTicket, verifyAuthentication, type MatchingPoolStatus, type SupportTopic } from './src/services/backend';
 import { matchReasons, rankMatches } from './src/domain/matching';
 import { canSendGift, spendCoins } from './src/domain/commerce';
 import { isEligibleMemberAge, isValidEmail, isValidPassword, isValidPhone } from './src/domain/validation';
@@ -155,13 +155,16 @@ function DestinyOneApp() {
   const [relationshipReminders,setRelationshipReminders] = useState<Record<string,RelationshipReminderRecord>>(initialPersistedState.relationshipReminders);
   const [serverMatches,setServerMatches] = useState<Match[]|null>(memberDataRuntime.allowsMockMatches?null:[]);
   const [matchLoadState,setMatchLoadState] = useState<MemberMatchLoadState>(memberDataRuntime.allowsMockMatches?'preview':'loading');
+  const [matchingPoolStatus,setMatchingPoolStatus] = useState<MatchingPoolStatus|null>(null);
   const [hydrated,setHydrated] = useState(false);
 
   const refreshServerMatches=async()=>{
     if(memberDataRuntime.source!=='server')return;
     setMatchLoadState('loading');
     try{
-      setServerMatches(await fetchDailyMatches(5)??[]);
+      const [daily,pool]=await Promise.all([fetchDailyMatches(5),fetchMatchingPoolStatus()]);
+      setServerMatches(daily??[]);
+      setMatchingPoolStatus(pool);
       setMatchLoadState('ready');
     }catch(error){
       setServerMatches([]);
@@ -531,7 +534,7 @@ function DestinyOneApp() {
     {screen==='vibes'&&<Vibes value={vibeList} onChange={setVibeList} onNext={()=>setScreen('intent')}/>} 
     {screen==='intent'&&<Intent value={intent} onChange={setIntent} onNext={()=>setScreen('alignment')}/>} 
     {screen==='alignment'&&<Alignment value={alignment} onChange={setAlignment} onNext={completeOnboarding}/>} 
-    {screen==='home'&&<HomeClean items={visibleMatches} matchLoadState={matchLoadState} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={setScreen}/>} 
+    {screen==='home'&&<HomeClean items={visibleMatches} matchLoadState={matchLoadState} matchingPoolStatus={matchingPoolStatus} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={setScreen}/>} 
     {screen==='explore'&&<ExploreHub navigate={setScreen}/>} 
     {screen==='circle'&&<TrustedCircle vouches={vouches} coinBalance={coinBalance} rewardMode={vouchRewardsMode} onBack={()=>setScreen('explore')} onAddVouch={(quality)=>{if(vouchRewardsMode==='demo'&&vouches.length<3&&!vouches.includes(quality)){setVouches(current=>[...current,quality]);setCoinBalance(balance=>balance+100)}}}/>} 
     {screen==='discovery'&&<DiscoveryCenter filters={matchFilters} onFiltersChange={updateMatchFilters} signals={discoverySignals} smartDiscovery={smartDiscovery} crossedPaths={crossedPaths} onSmartChange={updateSmartDiscovery} onCrossedChange={setCrossedPaths} onClear={clearMatchingActivity} onBack={()=>setScreen('explore')}/>} 
@@ -903,7 +906,7 @@ function Alignment({value,onChange,onNext}:{value:Record<string,string>;onChange
   </FormPage>
 }
 
-function HomeClean({items,matchLoadState,onRetryMatches,preferences,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{items:Match[];matchLoadState:MemberMatchLoadState;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
+function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,preferences,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{items:Match[];matchLoadState:MemberMatchLoadState;matchingPoolStatus:MatchingPoolStatus|null;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
   const {width}=useWindowDimensions();
   const useMatchGrid=width>=900;
   const compactHome=width<430;
@@ -917,6 +920,9 @@ function HomeClean({items,matchLoadState,onRetryMatches,preferences,signals,dism
     navigate(nudge.actionScreen);
   };
   const preferenceChips=[preferences.intent||'Marriage minded',preferences.filters.lookingFor,`${preferences.filters.minAge}-${preferences.filters.maxAge}`];
+  const poolNeedsVerification=matchingPoolStatus?.status==='verification_required';
+  const poolNeedsPreferences=matchingPoolStatus?.status==='preferences_incomplete';
+  const poolMessage=matchingPoolStatus?.suggestions[0]??'No verified profiles meet your preferences right now. We will refresh your introductions as the community grows.';
   return <LinearGradient colors={['#23030A','#0B0104',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,{maxWidth:920,paddingHorizontal:0}]}>
     <View style={homeCleanStyles.header}>
       <View style={{flex:1}}>
@@ -963,8 +969,8 @@ function HomeClean({items,matchLoadState,onRetryMatches,preferences,signals,dism
       {!items.length&&<View style={[shared.card,homeCleanStyles.emptyCard]}>
         <PremiumIcon name={matchLoadState==='error'?'cloud-offline-outline':matchLoadState==='loading'?'hourglass-outline':'heart-outline'} tone={matchLoadState==='error'?'ruby':'plum'} size={58} iconSize={27}/>
         <Text style={styles.cardTitle}>{matchLoadState==='error'?'Could not load your matches':matchLoadState==='loading'?'Curating your matches…':matchLoadState==='preview'?'No profiles match these filters':'Your next introduction is being curated'}</Text>
-        <Text style={[styles.helper,{textAlign:'center'}]}>{matchLoadState==='error'?'We will never replace unavailable member data with demo profiles. Check your connection and try again.':matchLoadState==='loading'?'Verified profiles are loading securely.':matchLoadState==='preview'?'Try widening age, city, vibe or family filters.':'No verified profiles meet your preferences right now. We will refresh your introductions as the community grows.'}</Text>
-        {matchLoadState==='error'?<Button label="Try again" icon="refresh" onPress={onRetryMatches}/>:matchLoadState==='preview'?<Button label="Adjust filters" onPress={()=>navigate('discovery')}/>:matchLoadState==='ready'?<Button label="Review preferences" icon="options-outline" onPress={()=>navigate('discovery')}/>:null}
+        <Text style={[styles.helper,{textAlign:'center'}]}>{matchLoadState==='error'?'We will never replace unavailable member data with demo profiles. Check your connection and try again.':matchLoadState==='loading'?'Verified profiles are loading securely.':matchLoadState==='preview'?'Try widening age, city, vibe or family filters.':poolMessage}</Text>
+        {matchLoadState==='error'?<Button label="Try again" icon="refresh" onPress={onRetryMatches}/>:matchLoadState==='preview'?<Button label="Adjust filters" onPress={()=>navigate('discovery')}/>:poolNeedsVerification?<Button label="Complete verification" icon="shield-checkmark-outline" onPress={()=>navigate('verifyHub')}/>:poolNeedsPreferences?<Button label="Complete preferences" icon="options-outline" onPress={()=>navigate('discovery')}/>:matchLoadState==='ready'?<Button label="Review preferences" icon="options-outline" onPress={()=>navigate('discovery')}/>:null}
       </View>}
     </ScrollView>
     <BottomNav active="home" navigate={navigate}/>
@@ -2051,7 +2057,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     appEnvironment,
     requiresRealBackend,
     supabaseConfigured:isSupabaseConfigured,
-    migrationCount:21,
+    migrationCount:22,
     edgeFunctionCount:5,
     dataModuleCount:dataSnapshot.totalModules,
     backendReadyModuleCount:dataSnapshot.backendReadyModules,

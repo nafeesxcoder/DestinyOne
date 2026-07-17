@@ -1,6 +1,6 @@
 export const deploymentContract = {
-  id: 'destinyone-backend-v21',
-  schemaVersion: 21,
+  id: 'destinyone-backend-v22',
+  schemaVersion: 22,
   tables: [
     'profiles',
     'user_preferences',
@@ -40,6 +40,7 @@ export const deploymentContract = {
     'match_feedback',
     'matching_model_versions',
     'matching_model_events',
+    'matching_model_guardrails',
     'city_launch_markets',
     'city_waitlist_entries',
     'city_referral_invites',
@@ -73,6 +74,7 @@ export const deploymentContract = {
   ],
   rpcs: [
     'daily_matches',
+    'get_matching_pool_status',
     'current_coin_balance',
     'get_current_member_bootstrap',
     'save_current_member_profile',
@@ -80,6 +82,9 @@ export const deploymentContract = {
     'clear_matching_learning',
     'record_discovery_signal',
     'submit_match_feedback',
+    'activate_matching_model',
+    'record_matching_quality_snapshot',
+    'rollback_matching_model',
     'submit_match_decision',
     'submit_icebreaker_answer',
     'send_match_message',

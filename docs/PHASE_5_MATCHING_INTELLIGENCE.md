@@ -30,6 +30,17 @@ short reasons and labels, never an internal percentage score.
   day. Match decisions must belong to the current deck or an inbound interest.
 - Service-role quality snapshots accept only numeric aggregate metrics; member,
   profile, message, and location identifiers are not accepted.
+- Verified-only discovery for both sides, with a 14-day repeat cooldown and no
+  recycling after a member has already chosen interested or pass.
+- Fully reciprocal family, children, marriage-timeline, relocation, distance,
+  intent, vibe, gender, and age eligibility.
+- Bounded positive-only outcome similarity, shared-language alignment, a new
+  member opportunity boost, and a 30-day exposure penalty. Generic negative
+  feedback is not treated as evidence about a member's preferred traits.
+- Sparse-pool status explains verification, preference, or city-supply gaps
+  without silently relaxing hard preferences.
+- Model guardrails require minimum sample size, conversation/date floors,
+  report/exposure ceilings, audited activation, and a service-only rollback.
 
 ## Migration 014
 
@@ -44,11 +55,17 @@ short reasons and labels, never an internal percentage score.
 - an expanded `daily_matches` RPC that returns display-safe profile fields,
   approved media paths, explanations, and model version
 
+## Migration 022
+
+`022_matching_quality_v2.sql` adds the reciprocal v2 eligibility/ranking
+engine, verified discovery boundary, repeat cooldown, safe pool status,
+positive-only consented learning, exposure balancing, model health thresholds,
+and an audited rollback RPC.
+
 ## Current verification
 
 - TypeScript passes.
-- 39 test files and 147 tests pass.
-- The transactional pgTAP matrix contains 75 assertions, including reciprocal
+- The transactional pgTAP matrix contains 160 assertions, including reciprocal
   rejection, hidden-score privileges, idempotent discovery learning, explicit
   outcome consent, and learning reset.
 - The Expo web export passes.
@@ -67,4 +84,3 @@ short reasons and labels, never an internal percentage score.
 6. Pilot in one city and measure qualified mutuals, meaningful conversations,
    accepted dates, reports, and post-date outcomes.
 7. Define automatic rollback thresholds and complete a model rollback drill.
-

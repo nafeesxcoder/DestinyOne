@@ -131,14 +131,14 @@ Verify each row in staging using real authenticated sessions:
 ## Evidence and limits
 
 - Runtime, bootstrap parser, and SQL security contracts have automated tests.
-- Supabase CLI 2.109.1 is pinned, local config is initialized, and a 147-assertion
+- Supabase CLI 2.109.1 is pinned, local config is initialized, and a 160-assertion
   transactional pgTAP RLS suite is present.
 - A read-only hosted-project probe confirmed email, Google, and phone Auth are
   enabled and `twilio_verify` is configured.
-- Hosted schema v21 still requires the protected deployment workflow, reviewed
+- Hosted schema v22 still requires the protected deployment workflow, reviewed
   legacy baseline, service-role verification, and stored evidence artifact.
 - TypeScript and the complete local test suite pass.
-- Migrations 001-021 are source-ready but have not been applied to a linked Supabase
+- Migrations 001-022 are source-ready but have not been applied to a linked Supabase
   project in this workspace.
 - The pgTAP suite cannot run on this machine until Docker, OrbStack, Podman, or
   another Docker-compatible runtime is installed.

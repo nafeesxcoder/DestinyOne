@@ -17,7 +17,7 @@ const migrationFiles = readdirSync(migrationDir)
   .sort();
 const versions = migrationFiles.map((name) => Number(name.match(/^(\d{3})_[a-z0-9_]+\.sql$/)?.[1] ?? -1));
 
-requireCondition(migrationFiles.length >= 21, 'Expected at least 21 ordered migrations.');
+requireCondition(migrationFiles.length >= 22, 'Expected at least 22 ordered migrations.');
 requireCondition(versions.every((version) => version > 0), 'Migration names must use NNN_snake_case.sql.');
 requireCondition(versions.every((version, index) => version === index + 1), 'Migration versions must be contiguous from 001.');
 
@@ -107,7 +107,7 @@ for (const functionName of edgeFunctions) {
 const databaseTest = readFileSync(testFile, 'utf8');
 const assertionPattern = /\bselect\s+(?:ok|is|isnt|like|unlike|throws_ok|lives_ok|has_[a-z_]+|hasnt_[a-z_]+|col_[a-z_]+|function_[a-z_]+|table_[a-z_]+|results_eq|set_eq|bag_eq|is_empty|isnt_empty)\s*\(/gi;
 const assertionCount = databaseTest.match(assertionPattern)?.length ?? 0;
-requireCondition(assertionCount >= 147, `Expected at least 147 pgTAP assertions, found ${assertionCount}.`);
+requireCondition(assertionCount >= 160, `Expected at least 160 pgTAP assertions, found ${assertionCount}.`);
 
 const publicFiles = ['.env.example', 'src/config/supabase.ts', 'src/lib/supabase.ts'];
 for (const file of publicFiles) {

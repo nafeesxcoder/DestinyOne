@@ -9,18 +9,19 @@ async function loadBackend() {
   const signInWithOtp = vi.fn().mockResolvedValue({ error: null });
   const verifyOtp = vi.fn().mockResolvedValue({ error: null });
   const updateUser = vi.fn().mockResolvedValue({ error: null });
+  const rpc = vi.fn();
   vi.doMock('../lib/supabase', () => ({
     backendReadinessError: '',
     backendRuntime: { mode: 'supabase', allowsDemoOtp: false },
     isSupabaseConfigured: true,
     supabase: {
       auth: { signInWithOtp, verifyOtp, updateUser },
-      rpc: vi.fn(),
+      rpc,
       storage: { from: vi.fn() },
     },
   }));
   const backend = await import('./backend');
-  return { backend, signInWithOtp, verifyOtp, updateUser };
+  return { backend, signInWithOtp, verifyOtp, updateUser, rpc };
 }
 
 describe('production Auth and profile-media runtime', () => {
@@ -49,5 +50,15 @@ describe('production Auth and profile-media runtime', () => {
     expect(() => backend.validateProfileMediaUpload('photo', { size: 0, type: 'image/jpeg' }, 'photo.jpg')).toThrow('empty');
     expect(() => backend.validateProfileMediaUpload('photo', { size: 11 * 1024 * 1024, type: 'image/jpeg' }, 'photo.jpg')).toThrow('10 MB');
     expect(() => backend.validateProfileMediaUpload('photo', { size: 1024, type: 'application/pdf' }, 'profile.pdf')).toThrow('JPEG');
+  });
+
+  it('parses only bounded, actionable matching pool status', async () => {
+    const { backend, rpc } = await loadBackend();
+    rpc.mockResolvedValueOnce({ data: { status: 'sparse', eligible_count: 3, daily_limit: 5, repeat_cooldown_days: 14, suggestions: ['More verified members are joining', 42] }, error: null });
+    await expect(backend.fetchMatchingPoolStatus()).resolves.toEqual({
+      status: 'sparse', eligibleCount: 3, dailyLimit: 5, repeatCooldownDays: 14, suggestions: ['More verified members are joining'],
+    });
+    rpc.mockResolvedValueOnce({ data: { status: 'internal_score', eligible_count: 9 }, error: null });
+    await expect(backend.fetchMatchingPoolStatus()).rejects.toThrow('invalid status');
   });
 });
