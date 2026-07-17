@@ -36,9 +36,10 @@ baseline; no production backend deployment is claimed by this document.
 
 ## Hosted baseline verification
 
-Migration `019_read_only_deployment_manifest.sql` adds a stable metadata RPC
+Migration `020_complete_deployment_contract.sql` upgrades the stable metadata RPC
 that is executable only by `service_role`. `pnpm supabase:verify` uses that RPC
-to compare the hosted table/function/RLS inventory with the versioned contract,
+to compare the complete hosted app/Edge-Function table, RPC and RLS inventory
+with the versioned v20 contract,
 then uses the anonymous OpenAPI surface and read-only `GET ... limit=0` probes
 to detect unintended anonymous exposure.
 

@@ -37,8 +37,8 @@ const authResult = await fetchJson(`${url}/auth/v1/settings`, {
   headers: {apikey: anonKey},
 });
 
-// This is the only RPC invoked by the verifier. Migration 019 defines it as a
-// stable, service-role-only metadata read with no member or commerce writes.
+// This is the only RPC invoked by the verifier. The latest contract migration
+// keeps it a stable, service-role-only metadata read with no member writes.
 const manifestResult = await fetchJson(`${url}/rest/v1/rpc/get_backend_deployment_manifest`, {
   method: 'POST',
   headers: {

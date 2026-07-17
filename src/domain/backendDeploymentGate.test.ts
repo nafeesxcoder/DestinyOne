@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 const workflow = readFileSync('.github/workflows/supabase-production.yml', 'utf8');
 const preflight = readFileSync('scripts/preflight-supabase-production.mjs', 'utf8');
 const verifier = readFileSync('scripts/verify-supabase-deployment.mjs', 'utf8');
+const contract = readFileSync('scripts/supabase-deployment-contract.mjs', 'utf8');
 
 describe('hosted backend deployment gate', () => {
   it('requires a manual production deployment and reviewed legacy baseline', () => {
@@ -36,6 +37,15 @@ describe('hosted backend deployment gate', () => {
     expect(verifier).toContain('anonymousTableExposures.length > 0');
     expect(verifier).toContain('anonymousRpcExposures.length > 0');
     expect(verifier).toContain('unhealthyTableEndpoints.length > 0');
+  });
+
+  it('uses the same complete versioned inventory for source and hosted verification', () => {
+    expect(preflight).toContain("import { deploymentContract } from './supabase-deployment-contract.mjs'");
+    expect(verifier).toContain("import { deploymentContract } from './supabase-deployment-contract.mjs'");
+    expect(preflight).toContain('for (const table of deploymentContract.tables)');
+    expect(preflight).toContain('for (const rpc of deploymentContract.rpcs)');
+    expect(contract).toContain("id: 'destinyone-backend-v20'");
+    expect(contract).toContain('schemaVersion: 20');
   });
 
   it('deploys every privileged Edge Function before hosted verification', () => {

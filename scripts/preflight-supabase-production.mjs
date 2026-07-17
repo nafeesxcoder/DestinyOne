@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
+import { deploymentContract } from './supabase-deployment-contract.mjs';
 
 const remote = process.argv.includes('--remote');
 const migrationDir = 'supabase/migrations';
@@ -16,13 +17,27 @@ const migrationFiles = readdirSync(migrationDir)
   .sort();
 const versions = migrationFiles.map((name) => Number(name.match(/^(\d{3})_[a-z0-9_]+\.sql$/)?.[1] ?? -1));
 
-requireCondition(migrationFiles.length >= 19, 'Expected at least 19 ordered migrations.');
+requireCondition(migrationFiles.length >= 20, 'Expected at least 20 ordered migrations.');
 requireCondition(versions.every((version) => version > 0), 'Migration names must use NNN_snake_case.sql.');
 requireCondition(versions.every((version, index) => version === index + 1), 'Migration versions must be contiguous from 001.');
 
 const migrationSql = migrationFiles
   .map((name) => readFileSync(join(migrationDir, name), 'utf8'))
   .join('\n');
+requireCondition(new Set(deploymentContract.tables).size === deploymentContract.tables.length, 'Deployment table contract contains duplicate names.');
+requireCondition(new Set(deploymentContract.rpcs).size === deploymentContract.rpcs.length, 'Deployment RPC contract contains duplicate names.');
+for (const table of deploymentContract.tables) {
+  requireCondition(
+    new RegExp(`create table(?: if not exists)? public\\.${table}\\b`, 'i').test(migrationSql),
+    `Deployment contract table is not created by migrations: ${table}`,
+  );
+}
+for (const rpc of deploymentContract.rpcs) {
+  requireCondition(
+    new RegExp(`create or replace function public\\.${rpc}\\b`, 'i').test(migrationSql),
+    `Deployment contract RPC is not created by migrations: ${rpc}`,
+  );
+}
 const forbiddenPlaceholders = ['your-project.supabase.co', 'SUPABASE_SERVICE_ROLE_KEY=', 'TODO_DEPLOY'];
 for (const placeholder of forbiddenPlaceholders) {
   requireCondition(!migrationSql.includes(placeholder), `Migration SQL contains forbidden placeholder: ${placeholder}`);
