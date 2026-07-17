@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { deploymentContract } from './supabase-deployment-contract.mjs';
 
 if (existsSync('.env.local')) {
@@ -12,6 +13,8 @@ if (existsSync('.env.local')) {
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const evidenceFileArgument = process.argv.find((argument) => argument.startsWith('--evidence-file='));
+const evidenceFile = evidenceFileArgument?.slice('--evidence-file='.length);
 
 const missingEnvironment = [
   ['EXPO_PUBLIC_SUPABASE_URL', url],
@@ -80,6 +83,9 @@ const unhealthyTableEndpoints = anonymousTableChecks.filter((item) => item.statu
 
 const auth = authResult.body;
 const summary = {
+  verifiedAt: new Date().toISOString(),
+  target: process.env.DESTINYONE_DEPLOYMENT_TARGET ?? 'unspecified',
+  commitSha: process.env.GITHUB_SHA ?? null,
   contract: {
     expectedId: deploymentContract.id,
     deployedId: manifest.contract_id ?? null,
@@ -119,5 +125,11 @@ const failed =
   anonymousTableExposures.length > 0 ||
   anonymousRpcExposures.length > 0 ||
   unhealthyTableEndpoints.length > 0;
+
+const evidence = {...summary, verified: !failed};
+if (evidenceFile) {
+  mkdirSync(dirname(evidenceFile), {recursive: true});
+  writeFileSync(evidenceFile, `${JSON.stringify(evidence, null, 2)}\n`, {mode: 0o600});
+}
 
 if (failed) process.exit(1);

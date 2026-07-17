@@ -47,3 +47,19 @@ mutation RPCs. It fails closed when the URL, anonymous key, service-role key,
 manifest version, RLS state or anonymous privilege evidence is missing or
 unexpected. The service-role key is an operator/CI secret and must never use an
 `EXPO_PUBLIC_` prefix or enter an app build.
+
+## Toronto pilot deployment workflow
+
+`.github/workflows/supabase-pilot.yml` is separate from production and runs
+only through a manual `DEPLOY_TORONTO_PILOT` confirmation, reviewed baseline
+checkbox and change-ticket reference. It uses pilot-only GitHub Environment
+secrets and the protected `toronto-pilot` environment.
+
+The workflow records linked migration history, shows a dry run before apply,
+deploys all five privileged Edge Functions, lints the linked public schema,
+executes the full pgTAP security suite against the pilot database and runs the
+read-only hosted contract verifier. A successful run uploads a permission-0600
+JSON evidence artifact containing contract, schema, auth and exposure results;
+credentials and tokens are never included. That artifact is required evidence
+for the hosted-backend pilot gate, but it does not prove physical-device OTP or
+end-to-end member journeys.
