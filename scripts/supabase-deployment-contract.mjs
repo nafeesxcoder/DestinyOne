@@ -1,6 +1,6 @@
 export const deploymentContract = {
-  id: 'destinyone-backend-v29',
-  schemaVersion: 29,
+  id: 'destinyone-backend-v30',
+  schemaVersion: 30,
   tables: [
     'profiles',
     'user_preferences',
@@ -97,6 +97,7 @@ export const deploymentContract = {
     'billing_refund_case_events',
     'billing_reconciliation_cases',
     'billing_finance_ingestion_runs',
+    'referral_base_passes',
   ],
   rpcs: [
     'daily_matches',
@@ -176,6 +177,7 @@ export const deploymentContract = {
     'record_billing_finance_snapshot',
     'reconcile_billing_operations',
     'resolve_billing_reconciliation_case',
+    'get_current_referral_pass',
     'get_backend_deployment_manifest',
   ],
 };

@@ -330,6 +330,7 @@ export type Database = {
       billing_refund_case_events: Table<{ id: number; refund_case_id: string; event_type: string; actor_id: string | null; amount_cents: number | null; note: string | null; idempotency_key: string; created_at: string }>;
       billing_reconciliation_cases: Table<{ id: string; case_key: string; case_type: string; severity: 'normal' | 'high' | 'critical'; status: 'open' | 'investigating' | 'resolved' | 'dismissed'; receipt_id: string | null; user_id: string | null; evidence: Json; resolution_note: string | null; resolved_by: string | null; resolution_idempotency_key: string | null; created_at: string; resolved_at: string | null }>;
       billing_finance_ingestion_runs: Table<{ id: string; snapshot_date: string; platform: 'apple_iap' | 'google_play' | 'real_world_processor'; source_run_id: string; payload_hash: string; recorded_at: string }>;
+      referral_base_passes: Table<{ id: string; user_id: string; referral_conversion_id: string; reward_ledger_id: string; status: 'active' | 'revoked'; starts_at: string; expires_at: string; revoked_at: string | null; created_at: string; updated_at: string }>;
     };
     Views: Record<never, never>;
     Functions: {
@@ -484,6 +485,7 @@ export type Database = {
       record_billing_finance_snapshot: { Args: { p_snapshot_date: string; p_platform: string; p_city_key: string; p_source_run_id: string; p_payload_hash: string; p_metrics: Json }; Returns: Json };
       reconcile_billing_operations: { Args: { p_stale_minutes?: number }; Returns: number };
       resolve_billing_reconciliation_case: { Args: { p_case_id: string; p_reviewer_id: string; p_status: 'resolved' | 'dismissed'; p_note: string; p_idempotency_key: string }; Returns: Json };
+      get_current_referral_pass: { Args: Record<string, never>; Returns: Json };
       prepare_store_purchase: {
         Args: { p_product_key: string; p_platform: 'apple_iap' | 'google_play'; p_idempotency_key: string };
         Returns: Json;

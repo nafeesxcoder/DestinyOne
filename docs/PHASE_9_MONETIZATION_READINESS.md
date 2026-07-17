@@ -22,6 +22,9 @@ DestinyOne now has a fail-closed source contract for paid access. Digital member
 - Database activation guard prevents safety, reporting, blocking, unmatching, emergency, privacy, verification or deletion capabilities from becoming paid entitlements
 - Unit-economics model for contribution margin and margin after acquisition
 - Pricing UI billing boundaries, multi-stage preview, secure restore behavior and billing-help paths
+- Membership catalog starts at $45/month: Base $45, Plus $75 and Elite $115, with annual plans priced at roughly ten monthly payments
+- Post-onboarding Destiny Pass offer provides a private referral link and a clearly explained 7-Day Base Pass
+- Referral Base access is granted only after the invited member verifies identity, completes onboarding and passes referral risk review; it expires server-side and supports reversal
 - Admin Audit operations gate that stays at 0% until live verified receipts exist
 
 ## Score

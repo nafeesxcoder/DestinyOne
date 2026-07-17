@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(258);
+select plan(260);
 
 select has_function('public','get_backend_deployment_manifest',array[]::text[],'read-only deployment manifest exists');
 select function_privs_are('public','get_backend_deployment_manifest',array[]::text[],'service_role',array['EXECUTE'],'deployment manifest is service-role only');
@@ -70,6 +70,8 @@ select has_function('public','review_billing_refund',array['uuid','uuid','text',
 select has_function('public','record_billing_finance_snapshot',array['date','text','text','text','text','jsonb'],'finance provenance RPC exists');
 select has_function('public','reconcile_billing_operations',array['integer'],'billing reconciliation RPC exists');
 select has_function('public','resolve_billing_reconciliation_case',array['uuid','uuid','text','text','text'],'qualified reconciliation review RPC exists');
+select has_table('public','referral_base_passes','verified referral Base passes exist');
+select has_function('public','get_current_referral_pass',array[]::text[],'member-safe referral pass RPC exists');
 
 select has_table('public','growth_attribution_touches','private attribution touches exist');
 select has_table('public','growth_events','consented funnel events exist');

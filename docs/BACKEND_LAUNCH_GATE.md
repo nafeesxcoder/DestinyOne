@@ -33,7 +33,7 @@ The app has a strong Supabase-shaped backend foundation:
   coverage, Edge Function entrypoints, and client secret boundaries
 - a manual GitHub production workflow with an environment approval gate, remote
   credential checks, migration dry run, reviewed push, Edge Function deployment,
-  linked schema lint, the 258-assertion pgTAP suite, post-deploy verification,
+  linked schema lint, the 260-assertion pgTAP suite, post-deploy verification,
   and a commit-linked evidence artifact
 
 But production launch still needs:
@@ -62,7 +62,7 @@ But production launch still needs:
   fails for missing objects, disabled RLS, anonymous policy/grant exposure, or
   unhealthy endpoints.
 - The legacy audit found only `profiles` and `messages` from an older 27-object
-  inventory. It does not satisfy the current v29 contract of 95 tables and 78
+  inventory. It does not satisfy the current v30 contract of 96 tables and 79
   RPCs; the protected workflow must produce fresh service-role evidence.
 
 ## Safe hosted deployment sequence
@@ -78,7 +78,7 @@ But production launch still needs:
    `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
 6. Run **Supabase production gate** manually, type `DEPLOY`, and confirm that the
    legacy baseline was reviewed. The job performs a dry run before any push.
-7. Require linked lint and all 258 pgTAP assertions to pass, then require the
+7. Require linked lint and all 260 pgTAP assertions to pass, then require the
    final hosted verifier to report every object present, zero anonymous
    exposures, and zero unhealthy endpoints. Retain the commit-linked evidence
    artifact from the workflow.

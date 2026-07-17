@@ -17,7 +17,7 @@ const migrationFiles = readdirSync(migrationDir)
   .sort();
 const versions = migrationFiles.map((name) => Number(name.match(/^(\d{3})_[a-z0-9_]+\.sql$/)?.[1] ?? -1));
 
-requireCondition(migrationFiles.length >= 29, 'Expected at least 29 ordered migrations.');
+requireCondition(migrationFiles.length >= 30, 'Expected at least 30 ordered migrations.');
 requireCondition(versions.every((version) => version > 0), 'Migration names must use NNN_snake_case.sql.');
 requireCondition(versions.every((version, index) => version === index + 1), 'Migration versions must be contiguous from 001.');
 
@@ -94,6 +94,7 @@ const requiredContracts = [
   'create table if not exists public.billing_refund_case_events',
   'create table if not exists public.billing_reconciliation_cases',
   'create table if not exists public.billing_finance_ingestion_runs',
+  'create table if not exists public.referral_base_passes',
   'create or replace function public.get_current_member_bootstrap',
   'create or replace function public.send_match_message',
   'create or replace function public.submit_member_report',
@@ -143,6 +144,7 @@ const requiredContracts = [
   'create or replace function public.record_billing_finance_snapshot',
   'create or replace function public.reconcile_billing_operations',
   'create or replace function public.resolve_billing_reconciliation_case',
+  'create or replace function public.get_current_referral_pass',
   'create or replace function public.get_backend_deployment_manifest',
   'alter default privileges in schema public revoke all on tables from anon',
   'alter default privileges in schema public revoke execute on functions from public',

@@ -44,6 +44,13 @@ export async function redeemGrowthReferral(inviteCode: string, idempotencyKey: s
   return data;
 }
 
+export async function getCurrentReferralPass() {
+  requireGrowthBackend();
+  const { data, error } = await supabase.rpc('get_current_referral_pass');
+  if (error) throw error;
+  return data as { status: 'none' | 'active' | 'expired' | 'revoked'; plan?: 'base'; startsAt?: string; expiresAt?: string; days?: 7 };
+}
+
 export async function getGrowthExperimentAssignment(experimentKey: string) {
   requireGrowthBackend();
   const { data, error } = await supabase.rpc('assign_growth_experiment', { p_experiment_key: experimentKey });

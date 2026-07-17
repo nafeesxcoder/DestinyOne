@@ -147,6 +147,8 @@ function DestinyOneApp() {
   const [roseTarget,setRoseTarget] = useState<Match|null>(null);
   const [rosePopup,setRosePopup] = useState<RosePopupPayload|null>(null);
   const [appNotice,setAppNotice] = useState<AppNotice|null>(null);
+  const [referralOfferOpen,setReferralOfferOpen] = useState(false);
+  const [referralCode] = useState(()=>`D1-${Date.now().toString(36).slice(-6).toUpperCase()}`);
   const [detailSafetyOpen,setDetailSafetyOpen] = useState(false);
   const [dismissedIds,setDismissedIds] = useState<string[]>([]);
   const [profileViewNotifiedIds,setProfileViewNotifiedIds] = useState<string[]>([]);
@@ -449,6 +451,7 @@ function DestinyOneApp() {
     if(!confirmMemberMutation(result,'Profile not completed','Your profile could not be saved securely. Please try again.'))return;
     setOnboardingComplete(true);
     setScreen('home');
+    setReferralOfferOpen(true);
     if(memberDataRuntime.source==='server')await refreshServerMatches();
   };
   const updateMatchFilters=async(next:MatchFilters)=>{
@@ -533,7 +536,7 @@ function DestinyOneApp() {
     appendChatMessage(match,createRoseMessage(note));
     setRosePopup({match,note,paid});
   };
-  const resetDemo=async()=>{await clearAppState();setVerified(initialPersistedState.verified);setProfileDraft(initialPersistedState.profileDraft);setVibeList(initialPersistedState.vibes);setIntent(initialPersistedState.intent);setAlignment(initialPersistedState.alignment);setChatMessages(initialPersistedState.chats);setChatDrafts({});setCoinBalance(initialPersistedState.coinBalance);setProfilePhotos(initialPersistedState.photos);setSelfieUri('');setVoiceIntroUri('');setVouches([]);setDiscoverySignals([]);setSmartDiscovery(true);setCrossedPaths(false);setBlockedIds([]);setReports([]);setSafeCheckIns([]);setMatchFilters(defaultMatchFilters);setRoseLedger(initialPersistedState.roseLedger);setLastSeenVisible(initialPersistedState.lastSeenVisible);setAnalyticsConsent(initialPersistedState.analyticsConsent);setChatSettings(initialPersistedState.chatSettings);setRelationshipReflections(initialPersistedState.relationshipReflections);setRelationshipReminders(initialPersistedState.relationshipReminders);setRosePopup(null);setAppNotice(null);setDetailSafetyOpen(false);setDismissedIds([]);setProfileViewNotifiedIds([]);setAuthDestination('');setAuthPassword('');setOnboardingComplete(false);setScreen('welcome')};
+  const resetDemo=async()=>{await clearAppState();setVerified(initialPersistedState.verified);setProfileDraft(initialPersistedState.profileDraft);setVibeList(initialPersistedState.vibes);setIntent(initialPersistedState.intent);setAlignment(initialPersistedState.alignment);setChatMessages(initialPersistedState.chats);setChatDrafts({});setCoinBalance(initialPersistedState.coinBalance);setProfilePhotos(initialPersistedState.photos);setSelfieUri('');setVoiceIntroUri('');setVouches([]);setDiscoverySignals([]);setSmartDiscovery(true);setCrossedPaths(false);setBlockedIds([]);setReports([]);setSafeCheckIns([]);setMatchFilters(defaultMatchFilters);setRoseLedger(initialPersistedState.roseLedger);setLastSeenVisible(initialPersistedState.lastSeenVisible);setAnalyticsConsent(initialPersistedState.analyticsConsent);setChatSettings(initialPersistedState.chatSettings);setRelationshipReflections(initialPersistedState.relationshipReflections);setRelationshipReminders(initialPersistedState.relationshipReminders);setRosePopup(null);setAppNotice(null);setReferralOfferOpen(false);setDetailSafetyOpen(false);setDismissedIds([]);setProfileViewNotifiedIds([]);setAuthDestination('');setAuthPassword('');setOnboardingComplete(false);setScreen('welcome')};
   const deleteAccount=async()=>{try{await requestAccountDeletion()}finally{await resetDemo()}};
   return <SafeAreaProvider><StatusBar style="light"/><View style={shared.screen}>
     {screen==='splash'&&<Splash/>}
@@ -568,6 +571,7 @@ function DestinyOneApp() {
     <RoseReceivedPopup data={rosePopup} onClose={()=>setRosePopup(null)} onOpenChat={(match)=>{setSelected(match);setRosePopup(null);setScreen('chat')}}/>
     <SafetyActions visible={detailSafetyOpen} match={selected} onClose={()=>setDetailSafetyOpen(false)} onSafetyCenter={()=>{setDetailSafetyOpen(false);setScreen('safety')}} onReport={async(reason,details)=>{setDetailSafetyOpen(false);if(await reportSelected(reason,details))setAppNotice({title:'Report submitted privately',body:'Your report is saved for safety review. The other member is not notified.',icon:'flag-outline',tone:'gold'})}} onBlock={async()=>{setDetailSafetyOpen(false);if(await blockMatch(selected)){setScreen('home');setAppNotice({title:'Blocked privately',body:`${selected.name} is hidden from your matches, likes and chats. They will not be notified.`,icon:'ban-outline',tone:'ruby'})}}} onUnmatch={async()=>{setDetailSafetyOpen(false);if(await unmatchMatch(selected)){setScreen('home');setAppNotice({title:'Unmatched',body:`${selected.name} has been removed from your introductions and conversation flow.`,icon:'person-remove-outline',tone:'rose'})}}}/>
     <AppNoticeSheet notice={appNotice} onClose={()=>setAppNotice(null)} onAction={(screen)=>{setAppNotice(null);setScreen(screen)}}/>
+    <ReferralWelcomeOffer visible={referralOfferOpen} referralCode={referralCode} onClose={()=>setReferralOfferOpen(false)} onViewPlans={()=>{setReferralOfferOpen(false);setScreen('pricing')}}/>
   </View></SafeAreaProvider>
 }
 
@@ -2100,7 +2104,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     appEnvironment,
     requiresRealBackend,
     supabaseConfigured:isSupabaseConfigured,
-    migrationCount:29,
+    migrationCount:30,
     edgeFunctionCount:5,
     dataModuleCount:dataSnapshot.totalModules,
     backendReadyModuleCount:dataSnapshot.backendReadyModules,
@@ -4364,6 +4368,40 @@ function SupportInfoSheet({info,onClose,onEmail}:{info:SupportInfo|null;onClose:
   return <Modal visible transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,{maxHeight:'82%'}]}><SheetHeader title={info.title} subtitle={info.body} onClose={onClose}/><View style={supportStyles.infoHero}><PremiumIcon name={info.icon} tone={info.tone??'gold'} size={54} iconSize={25}/><View style={{flex:1}}><Text style={styles.cardTitle}>{info.title}</Text><Text style={styles.helper}>{info.body}</Text></View></View>{info.bullets?.length?<View style={supportStyles.infoList}>{info.bullets.map(item=><View key={item} style={supportStyles.infoRow}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={26} iconSize={12}/><Text style={supportStyles.infoText}>{item}</Text></View>)}</View>:null}{info.cta==='email'?<Button label="Email support" icon="mail" variant="gold" onPress={onEmail}/>:<Button label="Got it" onPress={onClose}/>}</SafeAreaView></Modal>
 }
 
+function ReferralWelcomeOffer({visible,referralCode,onClose,onViewPlans}:{visible:boolean;referralCode:string;onClose:()=>void;onViewPlans:()=>void}){
+  const [shareStatus,setShareStatus]=useState('');
+  useEffect(()=>{if(visible)setShareStatus('')},[visible]);
+  const origin=Platform.OS==='web'&&typeof window!=='undefined'?window.location.origin:'https://destinyone.app';
+  const inviteLink=`${origin}/?ref=${encodeURIComponent(referralCode)}`;
+  const shareInvite=async()=>{
+    const message=`I joined DestinyOne for serious relationships. Complete your verified profile with my private invite and I’ll receive a 7-Day Base Pass: ${inviteLink}`;
+    try{await Share.share({title:'A private DestinyOne invitation',message});setShareStatus('Your private invitation is ready to send. Reward stays pending until your friend completes a verified profile.')}catch{setShareStatus(`Share is unavailable here. Use this link: ${inviteLink}`)}
+  };
+  return <Modal visible={visible} transparent animationType={Platform.OS==='web'?'fade':'slide'} onRequestClose={onClose}>
+    <View style={referralStyles.modalRoot}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,referralStyles.sheet]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={referralStyles.scroll}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close referral offer" onPress={onClose} style={referralStyles.close}><Ionicons name="close" size={20} color={colors.ivory}/></Pressable>
+        <LinearGradient colors={['#49100F','#18070B']} style={referralStyles.hero}>
+          <View style={referralStyles.giftHalo}><PremiumIcon name="gift" tone="gold" size={68} iconSize={31}/></View>
+          <Text style={styles.kicker}>YOUR FIRST DESTINY GIFT</Text>
+          <Text style={referralStyles.title}>Bring one good person.{`\n`}Enjoy one week on us.</Text>
+          <Text style={referralStyles.body}>Share DestinyOne with a friend who is genuinely looking for something real.</Text>
+        </LinearGradient>
+        <View style={referralStyles.rewardCard}><View style={referralStyles.rewardTop}><MiniPremiumIcon name="diamond" tone="ruby" size={42} iconSize={19}/><View style={{flex:1}}><Text style={referralStyles.rewardEyebrow}>7-DAY BASE PASS</Text><Text style={referralStyles.rewardTitle}>Unlocked after verified signup</Text></View><Text style={referralStyles.rewardValue}>$45</Text></View><View style={referralStyles.rewardPills}>{['5 daily introductions','Mutual chat','Serious filters','Profile visitors'].map(item=><View key={item} style={referralStyles.rewardPill}><Text style={referralStyles.rewardPillText}>{item}</Text></View>)}</View></View>
+        <View style={referralStyles.steps}>{[
+          ['1','Share your private link'],['2','Your friend downloads and completes a verified profile'],['3','Your Base Pass activates after referral checks'],
+        ].map(([number,label])=><View key={number} style={referralStyles.step}><View style={referralStyles.stepNumber}><Text style={referralStyles.stepNumberText}>{number}</Text></View><Text style={referralStyles.stepText}>{label}</Text></View>)}</View>
+        <View style={referralStyles.codeRow}><View><Text style={referralStyles.codeLabel}>YOUR PRIVATE CODE</Text><Text style={referralStyles.code}>{referralCode}</Text></View><MiniPremiumIcon name="link" tone="dark" size={34} iconSize={16}/></View>
+        {!!shareStatus&&<Text style={referralStyles.status}>{shareStatus}</Text>}
+        <Button label="Share private invite" icon="share-social" variant="gold" onPress={()=>void shareInvite()}/>
+        <Button label="See membership plans" icon="diamond-outline" variant="secondary" onPress={onViewPlans}/>
+        <Pressable onPress={onClose} style={referralStyles.later}><Text style={referralStyles.laterText}>Maybe later</Text></Pressable>
+        <Text style={styles.legal}>One reward per verified referral. Self-referrals, duplicate identities and abusive invitations are not eligible. Safety and privacy tools remain free for everyone.</Text>
+      </ScrollView>
+    </SafeAreaView></View>
+  </Modal>;
+}
+
 function Pricing({back,onBuyRoses}:{back:()=>void;onBuyRoses:(amount?:number)=>void}){
   const [billing,setBilling]=useState<BillingCycle>('monthly');
   const [restoreStatus,setRestoreStatus]=useState(buildRestorePreview([]));
@@ -4386,6 +4424,7 @@ function Pricing({back,onBuyRoses}:{back:()=>void;onBuyRoses:(amount?:number)=>v
     <View style={pricingStyles.billingToggle}><Pressable onPress={()=>setBilling('monthly')} style={[pricingStyles.billingOption,billing==='monthly'&&pricingStyles.billingOptionOn]}><Text style={[pricingStyles.billingText,billing==='monthly'&&{color:colors.ivory}]}>Monthly</Text></Pressable><Pressable onPress={()=>setBilling('annual')} style={[pricingStyles.billingOption,billing==='annual'&&pricingStyles.billingOptionOn]}><Text style={[pricingStyles.billingText,billing==='annual'&&{color:colors.ivory}]}>Annual</Text><View style={pricingStyles.saveBadge}><Text style={pricingStyles.saveText}>Save</Text></View></Pressable></View>
     <View style={pricingStyles.promiseGrid}><PricingPromise icon="shield-checkmark" title="Verified-first" body="Profiles, reports and blocks stay safety-led."/><PricingPromise icon="card" title="Store billing" body="Restore purchase and cancel through app stores."/><PricingPromise icon="heart" title="No fake scores" body="Matches use labels and explanations only."/></View>
     <View style={pricingStyles.entitlementPanel}><View style={shared.row}><PremiumIcon name="layers-outline" tone="gold" size={44} iconSize={20}/><View style={{flex:1,marginLeft:10}}><Text style={styles.cardTitle}>Entitlement foundation</Text><Text style={styles.helper}>Plans map to matches, filters, Spark wallet and likes access. Production feature gates stay locked until Apple/Google receipts and server entitlements are connected.</Text></View></View></View>
+    <View style={referralStyles.pricingBanner}><PremiumIcon name="gift" tone="gold" size={48} iconSize={22}/><View style={{flex:1}}><Text style={styles.kicker}>DESTINY PASS</Text><Text style={styles.cardTitle}>Invite a verified friend. Get Base free for 7 days.</Text><Text style={styles.helper}>The pass begins only after your friend completes profile verification and referral checks.</Text></View></View>
     <View style={pricingStyles.billingRailCard}><Text style={styles.sectionLabel}>SECURE BILLING BOUNDARIES</Text><View style={pricingStyles.billingRailRow}><MiniPremiumIcon name="phone-portrait-outline" tone="gold" size={32} iconSize={15}/><View style={{flex:1}}><Text style={styles.cardTitle}>Digital access</Text><Text style={styles.helper}>Memberships, Executive access and Spark packs use Apple App Store or Google Play billing.</Text></View></View><View style={pricingStyles.billingRailRow}><MiniPremiumIcon name="restaurant-outline" tone="rose" size={32} iconSize={15}/><View style={{flex:1}}><Text style={styles.cardTitle}>Dates and delivered gifts</Text><Text style={styles.helper}>Real-world bookings use server-owned prices and payment processing only after consent or confirmation.</Text></View></View><View style={pricingStyles.billingRailRow}><MiniPremiumIcon name="shield-checkmark-outline" tone="ruby" size={32} iconSize={15}/><View style={{flex:1}}><Text style={styles.cardTitle}>Unlock rule</Text><Text style={styles.helper}>A signed provider event must be verified on the server before any production entitlement changes.</Text></View></View></View>
     {membershipPlans.map(plan=>{const price=membershipPriceLabel(plan,billing);const period=billingPeriodLabel(billing);const accent=planAccent[plan.name];return <View key={plan.id} style={[pricingStyles.planCard,{borderColor:accent,backgroundColor:plan.recommended?'#19160F':'#20070D'}]}><View style={shared.row}><PremiumIcon name={plan.name==='Base'?'heart':plan.name==='Plus'?'sparkles':'diamond'} tone={plan.recommended?'gold':'ruby'} size={46} iconSize={22}/><View style={{flex:1,marginLeft:11}}><Text style={styles.kicker}>DESTINYONE {plan.name.toUpperCase()}</Text><Text style={pricingStyles.planFor}>{plan.forLabel}</Text></View><View style={[styles.popular,{backgroundColor:accent}]}><Text style={[styles.popularText,plan.recommended&&{color:'#2A1205'}]}>{plan.tag.toUpperCase()}</Text></View></View><View style={pricingStyles.priceRow}><Text style={styles.price}>{price}</Text><Text style={styles.per}>{period}</Text>{billing==='annual'&&<Text style={pricingStyles.annualNote}>{annualSavingsLabel(plan)}</Text>}</View><View style={pricingStyles.entitlementRow}>{membershipEntitlementSummary(plan).map(item=><View key={item} style={pricingStyles.entitlementPill}><Text style={pricingStyles.entitlementText}>{item}</Text></View>)}</View>{plan.features.map(x=><View key={x} style={pricingStyles.featureRow}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={30} iconSize={14}/><Text style={[shared.body,{color:colors.ivory,marginLeft:10,flex:1}]}>{x}</Text></View>)}<Button label={plan.cta} variant={plan.recommended?'gold':'secondary'} icon={Platform.OS==='ios'?'logo-apple':'card-outline'} onPress={()=>setCheckout({name:`DestinyOne ${plan.name}`,price,period,tag:plan.tag,features:plan.features,kind:'membership'})}/><View style={launchStyles.secureRow}><MiniPremiumIcon name="lock-closed" tone="gold" size={24} iconSize={11}/><Text style={launchStyles.secureText}>One tap · Restore anytime · Cancel in store settings</Text></View></View>})}
     <View style={pricingStyles.executiveCard}><LinearGradient colors={['rgba(245,212,106,.20)','rgba(229,9,47,.08)']} style={StyleSheet.absoluteFill}/><View style={shared.row}><PremiumIcon name="briefcase" tone="gold" size={54} iconSize={25}/><View style={{flex:1,marginLeft:12}}><Text style={styles.kicker}>{executivePlan.tag.toUpperCase()}</Text><Text style={pricingStyles.executiveTitle}>{executivePlan.name}</Text><Text style={pricingStyles.planFor}>{executivePlan.forLabel}</Text></View></View><View style={pricingStyles.priceRow}><Text style={styles.price}>{formatMoney(executivePlan.priceCents)}</Text><Text style={styles.per}>{executivePlan.period}</Text></View>{executivePlan.features.map(x=><View key={x} style={pricingStyles.featureRow}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={30} iconSize={14}/><Text style={[shared.body,{color:colors.ivory,marginLeft:10,flex:1}]}>{x}</Text></View>)}<Button label={executivePlan.cta} variant="gold" icon="briefcase" onPress={()=>setCheckout({name:executivePlan.name,price:formatMoney(executivePlan.priceCents),period:executivePlan.period,tag:executivePlan.tag,features:executivePlan.features,executive:true,kind:'executive_application'})}/><Text style={styles.helper}>Application approval is required before annual billing. Sensitive verification is private.</Text></View>
@@ -5265,6 +5304,37 @@ const rosePopupStyles=StyleSheet.create({
   note:{fontFamily:'Poppins_400Regular',fontSize:14,lineHeight:22,color:'#F7D5DC',textAlign:'center',paddingHorizontal:10},
   pushPreview:{width:'100%',padding:13,borderRadius:18,backgroundColor:'rgba(212,175,55,.09)',borderWidth:1,borderColor:'rgba(212,175,55,.28)',flexDirection:'row',alignItems:'center',gap:9},
   pushPreviewText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.5,lineHeight:15,color:'#E8D7AC'},
+});
+
+const referralStyles=StyleSheet.create({
+  modalRoot:{flex:1,justifyContent:'flex-end'},
+  sheet:{maxHeight:'94%',paddingTop:0},
+  scroll:{gap:14,padding:16,paddingBottom:26},
+  close:{position:'absolute',right:26,top:26,zIndex:4,width:38,height:38,borderRadius:19,backgroundColor:'rgba(7,0,2,.72)',borderWidth:1,borderColor:'rgba(255,255,255,.14)',alignItems:'center',justifyContent:'center'},
+  hero:{minHeight:244,borderRadius:24,padding:24,alignItems:'center',justifyContent:'center',gap:10,borderWidth:1,borderColor:'rgba(212,175,55,.30)',overflow:'hidden'},
+  giftHalo:{width:84,height:84,borderRadius:42,backgroundColor:'rgba(212,175,55,.10)',alignItems:'center',justifyContent:'center'},
+  title:{fontFamily:'Poppins_700Bold',fontSize:27,lineHeight:34,color:colors.ivory,textAlign:'center'},
+  body:{fontFamily:'Poppins_400Regular',fontSize:12.5,lineHeight:19,color:'#D8C2C7',textAlign:'center',maxWidth:340},
+  rewardCard:{gap:12,padding:15,borderRadius:22,backgroundColor:'#23090F',borderWidth:1,borderColor:'rgba(229,9,47,.30)'},
+  rewardTop:{flexDirection:'row',alignItems:'center',gap:10},
+  rewardEyebrow:{fontFamily:'Poppins_700Bold',fontSize:9,letterSpacing:1.2,color:colors.gold},
+  rewardTitle:{fontFamily:'Poppins_700Bold',fontSize:14,color:colors.ivory,marginTop:2},
+  rewardValue:{fontFamily:'Poppins_700Bold',fontSize:22,color:colors.gold},
+  rewardPills:{flexDirection:'row',flexWrap:'wrap',gap:6},
+  rewardPill:{paddingHorizontal:9,paddingVertical:6,borderRadius:13,backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.09)'},
+  rewardPillText:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#EBD7DC'},
+  steps:{gap:8},
+  step:{minHeight:45,flexDirection:'row',alignItems:'center',gap:11,paddingHorizontal:12,borderRadius:16,backgroundColor:'rgba(255,255,255,.035)',borderWidth:1,borderColor:'rgba(255,255,255,.07)'},
+  stepNumber:{width:26,height:26,borderRadius:13,backgroundColor:'#85162B',alignItems:'center',justifyContent:'center'},
+  stepNumberText:{fontFamily:'Poppins_700Bold',fontSize:10,color:colors.ivory},
+  stepText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.5,lineHeight:15,color:'#E4D1D5'},
+  codeRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',padding:13,borderRadius:18,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.24)'},
+  codeLabel:{fontFamily:'Poppins_700Bold',fontSize:7.8,letterSpacing:1.1,color:'#C8AD63'},
+  code:{fontFamily:'Poppins_700Bold',fontSize:17,color:colors.ivory,marginTop:2},
+  status:{fontFamily:'Poppins_600SemiBold',fontSize:10,lineHeight:15,color:'#E8D28E',textAlign:'center'},
+  later:{alignSelf:'center',padding:8},
+  laterText:{fontFamily:'Poppins_600SemiBold',fontSize:11,color:colors.muted},
+  pricingBanner:{flexDirection:'row',alignItems:'center',gap:12,padding:15,borderRadius:22,backgroundColor:'rgba(212,175,55,.075)',borderWidth:1,borderColor:'rgba(212,175,55,.28)'},
 });
 
 const pricingStyles=StyleSheet.create({

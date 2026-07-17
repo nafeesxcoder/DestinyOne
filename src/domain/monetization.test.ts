@@ -19,16 +19,16 @@ describe('monetization catalog', () => {
   it('formats membership prices and annual savings consistently', () => {
     const plus = membershipPlans.find((plan) => plan.id === 'plus');
     expect(plus).toBeTruthy();
-    expect(membershipPriceLabel(plus!, 'monthly')).toBe('$69');
-    expect(membershipPriceLabel(plus!, 'annual')).toBe('$690');
+    expect(membershipPriceLabel(plus!, 'monthly')).toBe('$75');
+    expect(membershipPriceLabel(plus!, 'annual')).toBe('$750');
     expect(billingPeriodLabel('annual')).toBe('/ year');
-    expect(annualSavingsCents(plus!)).toBe(13800);
-    expect(annualSavingsLabel(plus!)).toBe('Save $138');
+    expect(annualSavingsCents(plus!)).toBe(15000);
+    expect(annualSavingsLabel(plus!)).toBe('Save $150');
   });
 
   it('keeps entitlements clear and not swipe-gamified', () => {
     const elite = membershipPlans.find((plan) => plan.id === 'elite')!;
-    expect(membershipEntitlementSummary(elite)).toContain('12 curated matches/day');
+    expect(membershipEntitlementSummary(elite)).toContain('15 curated matches/day');
     expect(membershipEntitlementSummary(elite)).toContain('5 bonus Sparks/week');
   });
 
