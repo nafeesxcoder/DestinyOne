@@ -17,3 +17,12 @@ export const colors = {
 };
 
 export const radius = { sm: 12, md: 18, lg: 28, pill: 999 };
+
+export const typeScale = {
+  display: 29,
+  title: 22,
+  section: 18,
+  body: 14,
+  label: 12,
+  caption: 10.5,
+};

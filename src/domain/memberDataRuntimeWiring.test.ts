@@ -42,7 +42,7 @@ describe('member data runtime wiring', () => {
     expect(app).toContain("const requirePreview=(action:()=>void)=>");
     expect(app).toContain("No verification, consent, or trusted-device result was changed.");
     expect(app).toContain("if(preview)setVerified(true)");
-    expect(app).toContain("No badge is shown until the provider and server approve it.");
+    expect(app).toContain("Your badge appears after approval.");
     expect(app).toContain("No identity document was selected or stored.");
     expect(app).toContain("Secure data export is unavailable until identity verification and the live export endpoint are connected.");
     expect(app).toContain("if(memberDataRuntime.source==='server'){");
