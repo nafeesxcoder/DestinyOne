@@ -5,6 +5,7 @@ import type { Database, Json, MessageRow } from '../types/database';
 import { parseMemberBootstrap, type MemberBootstrap } from '../domain/memberBootstrap';
 import { parseServerDailyMatch, type ServerDailyMatchRow } from '../domain/serverMatching';
 import type { MatchFilters, ProfileDraft } from '../storage';
+import { isValidEmail, isValidPassword, normalizeAuthPhone } from '../domain/validation';
 
 export const backendMode = backendRuntime.mode === 'blocked' ? 'missing' : backendRuntime.mode;
 export const allowsPreviewOtpFallback = backendRuntime.allowsDemoOtp;
@@ -28,26 +29,50 @@ function ensureBackendConfigured() {
   if (backendReadinessError) throw new Error(backendReadinessError);
 }
 
-type ProfileMediaKind = 'photo' | 'voice' | 'verification';
+export type ProfileMediaKind = 'photo' | 'voice' | 'verification';
 type ChatMediaKind = 'image' | 'gif' | 'snap' | 'sticker' | 'voice';
 
-function contentTypeForMedia(kind: ProfileMediaKind, blobType?: string) {
-  if (blobType) return blobType;
-  if (kind === 'voice') return 'audio/m4a';
+const profileMediaLimitBytes = 10 * 1024 * 1024;
+const imageMediaTypes: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+};
+const voiceMediaTypes: Record<string, string> = {
+  'audio/mp4': 'm4a',
+  'audio/m4a': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+  'audio/aac': 'aac',
+};
+
+function inferredProfileMediaType(kind: ProfileMediaKind, uri: string) {
+  const extension = uri.split('?')[0]?.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase();
+  if (kind === 'voice') {
+    if (extension === 'mp3') return 'audio/mpeg';
+    if (extension === 'wav') return 'audio/wav';
+    if (extension === 'aac') return 'audio/aac';
+    return 'audio/mp4';
+  }
+  if (extension === 'png') return 'image/png';
+  if (extension === 'webp') return 'image/webp';
+  if (extension === 'heic') return 'image/heic';
+  if (extension === 'heif') return 'image/heif';
   return 'image/jpeg';
 }
 
-function extensionForMedia(kind: ProfileMediaKind, uri: string, blobType?: string) {
-  if (blobType?.includes('png')) return 'png';
-  if (blobType?.includes('webp')) return 'webp';
-  if (blobType?.includes('gif')) return 'gif';
-  if (blobType?.includes('mpeg')) return 'mp3';
-  if (blobType?.includes('wav')) return 'wav';
-  if (blobType?.includes('mp4')) return kind === 'voice' ? 'm4a' : 'mp4';
-  const cleanUri = uri.split('?')[0] ?? uri;
-  const match = cleanUri.match(/\.([a-z0-9]{2,5})$/i);
-  if (match?.[1]) return match[1].toLowerCase();
-  return kind === 'voice' ? 'm4a' : 'jpg';
+export function validateProfileMediaUpload(kind: ProfileMediaKind, file: { size: number; type?: string }, uri: string) {
+  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected media file is empty.');
+  if (file.size > profileMediaLimitBytes) throw new Error('Profile media must be 10 MB or smaller.');
+  const contentType = (file.type?.split(';')[0]?.trim().toLowerCase() || inferredProfileMediaType(kind, uri));
+  const allowedTypes = kind === 'voice' ? voiceMediaTypes : imageMediaTypes;
+  const extension = allowedTypes[contentType];
+  if (!extension) throw new Error(kind === 'voice' ? 'Choose an M4A, MP3, WAV, or AAC recording.' : 'Choose a JPEG, PNG, WebP, HEIC, or HEIF image.');
+  return { contentType, extension };
 }
 
 function extensionForChatMedia(kind: ChatMediaKind, uri: string, blobType?: string) {
@@ -84,7 +109,9 @@ export async function beginAuthentication(request: AuthRequest) {
   ensureBackendConfigured();
   if (!isSupabaseConfigured) return { demo: true } as const;
   if (request.mode === 'phone') {
-    const { error } = await supabase.auth.signInWithOtp({ phone: request.phone });
+    const phone = normalizeAuthPhone(request.phone);
+    if (!phone) throw new Error('Enter a valid phone number with country code.');
+    const { error } = await supabase.auth.signInWithOtp({ phone });
     if (error) {
       // Development preview should stay easy to enter while Supabase SMS/Twilio
       // is still being configured. Production must use real Supabase OTP only.
@@ -99,8 +126,11 @@ export async function beginAuthentication(request: AuthRequest) {
   // Use email OTP for the real app flow so email users must verify before the
   // profile opens. After verification, verifyAuthentication can attach the
   // chosen password to the newly authenticated Supabase user.
+  const email = request.email.trim().toLowerCase();
+  if (!isValidEmail(email)) throw new Error('Enter a valid email address.');
+  if (!isValidPassword(request.password)) throw new Error('Use at least 10 characters with uppercase, lowercase, and a number.');
   const { error } = await supabase.auth.signInWithOtp({
-    email: request.email,
+    email,
     options: {
       shouldCreateUser: true,
       emailRedirectTo: getEmailRedirectTo(),
@@ -129,8 +159,12 @@ export async function verifyAuthentication(destination: string, token: string, p
   }
 
   if (isEmailDestination) {
+    const email = destination.trim().toLowerCase();
+    const strongPassword = password ?? '';
+    if (!isValidEmail(email)) throw new Error('Enter a valid email address.');
+    if (!isValidPassword(strongPassword)) throw new Error('Use at least 10 characters with uppercase, lowercase, and a number.');
     const { error } = await supabase.auth.verifyOtp({
-      email: destination.trim(),
+      email,
       token,
       type: 'email',
     });
@@ -138,13 +172,13 @@ export async function verifyAuthentication(destination: string, token: string, p
 
     // Optional password is collected in onboarding and set only after the email
     // OTP succeeds. Backend can later enforce password policy/server checks.
-    if (password && password.length >= 8) {
-      const { error: passwordError } = await supabase.auth.updateUser({ password });
-      if (passwordError) throw passwordError;
-    }
+    const { error: passwordError } = await supabase.auth.updateUser({ password: strongPassword });
+    if (passwordError) throw passwordError;
     return true;
   }
-  const { error } = await supabase.auth.verifyOtp({ phone: destination, token, type: 'sms' });
+  const phone = normalizeAuthPhone(destination);
+  if (!phone) throw new Error('Enter a valid phone number with country code.');
+  const { error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
   if (error) throw error;
   return true;
 }
@@ -171,14 +205,13 @@ export async function uploadCurrentUserProfileMedia(kind: ProfileMediaKind, uri:
   if (/^profile-media\//.test(uri)) return uri.replace(/^profile-media\//, '');
   const userId = await requireCurrentUserId();
   const blob = await uriToBlob(uri);
-  const contentType = contentTypeForMedia(kind, blob.type);
-  const extension = extensionForMedia(kind, uri, contentType);
+  const { contentType, extension } = validateProfileMediaUpload(kind, blob, uri);
   const safePosition = Math.max(0, Math.min(99, position));
   const mediaPath = `${userId}/${kind}/${Date.now()}-${safePosition}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
   const { data, error } = await supabase.storage.from('profile-media').upload(mediaPath, blob, {
     cacheControl: '3600',
     contentType,
-    upsert: true,
+    upsert: false,
   });
   if (error) throw error;
   return data.path;

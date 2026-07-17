@@ -39,7 +39,7 @@ baseline; no production backend deployment is claimed by this document.
 Migration `020_complete_deployment_contract.sql` upgrades the stable metadata RPC
 that is executable only by `service_role`. `pnpm supabase:verify` uses that RPC
 to compare the complete hosted app/Edge-Function table, RPC and RLS inventory
-with the versioned v20 contract,
+with the versioned v21 contract,
 then uses the anonymous OpenAPI surface and read-only `GET ... limit=0` probes
 to detect unintended anonymous exposure.
 
@@ -64,3 +64,7 @@ JSON evidence artifact containing contract, schema, auth and exposure results;
 credentials and tokens are never included. That artifact is required evidence
 for the hosted-backend pilot gate, but it does not prove physical-device OTP or
 end-to-end member journeys.
+
+The hosted Auth settings probe currently confirms email, phone, Google, and
+Twilio Verify. The deployment verifier fails closed if email, phone, or an SMS
+provider is later removed.

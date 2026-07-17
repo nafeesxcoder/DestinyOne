@@ -21,7 +21,7 @@ This P1 gate separates “the backend structure is ready” from “production b
 
 The app has a strong Supabase-shaped backend foundation:
 
-- fourteen migrations for server-owned profile/chat writes, reciprocal matching, preferences, matches,
+- twenty-one ordered migrations for server-owned profile/chat writes, reciprocal matching, preferences, matches,
   audited reports/blocks/unmatch/live-location, safety check-ins, support tickets,
   gifts, date proposals, relationship learning, notifications, and private-media hardening
 - typed client integration

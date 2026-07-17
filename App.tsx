@@ -675,7 +675,7 @@ function Auth({onNext,onBack}:{onNext:(destination:string,skipOtp?:boolean,passw
         <Text style={styles.helper}>{backendMode==='demo'||allowsPreviewOtpFallback?'Preview mode: real Supabase is connected, and demo OTP 123456 also works.':'We’ll send a one-time verification code.'}</Text>
       </>:<>
         <Field label="Email address" placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} error={submitted&&!emailValid?'Enter a valid email address.':''}/>
-        <Field label="Password" placeholder="At least 8 characters" secureTextEntry value={password} onChangeText={setPassword} error={submitted&&!passwordValid?'Use at least 8 characters.':''}/>
+        <Field label="Password" placeholder="10+ characters" secureTextEntry value={password} onChangeText={setPassword} error={submitted&&!passwordValid?'Use 10+ characters with uppercase, lowercase, and a number.':''}/>
         <Text style={styles.helper}>We’ll email a real 6-digit verification code before your profile opens. Demo OTP is disabled for email.</Text>
       </>}
     </View>
@@ -2051,7 +2051,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     appEnvironment,
     requiresRealBackend,
     supabaseConfigured:isSupabaseConfigured,
-    migrationCount:20,
+    migrationCount:21,
     edgeFunctionCount:5,
     dataModuleCount:dataSnapshot.totalModules,
     backendReadyModuleCount:dataSnapshot.backendReadyModules,

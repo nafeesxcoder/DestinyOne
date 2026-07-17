@@ -37,6 +37,7 @@ describe('hosted backend deployment gate', () => {
     expect(verifier).toContain('anonymousTableExposures.length > 0');
     expect(verifier).toContain('anonymousRpcExposures.length > 0');
     expect(verifier).toContain('unhealthyTableEndpoints.length > 0');
+    expect(verifier).toContain('missingAuthProviders.length > 0');
   });
 
   it('uses the same complete versioned inventory for source and hosted verification', () => {
@@ -44,8 +45,8 @@ describe('hosted backend deployment gate', () => {
     expect(verifier).toContain("import { deploymentContract } from './supabase-deployment-contract.mjs'");
     expect(preflight).toContain('for (const table of deploymentContract.tables)');
     expect(preflight).toContain('for (const rpc of deploymentContract.rpcs)');
-    expect(contract).toContain("id: 'destinyone-backend-v20'");
-    expect(contract).toContain('schemaVersion: 20');
+    expect(contract).toContain("id: 'destinyone-backend-v21'");
+    expect(contract).toContain('schemaVersion: 21');
   });
 
   it('deploys every privileged Edge Function before hosted verification', () => {

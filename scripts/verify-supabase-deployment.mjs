@@ -82,6 +82,11 @@ const anonymousTableExposures = anonymousTableChecks.filter((item) => item.expos
 const unhealthyTableEndpoints = anonymousTableChecks.filter((item) => item.status >= 500).map((item) => item.name);
 
 const auth = authResult.body;
+const missingAuthProviders = [
+  auth?.external?.email === true ? null : 'email',
+  auth?.external?.phone === true ? null : 'phone',
+  typeof auth?.sms_provider === 'string' && auth.sms_provider.trim() ? null : 'sms_provider',
+].filter(Boolean);
 const summary = {
   verifiedAt: new Date().toISOString(),
   target: process.env.DESTINYONE_DEPLOYMENT_TARGET ?? 'unspecified',
@@ -99,6 +104,7 @@ const summary = {
     google: auth?.external?.google === true,
     smsProvider: auth?.sms_provider ?? null,
   },
+  missingAuthProviders,
   manifestReachable: manifestResult.response.ok,
   openApiReachable: openApiResult.response.ok,
   expectedTables: deploymentContract.tables.length,
@@ -117,6 +123,7 @@ const failed =
   !authResult.response.ok ||
   !manifestResult.response.ok ||
   !openApiResult.response.ok ||
+  missingAuthProviders.length > 0 ||
   manifest.contract_id !== deploymentContract.id ||
   manifest.schema_version !== deploymentContract.schemaVersion ||
   missingTables.length > 0 ||

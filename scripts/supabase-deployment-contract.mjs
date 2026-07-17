@@ -1,6 +1,6 @@
 export const deploymentContract = {
-  id: 'destinyone-backend-v20',
-  schemaVersion: 20,
+  id: 'destinyone-backend-v21',
+  schemaVersion: 21,
   tables: [
     'profiles',
     'user_preferences',

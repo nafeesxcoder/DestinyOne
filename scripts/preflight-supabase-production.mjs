@@ -17,7 +17,7 @@ const migrationFiles = readdirSync(migrationDir)
   .sort();
 const versions = migrationFiles.map((name) => Number(name.match(/^(\d{3})_[a-z0-9_]+\.sql$/)?.[1] ?? -1));
 
-requireCondition(migrationFiles.length >= 20, 'Expected at least 20 ordered migrations.');
+requireCondition(migrationFiles.length >= 21, 'Expected at least 21 ordered migrations.');
 requireCondition(versions.every((version) => version > 0), 'Migration names must use NNN_snake_case.sql.');
 requireCondition(versions.every((version, index) => version === index + 1), 'Migration versions must be contiguous from 001.');
 
@@ -107,12 +107,31 @@ for (const functionName of edgeFunctions) {
 const databaseTest = readFileSync(testFile, 'utf8');
 const assertionPattern = /\bselect\s+(?:ok|is|isnt|like|unlike|throws_ok|lives_ok|has_[a-z_]+|hasnt_[a-z_]+|col_[a-z_]+|function_[a-z_]+|table_[a-z_]+|results_eq|set_eq|bag_eq|is_empty|isnt_empty)\s*\(/gi;
 const assertionCount = databaseTest.match(assertionPattern)?.length ?? 0;
-requireCondition(assertionCount >= 139, `Expected at least 139 pgTAP assertions, found ${assertionCount}.`);
+requireCondition(assertionCount >= 147, `Expected at least 147 pgTAP assertions, found ${assertionCount}.`);
 
 const publicFiles = ['.env.example', 'src/config/supabase.ts', 'src/lib/supabase.ts'];
 for (const file of publicFiles) {
   const source = readFileSync(file, 'utf8');
   requireCondition(!/EXPO_PUBLIC_(?:SUPABASE_)?SERVICE_ROLE/i.test(source), `${file} exposes a service-role variable to the client.`);
+}
+
+const authConfig = readFileSync('supabase/config.toml', 'utf8');
+const requiredAuthContracts = [
+  'enable_anonymous_sign_ins = false',
+  'enable_manual_linking = false',
+  'minimum_password_length = 10',
+  'password_requirements = "lower_upper_letters_digits"',
+  'secure_password_change = true',
+  'max_frequency = "30s"',
+  'otp_length = 6',
+  'otp_expiry = 600',
+  'sms_sent = 6',
+  'sign_in_sign_ups = 10',
+  'token_verifications = 20',
+  '"destinyone://auth/callback"',
+];
+for (const contract of requiredAuthContracts) {
+  requireCondition(authConfig.includes(contract), `Missing production Auth config contract: ${contract}`);
 }
 
 if (remote) {

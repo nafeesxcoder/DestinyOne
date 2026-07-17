@@ -65,6 +65,13 @@ Last verified locally: 2026-07-16
 - member-owned storage path and profile-photo count validation
 - removal of direct profile, preference, photo, and deletion workflow writes
 - owner-private exact birth date through server-owned bootstrap
+
+`021_auth_profile_media_hardening.sql` adds:
+
+- private 10 MB profile-media and 15 MB chat-media bucket limits
+- explicit image/audio MIME allowlists at the storage boundary
+- member-owned `photo`, `voice`, and `verification` upload folders
+- a v21 hosted deployment manifest tied to this identity/media boundary
 - server-owned account deletion request mutation
 
 ## Migration 013
@@ -124,19 +131,14 @@ Verify each row in staging using real authenticated sessions:
 ## Evidence and limits
 
 - Runtime, bootstrap parser, and SQL security contracts have automated tests.
-- Supabase CLI 2.109.1 is pinned, local config is initialized, and a 75-assertion
+- Supabase CLI 2.109.1 is pinned, local config is initialized, and a 147-assertion
   transactional pgTAP RLS suite is present.
 - A read-only hosted-project probe confirmed email, Google, and phone Auth are
   enabled and `twilio_verify` is configured.
-- The expanded verifier currently finds 2 of 25 expected schema objects: only
-  legacy `profiles` and `messages` are present; both correctly reject anonymous
-  reads.
-- The same probe found `get_current_member_bootstrap`, `daily_matches`, and the
-  migrations 003-013 tables and newer RPCs absent from the hosted PostgREST schema cache. The
-  configured project is therefore not a valid migration target without a
-  deliberate baseline/migration decision.
+- Hosted schema v21 still requires the protected deployment workflow, reviewed
+  legacy baseline, service-role verification, and stored evidence artifact.
 - TypeScript and the complete local test suite pass.
-- Migrations 010-014 are source-ready but have not been applied to a linked Supabase
+- Migrations 001-021 are source-ready but have not been applied to a linked Supabase
   project in this workspace.
 - The pgTAP suite cannot run on this machine until Docker, OrbStack, Podman, or
   another Docker-compatible runtime is installed.

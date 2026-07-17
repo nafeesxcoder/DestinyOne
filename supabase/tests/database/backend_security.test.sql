@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(139);
+select plan(147);
 
 select has_function('public','get_backend_deployment_manifest',array[]::text[],'read-only deployment manifest exists');
 select function_privs_are('public','get_backend_deployment_manifest',array[]::text[],'service_role',array['EXECUTE'],'deployment manifest is service-role only');
@@ -148,6 +148,23 @@ select ok(
 select ok(
   not has_column_privilege('authenticated', 'public.profiles', 'birth_date', 'SELECT'),
   'exact birth date is not a public profile column'
+);
+select is((select public from storage.buckets where id='profile-media'),false,'profile media bucket is private');
+select is((select file_size_limit from storage.buckets where id='profile-media'),10485760::bigint,'profile media has a 10 MB server limit');
+select ok((select 'image/jpeg'=any(allowed_mime_types) from storage.buckets where id='profile-media'),'profile media allows reviewed image MIME types');
+select ok((select 'audio/mp4'=any(allowed_mime_types) from storage.buckets where id='profile-media'),'profile media allows bounded voice MIME types');
+select is((select public from storage.buckets where id='chat-media'),false,'chat media bucket is private');
+select is((select file_size_limit from storage.buckets where id='chat-media'),15728640::bigint,'chat media has a 15 MB server limit');
+select ok((select 'image/gif'=any(allowed_mime_types) from storage.buckets where id='chat-media'),'chat media allowlist supports GIF messages');
+select ok(
+  exists(
+    select 1 from pg_policies
+    where schemaname='storage' and tablename='objects'
+      and policyname='members upload own profile media'
+      and with_check like '%storage.foldername(name)%'
+      and with_check like '%metadata%'
+  ),
+  'profile media upload policy validates member folder, kind, and MIME metadata'
 );
 
 select ok(
