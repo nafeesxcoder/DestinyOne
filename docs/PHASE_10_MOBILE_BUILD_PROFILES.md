@@ -28,3 +28,45 @@ Before the first pilot build, create `EXPO_PUBLIC_SUPABASE_URL` and
 build, create their production equivalents in the EAS `production`
 environment. These are public client values; service-role, database, provider
 and signing secrets must never use an `EXPO_PUBLIC_` prefix.
+
+## Signed Toronto pilot build
+
+`.github/workflows/mobile-pilot-build.yml` is the controlled build entry point.
+It is manual, requires the exact `BUILD_TORONTO_PILOT` confirmation, a change or
+QA ticket, and confirmation that Expo/platform signing credentials are already
+configured. The workflow runs the environment guard and full release check
+before requesting a non-blocking EAS build from the reviewed commit. iOS,
+Android or both platforms can be selected. The workflow stores only the EAS
+build request metadata as a short-lived artifact.
+
+Create the protected GitHub environment `toronto-pilot-mobile` with approval
+rules and these pilot-only secrets:
+
+- `PILOT_EXPO_TOKEN`
+- `PILOT_EXPO_PUBLIC_SUPABASE_URL`
+- `PILOT_EXPO_PUBLIC_SUPABASE_ANON_KEY`
+
+Apple distribution, provisioning devices and Android keystore credentials stay
+in the Expo credential service and must be configured before selecting the
+workflow's credentials confirmation. Never place signing files in the repo.
+
+## Physical-device evidence gate
+
+A successful cloud build is not a passed device journey. Run the canonical ten
+steps in `scripts/mobile-pilot-evidence-contract.mjs` on a physical iPhone and a
+physical Android device using the same reviewed commit. Start from
+`docs/evidence/mobile-pilot-evidence.example.json`, create separate iOS and
+Android packets outside the repo, and validate them with:
+
+```bash
+pnpm mobile:pilot:evidence path/to/ios.json path/to/android.json \
+  --summary-file=artifacts/mobile-pilot-summary.json
+```
+
+The gate fails unless both packets use the pilot app, real backend, physical
+devices, the same commit, every required journey is passed, and every evidence
+reference is marked redacted. The validator rejects common personal/secret
+metadata fields. Screenshots and videos still require human review before they
+are attached: use synthetic pilot accounts, redact identifiers and message
+content, and keep raw artifacts in access-controlled QA storage. Only the
+sanitized summary should be retained with release evidence.

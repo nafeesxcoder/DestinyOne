@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "pilotCity": "Toronto",
+  "platform": "ios",
+  "appVariant": "pilot",
+  "backendMode": "real",
+  "build": {
+    "id": "replace-with-eas-build-id",
+    "commitSha": "0123456789abcdef0123456789abcdef01234567",
+    "version": "1.0.0"
+  },
+  "device": {
+    "physical": true,
+    "model": "replace-with-device-model",
+    "osVersion": "replace-with-os-version"
+  },
+  "testerId": "qa-001",
+  "executedAt": "2026-07-16T12:00:00.000Z",
+  "results": [
+    {"id": "install_launch", "status": "pending", "notes": "Record cold launch, resume and upgrade result.", "evidence": []},
+    {"id": "real_auth_otp", "status": "pending", "notes": "Use a dedicated test account and redact the address or phone number.", "evidence": []},
+    {"id": "profile_photo_camera", "status": "pending", "notes": "Test allow, deny and Settings recovery without retaining personal photos.", "evidence": []},
+    {"id": "discovery_match", "status": "pending", "notes": "Record reciprocal test profiles and deterministic match outcome.", "evidence": []},
+    {"id": "chat_media_voice", "status": "pending", "notes": "Use synthetic content and verify delivery, retry and restart.", "evidence": []},
+    {"id": "date_plan", "status": "pending", "notes": "Verify proposal, acceptance and safety-plan states.", "evidence": []},
+    {"id": "report_block", "status": "pending", "notes": "Verify blocked access is denied from both accounts.", "evidence": []},
+    {"id": "permission_recovery", "status": "pending", "notes": "Deny camera, microphone, photos and location, then recover safely.", "evidence": []},
+    {"id": "offline_restart", "status": "pending", "notes": "Verify useful errors, retry and durable state after force-close.", "evidence": []},
+    {"id": "privacy_deletion", "status": "pending", "notes": "Verify privacy changes and deletion-request acknowledgement.", "evidence": []}
+  ]
+}
