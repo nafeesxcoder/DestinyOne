@@ -1,7 +1,12 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(135);
+select plan(139);
+
+select has_function('public','get_backend_deployment_manifest',array[]::text[],'read-only deployment manifest exists');
+select function_privs_are('public','get_backend_deployment_manifest',array[]::text[],'service_role',array['EXECUTE'],'deployment manifest is service-role only');
+select ok(not has_function_privilege('anon','public.get_backend_deployment_manifest()','EXECUTE'),'anonymous users cannot inspect the deployment manifest');
+select ok(not has_function_privilege('authenticated','public.get_backend_deployment_manifest()','EXECUTE'),'members cannot inspect the deployment manifest');
 
 select has_table('public','billing_products','server-owned billing catalog exists');
 select has_table('public','billing_purchase_sessions','server-bound store purchase sessions exist');

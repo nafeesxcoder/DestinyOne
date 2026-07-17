@@ -45,6 +45,7 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       SUPABASE_BASELINE_APPROVED: 'true'
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
@@ -70,5 +71,7 @@ jobs:
           pnpm exec supabase functions deploy create-date-reservation-intent --project-ref "$SUPABASE_PROJECT_REF" --use-api
           pnpm exec supabase functions deploy create-gift-order --project-ref "$SUPABASE_PROJECT_REF" --use-api
           pnpm exec supabase functions deploy relationship-reminders --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          pnpm exec supabase functions deploy marketplace-booking-webhook --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          pnpm exec supabase functions deploy store-billing-webhook --project-ref "$SUPABASE_PROJECT_REF" --use-api
       - name: Verify hosted schema and anonymous denial
         run: pnpm supabase:verify

@@ -23,14 +23,28 @@ describe('hosted backend deployment gate', () => {
   it('requires remote credentials without putting service-role secrets in Expo', () => {
     expect(preflight).toContain("'SUPABASE_ACCESS_TOKEN'");
     expect(preflight).toContain("'SUPABASE_DB_PASSWORD'");
+    expect(preflight).toContain("'SUPABASE_SERVICE_ROLE_KEY'");
+    expect(workflow).toContain('SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}');
     expect(preflight).toContain("process.env.SUPABASE_BASELINE_APPROVED === 'true'");
     expect(preflight).toContain('EXPO_PUBLIC_(?:SUPABASE_)?SERVICE_ROLE');
   });
 
   it('fails verification for missing objects, anonymous exposure, or unhealthy endpoints', () => {
-    expect(verifier).toContain('anonymousExposures');
-    expect(verifier).toContain('summary.present !== summary.expected');
-    expect(verifier).toContain('summary.anonymousExposures.length > 0');
-    expect(verifier).toContain('summary.unhealthy.length > 0');
+    expect(verifier).toContain('missingTables.length > 0');
+    expect(verifier).toContain('missingRpcs.length > 0');
+    expect(verifier).toContain('requiredTablesWithoutRls.length > 0');
+    expect(verifier).toContain('anonymousTableExposures.length > 0');
+    expect(verifier).toContain('anonymousRpcExposures.length > 0');
+    expect(verifier).toContain('unhealthyTableEndpoints.length > 0');
+  });
+
+  it('deploys every privileged Edge Function before hosted verification', () => {
+    for (const functionName of [
+      'create-date-reservation-intent',
+      'create-gift-order',
+      'relationship-reminders',
+      'marketplace-booking-webhook',
+      'store-billing-webhook',
+    ]) expect(workflow).toContain(`functions deploy ${functionName}`);
   });
 });

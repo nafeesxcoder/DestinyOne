@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { deploymentContract } from './supabase-deployment-contract.mjs';
 
 if (existsSync('.env.local')) {
   for (const line of readFileSync('.env.local', 'utf8').split(/\r?\n/)) {
@@ -9,231 +10,114 @@ if (existsSync('.env.local')) {
 }
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
-const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!url || !key) {
-  console.error('Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY before verification.');
+const missingEnvironment = [
+  ['EXPO_PUBLIC_SUPABASE_URL', url],
+  ['EXPO_PUBLIC_SUPABASE_ANON_KEY', anonKey],
+  ['SUPABASE_SERVICE_ROLE_KEY', serviceRoleKey],
+].filter(([, value]) => !value).map(([name]) => name);
+
+if (missingEnvironment.length) {
+  console.error(`Missing hosted verification variables: ${missingEnvironment.join(', ')}`);
   process.exit(2);
 }
 
-const objects = [
-  ['table', 'profiles'],
-  ['table', 'messages'],
-  ['table', 'member_notifications'],
-  ['table', 'relationship_reflections'],
-  ['table', 'relationship_learning_signals'],
-  ['table', 'relationship_reminders'],
-  ['table', 'gift_orders'],
-  ['table', 'live_location_shares'],
-  ['table', 'safety_action_events'],
-  ['table', 'profile_match_attributes'],
-  ['table', 'matching_preferences'],
-  ['table', 'daily_match_recommendations'],
-  ['table', 'match_feedback'],
-  ['table', 'matching_model_versions'],
-  ['table', 'matching_model_events'],
-  ['table', 'city_launch_markets'],
-  ['table', 'city_waitlist_entries'],
-  ['table', 'city_referral_invites'],
-  ['table', 'city_ambassador_applications'],
-  ['table', 'city_liquidity_snapshots'],
-  ['table', 'city_cohort_snapshots'],
-  ['table', 'marketplace_partners'],
-  ['table', 'marketplace_venues'],
-  ['table', 'marketplace_offerings'],
-  ['table', 'marketplace_availability_slots'],
-  ['table', 'marketplace_reservation_quotes'],
-  ['table', 'marketplace_reservation_orders'],
-  ['table', 'marketplace_reservation_events'],
-  ['table', 'marketplace_provider_webhook_receipts'],
-  ['table', 'growth_attribution_touches'],
-  ['table', 'growth_events'],
-  ['table', 'growth_experiments'],
-  ['table', 'growth_experiment_assignments'],
-  ['table', 'growth_referral_conversions'],
-  ['table', 'growth_reward_ledger'],
-  ['table', 'growth_daily_cohort_snapshots'],
-  ['table', 'billing_products'],
-  ['table', 'billing_purchase_sessions'],
-  ['table', 'billing_purchase_receipts'],
-  ['table', 'billing_entitlement_ledger'],
-  ['table', 'billing_entitlement_snapshots'],
-  ['table', 'billing_webhook_receipts'],
-  ['table', 'billing_refund_cases'],
-  ['table', 'billing_daily_finance_snapshots'],
-  ['table', 'golden_spark_sends'],
-  ['rpc', 'daily_matches'],
-  ['rpc', 'get_current_member_bootstrap'],
-  ['rpc', 'send_match_message'],
-  ['rpc', 'save_current_member_profile'],
-  ['rpc', 'submit_member_report'],
-  ['rpc', 'unmatch_member'],
-  ['rpc', 'start_live_location_share'],
-  ['rpc', 'save_matching_preferences'],
-  ['rpc', 'record_discovery_signal'],
-  ['rpc', 'submit_match_feedback'],
-  ['rpc', 'clear_matching_learning'],
-  ['rpc', 'submit_match_decision'],
-  ['rpc', 'join_city_waitlist'],
-  ['rpc', 'create_city_referral'],
-  ['rpc', 'apply_city_ambassador'],
-  ['rpc', 'create_marketplace_quote'],
-  ['rpc', 'create_marketplace_reservation_order'],
-  ['rpc', 'respond_marketplace_reservation_order'],
-  ['rpc', 'prepare_marketplace_payment'],
-  ['rpc', 'cancel_marketplace_reservation_order'],
-  ['rpc', 'record_growth_event'],
-  ['rpc', 'record_growth_attribution_touch'],
-  ['rpc', 'redeem_growth_referral'],
-  ['rpc', 'assign_growth_experiment'],
-  ['rpc', 'get_current_entitlements'],
-  ['rpc', 'restore_store_purchases'],
-  ['rpc', 'request_billing_refund'],
-  ['rpc', 'prepare_store_purchase'],
-  ['rpc', 'consume_billing_entitlement'],
-  ['rpc', 'send_golden_spark'],
-];
-
-const rpcBodies = {
-  daily_matches: { result_limit: 1 },
-  send_match_message: {
-    p_match_id: '00000000-0000-4000-8000-000000000000',
-    p_client_message_id: 'deployment-probe',
-    p_kind: 'text',
-    p_body: 'probe',
-  },
-  save_current_member_profile: {
-    p_profile: {},
-    p_preferences: {},
-  },
-  submit_member_report: {
-    p_reported_id: '00000000-0000-4000-8000-000000000000',
-    p_reason: 'Safety concern',
-    p_details: 'deployment probe',
-    p_client_action_id: 'deployment-probe',
-  },
-  unmatch_member: {
-    p_match_id: '00000000-0000-4000-8000-000000000000',
-    p_client_action_id: 'deployment-probe',
-  },
-  start_live_location_share: {
-    p_match_id: '00000000-0000-4000-8000-000000000000',
-    p_client_action_id: 'deployment-probe',
-    p_latitude: 0,
-    p_longitude: 0,
-    p_accuracy_m: 10,
-    p_duration_minutes: 5,
-  },
-  save_matching_preferences: {
-    p_preferences: {},
-    p_attributes: {},
-  },
-  record_discovery_signal: {
-    p_target_id: '00000000-0000-4000-8000-000000000000',
-    p_signal: 'view',
-    p_client_action_id: 'deployment-probe',
-  },
-  submit_match_feedback: {
-    p_match_id: '00000000-0000-4000-8000-000000000000',
-    p_feedback: 'not_aligned',
-    p_use_for_matching: false,
-    p_client_action_id: 'deployment-probe',
-  },
-  submit_match_decision: {
-    recipient_id: '00000000-0000-4000-8000-000000000000',
-    decision: 'pass',
-  },
-  join_city_waitlist: {
-    p_city_key: 'toronto',
-    p_locality: 'Toronto',
-    p_region: 'Ontario',
-    p_country_code: 'CA',
-    p_source: 'member',
-  },
-  create_city_referral: { p_city_key: 'toronto' },
-  apply_city_ambassador: {
-    p_city_key: 'toronto',
-    p_community_reach: 'deployment probe community reach',
-    p_hosting_experience: 'deployment probe hosting experience',
-    p_safety_commitment: true,
-  },
-  request_billing_refund: {
-    p_receipt_id: '00000000-0000-4000-8000-000000000000',
-    p_reason: 'deployment probe request',
-    p_idempotency_key: 'deployment-probe',
-  },
-  prepare_store_purchase: {
-    p_product_key: 'plus_monthly',
-    p_platform: 'apple_iap',
-    p_idempotency_key: 'deployment-probe',
-  },
-  consume_billing_entitlement: {
-    p_entitlement_key: 'spark_wallet',
-    p_units: 1,
-    p_idempotency_key: 'deployment-probe',
-  },
-  send_golden_spark: {
-    p_recipient_id: '00000000-0000-4000-8000-000000000000',
-    p_note: 'deployment probe',
-    p_idempotency_key: 'deployment-probe',
-  },
+const fetchJson = async (endpoint, init) => {
+  const response = await fetch(endpoint, {...init, signal: AbortSignal.timeout(10_000)});
+  const body = await response.json().catch(() => ({}));
+  return {response, body};
 };
 
-async function probe(kind, name) {
-  const endpoint = kind === 'rpc'
-    ? `${url}/rest/v1/rpc/${name}`
-    : `${url}/rest/v1/${name}?select=*&limit=0`;
-  const response = await fetch(endpoint, {
-    method: kind === 'rpc' ? 'POST' : 'GET',
-    headers: {
-      apikey: key,
-      'Content-Type': 'application/json',
-      Prefer: 'tx=rollback,return=minimal',
-    },
-    body: kind === 'rpc' ? JSON.stringify(rpcBodies[name] ?? {}) : undefined,
+const authResult = await fetchJson(`${url}/auth/v1/settings`, {
+  headers: {apikey: anonKey},
+});
+
+// This is the only RPC invoked by the verifier. Migration 019 defines it as a
+// stable, service-role-only metadata read with no member or commerce writes.
+const manifestResult = await fetchJson(`${url}/rest/v1/rpc/get_backend_deployment_manifest`, {
+  method: 'POST',
+  headers: {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    'Content-Type': 'application/json',
+  },
+  body: '{}',
+});
+
+const openApiResult = await fetchJson(`${url}/rest/v1/`, {
+  headers: {
+    apikey: anonKey,
+    Accept: 'application/openapi+json',
+  },
+});
+
+const manifest = manifestResult.body && typeof manifestResult.body === 'object'
+  ? manifestResult.body
+  : {};
+const deployedTables = new Set(Array.isArray(manifest.tables) ? manifest.tables : []);
+const deployedFunctions = new Set(Array.isArray(manifest.functions) ? manifest.functions : []);
+const rlsDisabledTables = new Set(Array.isArray(manifest.rls_disabled_tables) ? manifest.rls_disabled_tables : []);
+const openApiPaths = openApiResult.body && typeof openApiResult.body.paths === 'object'
+  ? openApiResult.body.paths
+  : {};
+
+const missingTables = deploymentContract.tables.filter((name) => !deployedTables.has(name));
+const missingRpcs = deploymentContract.rpcs.filter((name) => !deployedFunctions.has(name));
+const requiredTablesWithoutRls = deploymentContract.tables.filter((name) => rlsDisabledTables.has(name));
+const anonymousRpcExposures = deploymentContract.rpcs.filter((name) => Boolean(openApiPaths[`/rpc/${name}`]));
+
+const anonymousTableChecks = await Promise.all(deploymentContract.tables.map(async (name) => {
+  const response = await fetch(`${url}/rest/v1/${name}?select=*&limit=0`, {
+    headers: {apikey: anonKey},
     signal: AbortSignal.timeout(10_000),
   });
-  const body = await response.json().catch(() => ({}));
-  const missing = response.status === 404 && (body.code === 'PGRST202' || body.code === 'PGRST205');
-  return {
-    kind,
-    name,
-    present: !missing,
-    anonymousAccess: response.ok,
-    healthy: response.status < 500,
-    status: response.status,
-    code: body.code ?? null,
-  };
-}
+  return {name, status: response.status, exposed: response.ok};
+}));
+const anonymousTableExposures = anonymousTableChecks.filter((item) => item.exposed).map((item) => item.name);
+const unhealthyTableEndpoints = anonymousTableChecks.filter((item) => item.status >= 500).map((item) => item.name);
 
-const authResponse = await fetch(`${url}/auth/v1/settings`, {
-  headers: { apikey: key },
-  signal: AbortSignal.timeout(10_000),
-});
-const auth = await authResponse.json().catch(() => ({}));
-const results = [];
-for (const [kind, name] of objects) results.push(await probe(kind, name));
-
+const auth = authResult.body;
 const summary = {
+  contract: {
+    expectedId: deploymentContract.id,
+    deployedId: manifest.contract_id ?? null,
+    expectedSchemaVersion: deploymentContract.schemaVersion,
+    deployedSchemaVersion: manifest.schema_version ?? null,
+  },
   auth: {
-    reachable: authResponse.ok,
+    reachable: authResult.response.ok,
     email: auth?.external?.email === true,
     phone: auth?.external?.phone === true,
     google: auth?.external?.google === true,
     smsProvider: auth?.sms_provider ?? null,
   },
-  schema: results,
-  present: results.filter((item) => item.present).length,
-  expected: results.length,
-  missing: results.filter((item) => !item.present).map((item) => `${item.kind}:${item.name}`),
-  anonymousExposures: results.filter((item) => item.anonymousAccess).map((item) => `${item.kind}:${item.name}`),
-  unhealthy: results.filter((item) => !item.healthy).map((item) => `${item.kind}:${item.name}`),
+  manifestReachable: manifestResult.response.ok,
+  openApiReachable: openApiResult.response.ok,
+  expectedTables: deploymentContract.tables.length,
+  expectedRpcs: deploymentContract.rpcs.length,
+  missingTables,
+  missingRpcs,
+  requiredTablesWithoutRls,
+  anonymousTableExposures,
+  anonymousRpcExposures,
+  unhealthyTableEndpoints,
 };
 
 console.log(JSON.stringify(summary, null, 2));
-if (
-  !authResponse.ok ||
-  summary.present !== summary.expected ||
-  summary.anonymousExposures.length > 0 ||
-  summary.unhealthy.length > 0
-) process.exit(1);
+
+const failed =
+  !authResult.response.ok ||
+  !manifestResult.response.ok ||
+  !openApiResult.response.ok ||
+  manifest.contract_id !== deploymentContract.id ||
+  manifest.schema_version !== deploymentContract.schemaVersion ||
+  missingTables.length > 0 ||
+  missingRpcs.length > 0 ||
+  requiredTablesWithoutRls.length > 0 ||
+  anonymousTableExposures.length > 0 ||
+  anonymousRpcExposures.length > 0 ||
+  unhealthyTableEndpoints.length > 0;
+
+if (failed) process.exit(1);

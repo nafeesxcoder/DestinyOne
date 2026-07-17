@@ -33,3 +33,17 @@ The source model, automated contracts and Admin Audit card are implemented.
 Live evidence remains `0/12`, so the honest state is `Source plan only · 0%`.
 The first operational action is to align and verify the hosted Supabase pilot
 baseline; no production backend deployment is claimed by this document.
+
+## Hosted baseline verification
+
+Migration `019_read_only_deployment_manifest.sql` adds a stable metadata RPC
+that is executable only by `service_role`. `pnpm supabase:verify` uses that RPC
+to compare the hosted table/function/RLS inventory with the versioned contract,
+then uses the anonymous OpenAPI surface and read-only `GET ... limit=0` probes
+to detect unintended anonymous exposure.
+
+The verifier never calls member, safety, marketplace, growth or billing
+mutation RPCs. It fails closed when the URL, anonymous key, service-role key,
+manifest version, RLS state or anonymous privilege evidence is missing or
+unexpected. The service-role key is an operator/CI secret and must never use an
+`EXPO_PUBLIC_` prefix or enter an app build.
