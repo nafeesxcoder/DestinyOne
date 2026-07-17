@@ -1,0 +1,95 @@
+name: Supabase Toronto pilot gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type DEPLOY_TORONTO_PILOT after reviewing the linked project and dry run
+        required: true
+        type: string
+      baseline_reviewed:
+        description: Pilot migration history and existing profiles/messages schema were reviewed
+        required: true
+        default: false
+        type: boolean
+      change_ticket:
+        description: Approved pilot change or review ticket reference
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: destinyone-supabase-toronto-pilot
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm backend:preflight
+      - run: pnpm check
+
+  deploy-pilot:
+    needs: validate
+    if: inputs.confirm == 'DEPLOY_TORONTO_PILOT' && inputs.baseline_reviewed && inputs.change_ticket != ''
+    runs-on: ubuntu-latest
+    environment: toronto-pilot
+    env:
+      DESTINYONE_DEPLOYMENT_TARGET: toronto-pilot
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.PILOT_SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.PILOT_SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.PILOT_SUPABASE_DB_PASSWORD }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PILOT_SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_BASELINE_APPROVED: 'true'
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.PILOT_EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PILOT_EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm backend:preflight --remote
+      - name: Link reviewed Toronto pilot project
+        run: pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Capture linked migration history
+        run: pnpm exec supabase migration list --linked --password "$SUPABASE_DB_PASSWORD"
+      - name: Show pilot migration dry run
+        run: pnpm exec supabase db push --dry-run --include-all --password "$SUPABASE_DB_PASSWORD"
+      - name: Apply reviewed pilot migrations
+        run: pnpm exec supabase db push --include-all --password "$SUPABASE_DB_PASSWORD"
+      - name: Deploy pilot Edge Functions
+        run: |
+          pnpm exec supabase functions deploy create-date-reservation-intent --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          pnpm exec supabase functions deploy create-gift-order --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          pnpm exec supabase functions deploy relationship-reminders --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          pnpm exec supabase functions deploy marketplace-booking-webhook --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          pnpm exec supabase functions deploy store-billing-webhook --project-ref "$SUPABASE_PROJECT_REF" --use-api
+      - name: Lint linked pilot schema
+        run: pnpm exec supabase db lint --linked --schema public --level error --fail-on error
+      - name: Execute pilot RLS and security tests
+        run: pnpm exec supabase test db --linked supabase/tests/database/backend_security.test.sql
+      - name: Verify hosted contract and write sanitized evidence
+        run: pnpm supabase:verify -- --evidence-file=artifacts/supabase-pilot-evidence.json
+      - name: Upload verified pilot evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-toronto-pilot-evidence-${{ github.sha }}
+          path: artifacts/supabase-pilot-evidence.json
+          if-no-files-found: error
+          retention-days: 30
