@@ -41,6 +41,32 @@ production build guards reject missing or malformed linkage IDs. The project
 UUID is an identifier rather than a credential, but it should still be managed
 as configuration instead of being invented or copied from another app.
 
+## Native privacy preflight
+
+The signed-build workflow generates both native projects before calling EAS
+and runs `pnpm mobile:native:verify -- --variant=pilot`. This validates the
+configuration that Android and iOS will actually compile instead of relying
+only on the JavaScript config.
+
+The gate verifies variant package/bundle IDs, deep-link schemes, Apple Pay
+merchant entitlement, camera/microphone/photo descriptions, foreground-only
+approximate location, tablet orientations and disabled Android backups. It
+fails if iOS declares always/background location, Android includes foreground
+service/background audio, or a pilot/production build exposes the generated
+Expo development scheme. Overlay and fine-location permissions are explicitly
+removed from the Android release manifest. `expo-system-ui` is installed so the
+native dark system appearance is applied without prebuild warnings.
+
+For a local generated project, run:
+
+```bash
+APP_VARIANT=pilot EAS_PROJECT_ID=<real-project-uuid> pnpm exec expo prebuild --no-install --platform all
+pnpm mobile:native:verify -- --variant=pilot
+```
+
+Do this only in a clean disposable checkout when `ios/` and `android/` are not
+intended to be committed. CI performs it on an ephemeral runner.
+
 ## Signed Toronto pilot build
 
 `.github/workflows/mobile-pilot-build.yml` is the controlled build entry point.

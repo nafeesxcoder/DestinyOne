@@ -30,11 +30,15 @@ export default ({config}: ConfigContext): ExpoConfig => {
     pilot: 'merchant.com.destinyone.app.pilot',
     production: 'merchant.com.destinyone.app',
   };
-  const plugins = config.plugins?.map((plugin) => {
+  const configuredPlugins = config.plugins?.map((plugin) => {
     if (!Array.isArray(plugin) || plugin[0] !== '@stripe/stripe-react-native') return plugin;
     const options = typeof plugin[1] === 'object' && plugin[1] !== null ? plugin[1] : {};
     return [plugin[0], {...options, merchantIdentifier: merchantIdentifiers[variant]}] as typeof plugin;
   });
+  const plugins = [
+    ...(configuredPlugins ?? []),
+    ['expo-dev-client', {addGeneratedScheme: variant === 'development'}],
+  ] as ExpoConfig['plugins'];
   const eas = easProjectId ? {projectId: easProjectId} : undefined;
 
   return {

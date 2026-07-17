@@ -77,6 +77,10 @@ jobs:
           token: ${{ secrets.PILOT_EXPO_TOKEN }}
       - name: Verify pilot environment again before remote build
         run: pnpm mobile:build:verify
+      - name: Generate and audit native pilot projects
+        run: |
+          pnpm exec expo prebuild --no-install --platform all
+          pnpm mobile:native:verify -- --variant=pilot
       - name: Request signed EAS build from the reviewed commit
         run: |
           mkdir -p artifacts
