@@ -17,7 +17,7 @@ const migrationFiles = readdirSync(migrationDir)
   .sort();
 const versions = migrationFiles.map((name) => Number(name.match(/^(\d{3})_[a-z0-9_]+\.sql$/)?.[1] ?? -1));
 
-requireCondition(migrationFiles.length >= 25, 'Expected at least 25 ordered migrations.');
+requireCondition(migrationFiles.length >= 26, 'Expected at least 26 ordered migrations.');
 requireCondition(versions.every((version) => version > 0), 'Migration names must use NNN_snake_case.sql.');
 requireCondition(versions.every((version, index) => version === index + 1), 'Migration versions must be contiguous from 001.');
 
@@ -60,6 +60,9 @@ const requiredContracts = [
   'create table if not exists public.city_waitlist_entries',
   'create table if not exists public.city_liquidity_snapshots',
   'create table if not exists public.city_cohort_snapshots',
+  'create table if not exists public.city_metric_runs',
+  'create table if not exists public.city_ops_reviewers',
+  'create table if not exists public.city_expansion_decisions',
   'create table if not exists public.marketplace_reservation_orders',
   'create table if not exists public.marketplace_provider_webhook_receipts',
   'create table if not exists public.growth_events',
@@ -86,6 +89,9 @@ const requiredContracts = [
   'create or replace function public.join_city_waitlist',
   'create or replace function public.create_city_referral',
   'create or replace function public.apply_city_ambassador',
+  'create or replace function public.record_city_density_week',
+  'create or replace function public.evaluate_city_expansion',
+  'create or replace function public.apply_city_discovery_decision',
   'create or replace function public.create_marketplace_quote',
   'create or replace function public.prepare_marketplace_payment',
   'create or replace function public.process_marketplace_booking_webhook',

@@ -2096,7 +2096,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     appEnvironment,
     requiresRealBackend,
     supabaseConfigured:isSupabaseConfigured,
-    migrationCount:25,
+    migrationCount:26,
     edgeFunctionCount:5,
     dataModuleCount:dataSnapshot.totalModules,
     backendReadyModuleCount:dataSnapshot.backendReadyModules,
@@ -2360,7 +2360,15 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
   });
   const marketplaceSnapshot=buildMarketplaceSnapshot();
   const networkSnapshot=buildNetworkEffectPlan({matches,selectedCities:[],verified:true,vouchesCount:3});
-  const cityDensitySnapshot=buildCityDensitySnapshot({liveMetricsConnected:false,measurements:[]});
+  const cityDensitySnapshot=buildCityDensitySnapshot({
+    liveMetricsConnected:false,
+    measurements:[],
+    metricIngestionReady:true,
+    privacySuppressionReady:true,
+    discoveryEnforcementReady:true,
+    dualApprovalReady:true,
+    rollbackReady:true,
+  });
   const growthEngineSnapshot=buildGrowthEngineSnapshot({
     liveInstrumentationConnected:false,
     mappedEvents:growthFunnelEvents.length,
@@ -2439,7 +2447,7 @@ function CityDensityReadinessCard({snapshot}:{snapshot:CityDensitySnapshot}){
   return <View style={cityDensityStyles.auditCard}>
     <View style={shared.row}><PremiumIcon name="map" tone="gold" size={48} iconSize={22}/><View style={{flex:1,marginLeft:10}}><Text style={styles.kicker}>CITY DENSITY GATE</Text><Text style={adminOpsStyles.qualityTitle}>{snapshot.status} · {snapshot.score}%</Text><Text style={styles.helper}>Liquidity is measured by reciprocal candidates and healthy outcomes, never waitlist size alone.</Text></View></View>
     <View style={adminOpsStyles.qualityTrack}><View style={[adminOpsStyles.qualityFill,{width:`${snapshot.score}%`}]}/></View>
-    <View style={adminOpsStyles.areaGrid}><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Markets</Text><Text style={adminOpsStyles.areaScore}>{snapshot.markets.length}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Expansion</Text><Text style={adminOpsStyles.areaScore}>{snapshot.readyMarkets}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Live data</Text><Text style={adminOpsStyles.areaScore}>{snapshot.liveMetricsConnected?'Yes':'No'}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Blockers</Text><Text style={adminOpsStyles.areaScore}>{snapshot.blockers.length}</Text></View></View>
+    <View style={adminOpsStyles.areaGrid}><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Source</Text><Text style={adminOpsStyles.areaScore}>{snapshot.sourceControlScore}%</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Controls</Text><Text style={adminOpsStyles.areaScore}>{snapshot.sourceControlReady}/{snapshot.sourceControlTotal}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Expansion</Text><Text style={adminOpsStyles.areaScore}>{snapshot.readyMarkets}</Text></View><View style={adminOpsStyles.areaPill}><Text style={adminOpsStyles.areaLabel}>Live data</Text><Text style={adminOpsStyles.areaScore}>{snapshot.liveMetricsConnected?'Yes':'No'}</Text></View></View>
     <View style={cityDensityStyles.marketGrid}>{snapshot.markets.map(market=><View key={market.city} style={cityDensityStyles.marketCard}><View style={shared.row}><Text style={cityDensityStyles.marketName}>{market.city}</Text><Text style={cityDensityStyles.marketScore}>{market.score}%</Text></View><Text style={cityDensityStyles.marketStatus}>{market.status}</Text><Text style={cityDensityStyles.marketBody}>{market.nextAction}</Text></View>)}</View>
     <View style={adminOpsStyles.nextOpsCard}><MiniPremiumIcon name="arrow-forward-circle" tone="gold" size={30} iconSize={14}/><Text style={adminOpsStyles.nextOpsText}>{snapshot.nextBestStep}</Text></View>
   </View>

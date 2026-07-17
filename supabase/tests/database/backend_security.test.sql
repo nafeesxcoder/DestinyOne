@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(184);
+select plan(199);
 
 select has_function('public','get_backend_deployment_manifest',array[]::text[],'read-only deployment manifest exists');
 select function_privs_are('public','get_backend_deployment_manifest',array[]::text[],'service_role',array['EXECUTE'],'deployment manifest is service-role only');
@@ -119,6 +119,21 @@ select has_table('public','city_referral_invites','auditable referral invites ex
 select has_table('public','city_ambassador_applications','reviewed ambassador applications exist');
 select has_table('public','city_liquidity_snapshots','weekly city liquidity snapshots exist');
 select has_table('public','city_cohort_snapshots','privacy-suppressed cohort snapshots exist');
+select has_table('public','city_metric_runs','city metric provenance runs exist');
+select has_table('public','city_ops_reviewers','city operations reviewers exist');
+select has_table('public','city_expansion_decisions','audited city launch decisions exist');
+select has_function('public','record_city_density_week',array['text','date','jsonb','jsonb','text','text','text','text'],'provenance-backed city metric ingestion exists');
+select has_function('public','evaluate_city_expansion',array['text'],'city expansion evidence gate exists');
+select has_function('public','apply_city_discovery_decision',array['text','text','uuid','uuid','text','text'],'dual-approved city decision RPC exists');
+select function_privs_are('public','record_city_density_week',array['text','date','jsonb','jsonb','text','text','text','text'],'service_role',array['EXECUTE'],'city ingestion is service-only');
+select function_privs_are('public','evaluate_city_expansion',array['text'],'service_role',array['EXECUTE'],'city evaluation is service-only');
+select function_privs_are('public','apply_city_discovery_decision',array['text','text','uuid','uuid','text','text'],'service_role',array['EXECUTE'],'city decisions are service-only');
+select table_privs_are('public','city_metric_runs','authenticated',array[]::text[],'members cannot read metric provenance');
+select table_privs_are('public','city_ops_reviewers','authenticated',array[]::text[],'members cannot read city reviewer identities');
+select table_privs_are('public','city_expansion_decisions','authenticated',array[]::text[],'members cannot read internal expansion evidence');
+select ok(not has_function_privilege('authenticated','public.city_discovery_pair_allowed(uuid,uuid)','EXECUTE'),'members cannot probe city eligibility pairs');
+select ok(not has_function_privilege('authenticated','public.city_key_for_profile_city(text)','EXECUTE'),'members cannot call internal city resolver');
+select has_function('public','matching_candidate_eligible',array['uuid','uuid'],'matching eligibility remains available to server functions');
 select ok(
   not has_table_privilege('authenticated','public.city_liquidity_snapshots','SELECT'),
   'members cannot read operational city liquidity metrics'

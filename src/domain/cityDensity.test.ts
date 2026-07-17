@@ -19,17 +19,19 @@ const healthyToronto: CityLiquidityMeasurement = {
 };
 
 describe('city density operations', () => {
+  const controls = { metricIngestionReady: true, privacySuppressionReady: true, discoveryEnforcementReady: true, dualApprovalReady: true, rollbackReady: true };
   it('never treats source-only modeled data as live density', () => {
-    const snapshot = buildCityDensitySnapshot({ liveMetricsConnected: false, measurements: [healthyToronto] });
+    const snapshot = buildCityDensitySnapshot({ liveMetricsConnected: false, measurements: [healthyToronto], ...controls });
 
     expect(snapshot.status).toBe('Source model only');
     expect(snapshot.score).toBe(0);
     expect(snapshot.readyMarkets).toBe(0);
     expect(snapshot.markets[3]?.status).toBe('Measurement missing');
+    expect(snapshot.sourceControlScore).toBe(100);
   });
 
   it('requires liquidity, outcomes, safety, retention, and eight healthy weeks', () => {
-    const snapshot = buildCityDensitySnapshot({ liveMetricsConnected: true, measurements: [healthyToronto] });
+    const snapshot = buildCityDensitySnapshot({ liveMetricsConnected: true, measurements: [healthyToronto], ...controls });
     const toronto = snapshot.markets.find((market) => market.city === 'Toronto');
 
     expect(toronto?.status).toBe('Ready to expand');
@@ -41,6 +43,7 @@ describe('city density operations', () => {
     const snapshot = buildCityDensitySnapshot({
       liveMetricsConnected: true,
       measurements: [{ ...healthyToronto, safetyIncidentsPer100Dates: 2.4, consecutiveHealthyWeeks: 3 }],
+      ...controls,
     });
     const toronto = snapshot.markets.find((market) => market.city === 'Toronto');
 

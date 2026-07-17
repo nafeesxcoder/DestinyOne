@@ -43,6 +43,9 @@ export type CityDensityMarket = CityLiquidityMeasurement & {
 export type CityDensitySnapshot = {
   liveMetricsConnected: boolean;
   status: 'Source model only' | 'Pilot instrumentation' | 'Expansion ready';
+  sourceControlScore: number;
+  sourceControlReady: number;
+  sourceControlTotal: number;
   score: number;
   markets: CityDensityMarket[];
   readyMarkets: number;
@@ -135,6 +138,11 @@ function marketNextAction(status: CityDensityStatus, measurement: CityLiquidityM
 export function buildCityDensitySnapshot(input: {
   liveMetricsConnected: boolean;
   measurements: readonly CityLiquidityMeasurement[];
+  metricIngestionReady: boolean;
+  privacySuppressionReady: boolean;
+  discoveryEnforcementReady: boolean;
+  dualApprovalReady: boolean;
+  rollbackReady: boolean;
 }): CityDensitySnapshot {
   const markets = launchCityTargets.map((target) => {
     const measurement = input.measurements.find((item) => item.city === target.name) ?? {
@@ -173,10 +181,21 @@ export function buildCityDensitySnapshot(input: {
   const score = input.liveMetricsConnected
     ? clampPercent(markets.reduce((sum, market) => sum + market.score, 0) / markets.length)
     : 0;
+  const sourceControls = [
+    input.metricIngestionReady,
+    input.privacySuppressionReady,
+    input.discoveryEnforcementReady,
+    input.dualApprovalReady,
+    input.rollbackReady,
+  ];
+  const sourceControlReady = sourceControls.filter(Boolean).length;
 
   return {
     liveMetricsConnected: input.liveMetricsConnected,
     status: !input.liveMetricsConnected ? 'Source model only' : readyMarkets === markets.length ? 'Expansion ready' : 'Pilot instrumentation',
+    sourceControlScore: clampPercent((sourceControlReady / sourceControls.length) * 100),
+    sourceControlReady,
+    sourceControlTotal: sourceControls.length,
     score,
     markets,
     readyMarkets,

@@ -1,6 +1,6 @@
 export const deploymentContract = {
-  id: 'destinyone-backend-v25',
-  schemaVersion: 25,
+  id: 'destinyone-backend-v26',
+  schemaVersion: 26,
   tables: [
     'profiles',
     'user_preferences',
@@ -53,6 +53,9 @@ export const deploymentContract = {
     'city_ambassador_applications',
     'city_liquidity_snapshots',
     'city_cohort_snapshots',
+    'city_metric_runs',
+    'city_ops_reviewers',
+    'city_expansion_decisions',
     'marketplace_partners',
     'marketplace_venues',
     'marketplace_offerings',
@@ -116,6 +119,9 @@ export const deploymentContract = {
     'join_city_waitlist',
     'create_city_referral',
     'apply_city_ambassador',
+    'record_city_density_week',
+    'evaluate_city_expansion',
+    'apply_city_discovery_decision',
     'create_marketplace_quote',
     'create_marketplace_reservation_order',
     'respond_marketplace_reservation_order',

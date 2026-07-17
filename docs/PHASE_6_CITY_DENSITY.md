@@ -25,6 +25,16 @@ retention, and safety for eight consecutive weeks.
   gate green.
 - Secure backend adapters for waitlist join, referral creation, and ambassador
   application.
+- A provenance-backed weekly metric ingestion contract with recent-Monday
+  windows, explicit consent-policy version, source-job identity, idempotency,
+  payload allowlisting, and automatic privacy suppression below 20 members.
+- A server-only expansion evaluator that requires fresh measurements and eight
+  exact consecutive healthy weeks instead of a client-supplied streak.
+- Dual-approved city state changes with two distinct active reviewers, required
+  Safety lead approval, sequential promotion, immutable evidence, and rollback.
+- Matching eligibility now enforces the city launch state. Controlled and
+  healthy pilots serve only activated waitlist members in the same metro;
+  waitlist-only markets cannot leak into production discovery.
 
 ## Migration 015
 
@@ -39,6 +49,14 @@ retention, and safety for eight consecutive weeks.
 - one waitlist row per member/market, a 20-referral monthly limit, self-referral
   protection, verification-required ambassador applications, RLS, and explicit
   privilege revocation
+
+## Migration 026
+
+`026_city_density_control_plane.sql` adds private metric runs, city operations
+reviewers and immutable expansion decisions. Service-only RPCs record weekly
+metrics, evaluate expansion evidence and apply or roll back discovery state.
+Small cohorts are zeroed and marked suppressed before storage, and launch-state
+enforcement is composed directly into server matching eligibility.
 
 ## Pilot thresholds
 
@@ -61,8 +79,8 @@ retention, and safety for eight consecutive weeks.
 - The deployment preflight requires migration 015 and all city RPC contracts.
 - The hosted verifier now probes six city tables and three RPCs and fails on
   missing objects or anonymous exposure.
-- The pgTAP matrix contains 86 assertions, including service-only liquidity and
-  cohort metric privileges.
+- The complete pgTAP matrix contains 199 assertions, including service-only
+  metric provenance, reviewer identity, decision evidence and expansion RPCs.
 - TypeScript and the Expo web export must pass before publishing.
 - Local pgTAP execution still requires a Docker-compatible PostgreSQL runtime.
 
@@ -72,6 +90,10 @@ No city has verified live density yet. Hosted migration deployment, consented
 analytics ingestion, real waitlist acquisition, ambassador vetting, event
 operations, and eight weeks of pilot evidence are still required. This source
 phase raises operational readiness, not real-world liquidity.
+
+The defined source control plane is **10/10**. Live city density remains
+**0/10** until hosted ingestion, balanced verified Toronto supply and eight
+consecutive weeks of healthy outcome evidence exist.
 
 ## Toronto controlled-pilot sequence
 

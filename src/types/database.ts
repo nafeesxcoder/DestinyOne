@@ -264,6 +264,19 @@ export type Database = {
         status: 'submitted' | 'interview' | 'approved' | 'declined' | 'paused'; reviewer_id: string | null; reviewer_note: string | null;
         created_at: string; updated_at: string;
       }>;
+      city_metric_runs: Table<{
+        id: string; city_key: string; snapshot_week: string; source_name: string; source_job_id: string;
+        consent_policy_version: string; idempotency_key: string; cohort_count: number; status: 'accepted' | 'rejected'; recorded_at: string;
+      }>;
+      city_ops_reviewers: Table<{
+        id: string; user_id: string; role: 'growth_lead' | 'safety_lead' | 'executive'; status: 'active' | 'inactive'; created_at: string; updated_at: string;
+      }>;
+      city_expansion_decisions: Table<{
+        id: string; city_key: string; from_state: 'waitlist_only' | 'controlled_pilot' | 'healthy_pilot' | 'open';
+        to_state: 'waitlist_only' | 'controlled_pilot' | 'healthy_pilot' | 'open'; evidence_snapshot_week: string | null;
+        primary_reviewer_id: string; secondary_reviewer_id: string; reason: string; decision_status: 'applied' | 'rolled_back';
+        idempotency_key: string; evidence: Json; created_at: string;
+      }>;
     };
     Views: Record<never, never>;
     Functions: {
@@ -369,6 +382,15 @@ export type Database = {
       create_city_referral: { Args: { p_city_key: string }; Returns: Json };
       apply_city_ambassador: {
         Args: { p_city_key: string; p_community_reach: string; p_hosting_experience: string; p_safety_commitment: boolean };
+        Returns: Json;
+      };
+      record_city_density_week: {
+        Args: { p_city_key: string; p_snapshot_week: string; p_metrics: Json; p_cohorts: Json; p_source_name: string; p_source_job_id: string; p_consent_policy_version: string; p_idempotency_key: string };
+        Returns: Json;
+      };
+      evaluate_city_expansion: { Args: { p_city_key: string }; Returns: Json };
+      apply_city_discovery_decision: {
+        Args: { p_city_key: string; p_to_state: 'waitlist_only' | 'controlled_pilot' | 'healthy_pilot' | 'open'; p_primary_reviewer_id: string; p_secondary_reviewer_id: string; p_reason: string; p_idempotency_key: string };
         Returns: Json;
       };
       record_growth_event: {

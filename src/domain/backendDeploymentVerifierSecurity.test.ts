@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const verifier = readFileSync('scripts/verify-supabase-deployment.mjs', 'utf8');
-const migration = readFileSync('supabase/migrations/025_trust_ops_case_management.sql', 'utf8');
+const migration = readFileSync('supabase/migrations/026_city_density_control_plane.sql', 'utf8');
 
 describe('hosted deployment verifier security', () => {
   it('invokes only the read-only deployment manifest RPC', () => {
