@@ -12,7 +12,7 @@
     "test": "vitest run",
     "check": "pnpm typecheck && pnpm test && pnpm store:manifest:verify",
     "export:web": "expo export --platform web --output-dir dist",
-    "build": "expo export --platform web --output-dir dist",
+    "build": "node scripts/build-sites.mjs",
     "build:web": "expo export --platform web --output-dir dist",
     "release:check": "pnpm check && pnpm build:web",
     "supabase:start": "supabase start",
