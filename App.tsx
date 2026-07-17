@@ -897,35 +897,37 @@ function Verify({verified,selfieUri,onSelfie,setVerified,onNext}:{verified:boole
     if(!result.canceled&&result.assets[0])setIdUri(result.assets[0].uri);
   };
   return <FormPage step={2}>
-    <SectionTitle eyebrow="SHOW YOU’RE REAL" title="A little trust goes a long way." body="Add one clear selfie. It stays private and helps keep DestinyOne genuine."/>
-    <View style={[shared.card,{alignItems:'center',gap:14,paddingVertical:24}]}>
-      <View style={styles.selfie}>{selfieUri?<Image source={{uri:selfieUri}} style={mediaStyles.selfieImage}/>:<PremiumIcon name="scan-outline" tone="plum" size={68} iconSize={31}/>} {verified&&<View style={mediaStyles.selfieCheck}><MiniPremiumIcon name="checkmark" tone="gold" size={27} iconSize={13}/></View>}</View>
-      <Text style={styles.cardTitle}>{verified?'You’re verified':selfieUri&&!preview?'Verification pending':'Photo verification'}</Text>
-      <Text style={[shared.body,{textAlign:'center'}]}>{verified?'Your verified badge is ready.':selfieUri&&!preview?'Your selfie is ready for private review. Your badge appears after approval.':'Choose a recent photo where your face is easy to see.'}</Text>
+    <SectionTitle eyebrow="REAL PEOPLE. REAL INTENT." title="One selfie. More trust." body="A quick private check keeps fake profiles out and genuine people in."/>
+    <LinearGradient colors={verified?['rgba(212,175,55,.14)','rgba(55,10,19,.96)']:['rgba(229,9,47,.12)','rgba(31,7,13,.96)']} style={verificationStyles.card}>
+      <View style={verificationStyles.glow}/>
+      <View style={styles.selfie}>{selfieUri?<Image source={{uri:selfieUri}} style={mediaStyles.selfieImage}/>:<PremiumIcon name={verified?'shield-checkmark':'scan-outline'} tone={verified?'gold':'plum'} size={64} iconSize={29}/>} {verified&&<View style={mediaStyles.selfieCheck}><MiniPremiumIcon name="checkmark" tone="gold" size={27} iconSize={13}/></View>}</View>
+      <View style={verificationStyles.statusPill}><Ionicons name={verified?'checkmark-circle':'lock-closed'} size={13} color={verified?colors.gold:colors.pinkSoft}/><Text style={verificationStyles.statusText}>{verified?'TRUST BADGE ACTIVE':'PRIVATE CHECK'}</Text></View>
+      <Text style={verificationStyles.title}>{verified?'Verified looks good on you.':selfieUri&&!preview?'Your selfie is in review.':'Let’s make it official.'}</Text>
+      <Text style={verificationStyles.body}>{verified?'Your trust badge is live. Your selfie stays private.':selfieUri&&!preview?'Your selfie is being reviewed privately. Your badge appears after approval.':'Choose a recent solo photo. It will never appear on your profile.'}</Text>
       <View style={{width:'100%',gap:10}}>
-        <Button variant={verified?'gold':'secondary'} label={verified?'Choose another photo':'Choose from gallery'} onPress={pickVerificationPhoto} icon="images"/>
-        <Button variant="ghost" label="Use camera instead" onPress={captureSelfie} icon="camera-outline"/>
+        <Button variant={verified?'gold':'secondary'} label={verified?'Update my selfie':'Choose a selfie'} onPress={pickVerificationPhoto} icon="images"/>
+        <Button variant="ghost" label="Take one now" onPress={captureSelfie} icon="camera-outline"/>
       </View>
       {!!error&&<Text style={styles.formError}>{error}</Text>}
-    </View>
-    <Pressable onPress={()=>void pickGovernmentId()} style={styles.upload}><MiniPremiumIcon name={idUri?'checkmark-circle':'id-card-outline'} tone={idUri?'gold':'dark'} size={38} iconSize={18}/><View style={{flex:1}}><Text style={shared.label}>{idUri?'Government ID added':preview?'Add a government ID':'Government ID verification'}</Text><Text style={styles.helper}>{idUri?'Added privately':preview?'Optional, for extra trust':'Available in the secure verification flow'}</Text></View><MiniPremiumIcon name={idUri?'images':preview?'chevron-forward':'lock-closed'} tone={idUri?'gold':'dark'} size={30} iconSize={14}/></Pressable>
-    <View style={shared.spacer}/><Button label={selfieUri&&!verified&&!preview?'Continue with review pending':'Continue'} disabled={preview?!verified:!selfieUri} onPress={onNext}/>
+    </LinearGradient>
+    <Pressable onPress={()=>void pickGovernmentId()} style={[styles.upload,verificationStyles.idCard]}><MiniPremiumIcon name={idUri?'checkmark-circle':'id-card-outline'} tone={idUri?'gold':'dark'} size={38} iconSize={18}/><View style={{flex:1}}><Text style={shared.label}>{idUri?'Extra trust added':preview?'Want a stronger trust signal?':'Strengthen your trust badge'}</Text><Text style={styles.helper}>{idUri?'Your ID was added privately':preview?'Add an ID privately. Totally optional.':'Available through secure ID verification'}</Text></View><MiniPremiumIcon name={idUri?'checkmark':'chevron-forward'} tone={idUri?'gold':'dark'} size={30} iconSize={14}/></Pressable>
+    <View style={shared.spacer}/><Button label={selfieUri&&!verified&&!preview?'Continue while we review':'Keep going'} disabled={preview?!verified:!selfieUri} onPress={onNext}/>
   </FormPage>
 }
 
 function ModeSelect({mode,onChange,onNext}:{mode:ExperienceMode;onChange:(mode:ExperienceMode)=>void;onNext:()=>void}){
   const options=[
-    {mode:'seeking' as const,title:'Find my person',body:'Meet people ready for a real relationship.',icon:'heart-outline' as const,tone:'ruby' as const,points:['Five thoughtful picks a day','Values before small talk','Chat when it’s mutual']},
-    {mode:'couple' as const,title:'Already together',body:'Keep your chat, dates and little moments in one place.',icon:'heart-circle-outline' as const,tone:'gold' as const,points:['Matching stays off','Just the two of you','Chat, dates, gifts and games']},
+    {mode:'seeking' as const,tag:'MEET MODE',title:'I’m here to meet someone',body:'Curated matches with real relationship potential.',icon:'heart-outline' as const,tone:'ruby' as const,points:['Fresh picks, not endless swipes','Values + chemistry','Chat when it’s mutual']},
+    {mode:'couple' as const,tag:'COUPLE MODE',title:'We’re already a thing',body:'A private space to stay close and plan more together.',icon:'heart-circle-outline' as const,tone:'gold' as const,points:['Discovery stays off','Private by design','Chats, dates, gifts + games']},
   ];
   return <FormPage step={3}>
-    <SectionTitle eyebrow="YOUR SPACE, YOUR WAY" title="How are you using DestinyOne?" body="Pick what fits today. You can switch later."/>
+    <SectionTitle eyebrow="CHOOSE YOUR DESTINY" title="Still looking, or already lucky?" body="Pick the experience that fits your story right now."/>
     <View style={coupleModeStyles.modeGrid}>{options.map(option=><Pressable accessibilityRole="radio" accessibilityState={{checked:mode===option.mode}} key={option.mode} onPress={()=>onChange(option.mode)} style={[coupleModeStyles.modeCard,mode===option.mode&&coupleModeStyles.modeCardOn]}>
-      <View style={shared.row}><PremiumIcon name={option.icon} tone={mode===option.mode?'gold':option.tone} size={54} iconSize={25}/><View style={{flex:1,marginLeft:12}}><Text style={coupleModeStyles.modeTitle}>{option.title}</Text><Text style={styles.helper}>{option.body}</Text></View><MiniPremiumIcon name={mode===option.mode?'checkmark-circle':'ellipse-outline'} tone={mode===option.mode?'gold':'dark'} size={34} iconSize={16}/></View>
-      <View style={coupleModeStyles.modePoints}>{option.points.map(point=><View key={point} style={coupleModeStyles.modePoint}><Ionicons name="checkmark" size={14} color={mode===option.mode?colors.gold:colors.pinkSoft}/><Text style={coupleModeStyles.modePointText}>{point}</Text></View>)}</View>
+      <View style={shared.row}><PremiumIcon name={option.icon} tone={mode===option.mode?'gold':option.tone} size={50} iconSize={23}/><View style={{flex:1,marginLeft:12}}><Text style={coupleModeStyles.modeTag}>{option.tag}</Text><Text style={coupleModeStyles.modeTitle}>{option.title}</Text><Text style={styles.helper}>{option.body}</Text></View><MiniPremiumIcon name={mode===option.mode?'checkmark-circle':'ellipse-outline'} tone={mode===option.mode?'gold':'dark'} size={32} iconSize={15}/></View>
+      <View style={coupleModeStyles.modePoints}>{option.points.map(point=><View key={point} style={[coupleModeStyles.modePoint,mode===option.mode&&coupleModeStyles.modePointOn]}><Ionicons name="checkmark" size={12} color={mode===option.mode?colors.gold:colors.pinkSoft}/><Text style={coupleModeStyles.modePointText}>{point}</Text></View>)}</View>
     </Pressable>)}</View>
-    <View style={coupleModeStyles.modePromise}><MiniPremiumIcon name="swap-horizontal-outline" tone="rose" size={34} iconSize={16}/><Text style={[styles.helper,{flex:1}]}>Change modes anytime from Profile. Matching never turns on by itself.</Text></View>
-    <View style={shared.spacer}/><Button label={mode==='couple'?'Set up Couple Mode':'Find my person'} icon="arrow-forward" variant={mode==='couple'?'gold':'primary'} onPress={onNext}/>
+    <View style={coupleModeStyles.modePromise}><MiniPremiumIcon name="lock-closed-outline" tone="rose" size={34} iconSize={16}/><Text style={[styles.helper,{flex:1}]}>Your choice stays private. Switch anytime. Matching never turns on by itself.</Text></View>
+    <View style={shared.spacer}/><Button label={mode==='couple'?'Create our space':'Start meeting people'} icon="arrow-forward" variant={mode==='couple'?'gold':'primary'} onPress={onNext}/>
   </FormPage>
 }
 
@@ -981,15 +983,22 @@ function ProfileSetup({
   onVoiceChange:(uri:string)=>void;
   onNext:()=>void;
 }) {
+  const {width}=useWindowDimensions();
   const [mediaError,setMediaError]=useState('');
   const [cityQuery,setCityQuery]=useState(profile.city);
   const [photoPickerIndex,setPhotoPickerIndex]=useState<number|null>(null);
+  const compactPhotos=width<520;
+  const photoPrompts=[
+    {title:'A clear hello',body:'Face the camera'},
+    {title:'Your full look',body:'Show your style'},
+    {title:'Your world',body:'A moment you love'},
+  ];
   useEffect(()=>setCityQuery(profile.city),[profile.city]);
   const updateProfile=<Key extends keyof ProfileDraft>(key:Key,value:ProfileDraft[Key])=>onProfileChange({...profile,[key]:value});
   const citySuggestions=profileCities.filter(item=>item.toLowerCase().includes(cityQuery.trim().toLowerCase())).slice(0,12);
   const ageEligible=isEligibleMemberAge(profile.age);
   const profileReady=photos.length>=3&&profile.firstName.trim().length>=2&&!!profile.gender&&ageEligible&&!!profile.city&&profile.profession.trim().length>=2;
-  const continueLabel=photos.length<3?'Add 3 photos to continue':!profile.firstName.trim()?'Add your first name':!profile.gender?'Choose how you identify':!ageEligible?'Enter age 25–35':!profile.city?'Select your city':!profile.profession.trim()?'Add your profession':'Continue';
+  const continueLabel=photos.length<3?'Add 3 photos to keep going':!profile.firstName.trim()?'Add your name to keep going':!profile.gender?'Choose how you identify':!ageEligible?'Enter an age from 25–35':!profile.city?'Choose your city':!profile.profession.trim()?'Add what you do':'Looks good, keep going';
   const pickPhoto=async(index:number)=>{
     setMediaError('');
     const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -1008,13 +1017,17 @@ function ProfileSetup({
     setPhotoPickerIndex(index);
   };
   return <FormPage step={3} scroll>
-    <SectionTitle eyebrow="THE GOOD STUFF" title="Give them a feel for you." body="A few real details. No résumé energy."/>
-    <View style={{gap:9}}><Text style={shared.label}>Choose 3 recent photos</Text><View style={styles.photoRow}>{[0,1,2].map(index=><Pressable onPress={()=>choosePhoto(index)} key={index} style={styles.addPhoto}>{photos[index]?<Image source={{uri:photos[index]}} style={styles.fill}/>:<><MiniPremiumIcon name="add" tone="plum" size={36} iconSize={18}/><Text style={mediaStyles.addPhotoText}>Add</Text></>}<View style={styles.photoNum}><Text style={styles.photoNumText}>{index+1}</Text></View></Pressable>)}</View>{!!mediaError&&<Text style={styles.formError}>{mediaError}</Text>}</View>
+    <SectionTitle eyebrow="MAKE A FIRST IMPRESSION" title="Make them want to know more." body="Three good photos. A few real details. Zero résumé energy."/>
+    <View style={profileSetupStyles.photoSection}>
+      <View style={profileSetupStyles.photoHeader}><View style={{flex:1}}><Text style={shared.label}>Start with 3 photos that feel like you</Text><Text style={styles.helper}>Recent, clear, and unmistakably you.</Text></View><View style={profileSetupStyles.photoCount}><Text style={profileSetupStyles.photoCountText}>{photos.length}/3</Text></View></View>
+      <View style={styles.photoRow}>{[0,1,2].map(index=><Pressable onPress={()=>choosePhoto(index)} key={index} style={[styles.addPhoto,!compactPhotos&&profileSetupStyles.photoDesktop]}>{photos[index]?<Image source={{uri:photos[index]}} style={styles.fill}/>:<View style={profileSetupStyles.photoEmpty}><MiniPremiumIcon name="add" tone="plum" size={34} iconSize={17}/><Text style={profileSetupStyles.photoPrompt}>{photoPrompts[index]!.title}</Text><Text style={profileSetupStyles.photoHint}>{photoPrompts[index]!.body}</Text></View>}<View style={styles.photoNum}><Text style={styles.photoNumText}>{index+1}</Text></View></Pressable>)}</View>
+      {!!mediaError&&<Text style={styles.formError}>{mediaError}</Text>}
+    </View>
     <View style={{gap:16}}>
       <Field label="First name" placeholder="Your first name" value={profile.firstName} onChangeText={(text:string)=>updateProfile('firstName',text)}/>
-      <View style={{gap:8}}><Text style={shared.label}>I’m a</Text><View style={aiStyles.filterWrap}>{([
+      <View style={{gap:8}}><Text style={shared.label}>I identify as</Text><View style={aiStyles.filterWrap}>{([
         ['woman','Woman'],['man','Man'],['nonbinary','Non-binary'],
-      ] as const).map(([value,label])=><FilterChip key={value} label={label} active={profile.gender===value} onPress={()=>updateProfile('gender',value)}/>)}</View><Text style={styles.helper}>This helps us show compatible preferences.</Text></View>
+      ] as const).map(([value,label])=><FilterChip key={value} label={label} active={profile.gender===value} onPress={()=>updateProfile('gender',value)}/>)}</View></View>
       <View style={[styles.twoCol,{width:'100%',minWidth:0}]}><View style={{flex:1,minWidth:0}}><Field label="Age" placeholder="29" keyboardType="number-pad" value={profile.age} onChangeText={(text:string)=>updateProfile('age',text.replace(/\D/g,'').slice(0,2))} error={profile.age&&!ageEligible?'DestinyOne is currently for ages 25–35.':''}/></View><View style={{flex:1,minWidth:0}}><Field label="Height" placeholder={'5′ 8″'} value={profile.height} onChangeText={(text:string)=>updateProfile('height',text)}/></View></View>
       <View style={{gap:8}}>
         <Text style={shared.label}>City</Text>
@@ -1022,14 +1035,14 @@ function ProfileSetup({
         {!!profile.city&&<View style={selectorStyles.selectedPill}><MiniPremiumIcon name="checkmark" tone="gold" size={24} iconSize={11}/><Text style={selectorStyles.selectedText}>{profile.city}</Text></View>}
         {!!cityQuery&&<View style={selectorStyles.suggestionPanel}>{citySuggestions.length?citySuggestions.map(item=><Pressable key={item} onPress={()=>{updateProfile('city',item);setCityQuery(item)}} style={selectorStyles.suggestionRow}><Text style={selectorStyles.suggestionText}>{item}</Text><MiniPremiumIcon name="chevron-forward" tone="dark" size={24} iconSize={11}/></Pressable>):<Text style={styles.helper}>Try a nearby major city in the USA or Canada.</Text>}</View>}
       </View>
-      <Field label="Profession" placeholder="What do you do?" value={profile.profession} onChangeText={(text:string)=>updateProfile('profession',text)}/>
+      <Field label="What do you do?" placeholder="Designer, founder, engineer..." value={profile.profession} onChangeText={(text:string)=>updateProfile('profession',text)}/>
       <View style={{gap:8}}>
-        <Text style={shared.label}>Religion · optional</Text>
+        <Text style={shared.label}>Faith · optional</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>
           {religions.map(option=><Pressable key={option} onPress={()=>updateProfile('religion',profile.religion===option?'':option)} style={[selectorStyles.religionChip,profile.religion===option&&selectorStyles.religionChipOn]}><Text style={[selectorStyles.religionText,profile.religion===option&&{color:colors.ivory}]}>{option}</Text>{profile.religion===option&&<MiniPremiumIcon name="checkmark" tone="gold" size={22} iconSize={10}/>}</Pressable>)}
         </ScrollView>
       </View>
-      <Field label="Community · optional" placeholder="Punjabi, Gujarati, Telugu, mixed..." value={profile.community} onChangeText={(text:string)=>updateProfile('community',text)}/>
+      <Field label="Culture / community · optional" placeholder="Punjabi, Gujarati, Telugu, mixed..." value={profile.community} onChangeText={(text:string)=>updateProfile('community',text)}/>
     </View>
     <VoiceIntroRecorder uri={voiceUri} onChange={onVoiceChange}/>
     <Button label={continueLabel} disabled={!profileReady} onPress={onNext}/>
@@ -1061,7 +1074,7 @@ function VoiceIntroRecorder({uri,onChange}:{uri:string;onChange:(uri:string)=>vo
   const stop=async()=>{await recorder.stop();await setAudioModeAsync({allowsRecording:false});if(recorder.uri)onChange(recorder.uri)};
   const duration=Math.max(0,Math.round(recorderState.durationMillis/1000));
   return <View style={mediaStyles.voiceRecorder}>
-    <View style={shared.row}><PremiumIcon name={recorderState.isRecording?'mic':'volume-medium'} tone="ruby" size={43} iconSize={20}/><View style={{flex:1}}><Text style={styles.cardTitle}>Say a quick hello</Text><Text style={styles.helper}>{recorderState.isRecording?`Recording · 0:${String(duration).padStart(2,'0')} / 0:30`:uri?'Your voice intro is ready':'Optional · up to 30 seconds'}</Text></View></View>
+    <View style={shared.row}><PremiumIcon name={recorderState.isRecording?'mic':'volume-medium'} tone="ruby" size={43} iconSize={20}/><View style={{flex:1}}><Text style={styles.cardTitle}>Let them hear your vibe</Text><Text style={styles.helper}>{recorderState.isRecording?`Recording · 0:${String(duration).padStart(2,'0')} / 0:30`:uri?'Your hello is ready to play':'A 30-second hello beats another bio.'}</Text></View></View>
     {uri&&!recorderState.isRecording&&<View style={mediaStyles.voiceActions}><Pressable onPress={()=>playerStatus.playing?player.pause():player.play()} style={mediaStyles.mediaAction}><MiniPremiumIcon name={playerStatus.playing?'pause':'play'} tone="plum" size={30} iconSize={14}/><Text style={mediaStyles.mediaActionText}>{playerStatus.playing?'Pause':'Preview'}</Text></Pressable><Pressable onPress={()=>onChange('')} style={mediaStyles.deleteAction}><MiniPremiumIcon name="trash-outline" tone="ruby" size={34} iconSize={16}/></Pressable></View>}
     {!uri&&<Button variant="secondary" label={recorderState.isRecording?'Stop & save':'Record voice intro'} icon={recorderState.isRecording?'stop':'mic'} onPress={recorderState.isRecording?stop:start}/>} 
     {!!error&&<Text style={styles.formError}>{error}</Text>}
@@ -1069,23 +1082,23 @@ function VoiceIntroRecorder({uri,onChange}:{uri:string;onChange:(uri:string)=>vo
 }
 
 const vibeIcons: Array<keyof typeof Ionicons.glyphMap> = ['people','rocket','airplane','barbell','sparkles','restaurant','briefcase','leaf','heart-circle','color-palette','home','flower','paw','book','musical-notes','globe'];
+const vibeDescriptions=['Roots matter','Big goals','Always exploring','Move & grow','Inner calm','New table? Yes.','Build mode','Low-key joy','Talk it through','Make something','Cozy future','Tradition + now','Animal person','One more chapter','Live & loud','Show up for people'];
 function Vibes({value,onChange,onNext}:{value:string[];onChange:(x:string[])=>void;onNext:()=>void}) {
   const toggle=(v:string)=>onChange(value.includes(v)?value.filter(x=>x!==v):value.length<5?[...value,v]:value);
   return <FormPage step={4} scroll>
     <View style={vibeStyles.hero}>
-      <Text style={styles.kicker}>{value.length} OF 5 PICKED</Text>
-      <Text style={[shared.h1,{textAlign:'center'}]}>What feels like you?</Text>
-      <Text style={[shared.body,{textAlign:'center'}]}>Pick five. We’ll find a better rhythm, not a copy of you.</Text>
+      <Text style={styles.kicker}>{value.length} OF 5 LOCKED IN</Text>
+      <Text style={[shared.h1,{textAlign:'center'}]}>What’s your real-life vibe?</Text>
+      <Text style={[shared.body,{textAlign:'center'}]}>Pick the five that feel most like you. The mix is what makes it interesting.</Text>
       <View style={vibeStyles.progressDots}>{[0,1,2,3,4].map(index=><View key={index} style={[vibeStyles.progressDot,index<value.length&&vibeStyles.progressDotOn]}/>)}</View>
     </View>
-    <View style={styles.vibeGrid}>{vibes.map((v,i)=><Pressable onPress={()=>toggle(v)} key={v} style={[styles.vibeCard,value.includes(v)&&styles.vibeSelected]}>
-      <PremiumIcon name={vibeIcons[i]??'heart'} tone={value.includes(v)?'gold':'plum'} size={44} iconSize={20}/>
-      <Text style={[styles.vibeText,value.includes(v)&&{color:colors.ivory}]}>{v}</Text>
-      {value.includes(v)&&<Text style={vibeStyles.vibeMicro}>Picked</Text>}
+    <View style={styles.vibeGrid}>{vibes.map((v,i)=><Pressable onPress={()=>toggle(v)} key={v} style={[styles.vibeCard,vibeStyles.card,value.includes(v)&&styles.vibeSelected]}>
+      <PremiumIcon name={vibeIcons[i]??'heart'} tone={value.includes(v)?'gold':'plum'} size={40} iconSize={18}/>
+      <View style={vibeStyles.copy}><Text numberOfLines={2} style={[styles.vibeText,value.includes(v)&&{color:colors.ivory}]}>{v}</Text><Text numberOfLines={1} style={[vibeStyles.description,value.includes(v)&&vibeStyles.descriptionOn]}>{value.includes(v)?'Locked in':vibeDescriptions[i]}</Text></View>
       {value.includes(v)&&<View style={vibeStyles.vibeCheck}><MiniPremiumIcon name="checkmark" tone="gold" size={25} iconSize={12}/></View>}
     </Pressable>)}</View>
-    <View style={vibeStyles.tipCard}><MiniPremiumIcon name="sparkles" tone="gold" size={34} iconSize={16}/><Text style={[styles.helper,{flex:1}]}>Pick your everyday self. That’s where chemistry starts.</Text></View>
-    <Button label={value.length===5?'That’s my vibe':'Pick 5 to continue'} disabled={value.length!==5} onPress={onNext}/>
+    <View style={vibeStyles.tipCard}><MiniPremiumIcon name="sparkles" tone="gold" size={34} iconSize={16}/><Text style={[styles.helper,{flex:1}]}>Pick your normal-Tuesday self. That’s usually where the best chemistry starts.</Text></View>
+    <Button label={value.length===5?'Lock in my five':'Choose 5 to continue'} disabled={value.length!==5} onPress={onNext}/>
   </FormPage>
 }
 
@@ -4635,34 +4648,36 @@ function SupportInfoSheet({info,onClose,onEmail}:{info:SupportInfo|null;onClose:
 }
 
 function ReferralWelcomeOffer({visible,referralCode,onClose,onViewPlans}:{visible:boolean;referralCode:string;onClose:()=>void;onViewPlans:()=>void}){
+  const {width}=useWindowDimensions();
   const [shareStatus,setShareStatus]=useState('');
+  const wide=width>=760;
+  const wideSheetWidth=Math.min(900,width-32);
   useEffect(()=>{if(visible)setShareStatus('')},[visible]);
   const origin=Platform.OS==='web'&&typeof window!=='undefined'?window.location.origin:'https://destinyone.app';
   const inviteLink=`${origin}/?ref=${encodeURIComponent(referralCode)}`;
   const shareInvite=async()=>{
-    const message=`I joined DestinyOne for serious relationships. Complete your verified profile with my private invite and I’ll receive a 7-Day Base Pass: ${inviteLink}`;
-    try{await Share.share({title:'A private DestinyOne invitation',message});setShareStatus('Your private invitation is ready to send. Reward stays pending until your friend completes a verified profile.')}catch{setShareStatus(`Share is unavailable here. Use this link: ${inviteLink}`)}
+    const message=`I found DestinyOne, a dating app for people who actually mean it. Join with my private invite and complete your verified profile: ${inviteLink}`;
+    try{await Share.share({title:'Your private DestinyOne invite',message});setShareStatus('Invite ready. Your free week unlocks when your friend verifies their profile.')}catch{setShareStatus(`Share is unavailable here. Use this link: ${inviteLink}`)}
   };
   return <Modal visible={visible} transparent animationType={Platform.OS==='web'?'fade':'slide'} onRequestClose={onClose}>
-    <View style={referralStyles.modalRoot}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,referralStyles.sheet]}>
+    <View style={referralStyles.modalRoot}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,referralStyles.sheet,wide&&referralStyles.sheetWide,wide&&{left:(width-wideSheetWidth)/2,right:undefined,width:wideSheetWidth}]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={referralStyles.scroll}>
         <Pressable accessibilityRole="button" accessibilityLabel="Close referral offer" onPress={onClose} style={referralStyles.close}><Ionicons name="close" size={20} color={colors.ivory}/></Pressable>
         <LinearGradient colors={['#49100F','#18070B']} style={referralStyles.hero}>
-          <View style={referralStyles.giftHalo}><PremiumIcon name="gift" tone="gold" size={68} iconSize={31}/></View>
-          <Text style={styles.kicker}>YOUR FIRST DESTINY GIFT</Text>
-          <Text style={referralStyles.title}>Bring one good person.{`\n`}Enjoy one week on us.</Text>
-          <Text style={referralStyles.body}>Share DestinyOne with a friend who is genuinely looking for something real.</Text>
+          <View style={referralStyles.giftHalo}><PremiumIcon name="gift" tone="gold" size={58} iconSize={27}/></View>
+          <Text style={styles.kicker}>BETTER PEOPLE, BETTER MATCHES</Text>
+          <Text style={referralStyles.title}>Invite a friend. Unlock a week.</Text>
+          <Text style={referralStyles.body}>Bring someone genuine to DestinyOne. When they verify, your Base Pass is on us.</Text>
         </LinearGradient>
-        <View style={referralStyles.rewardCard}><View style={referralStyles.rewardTop}><MiniPremiumIcon name="diamond" tone="ruby" size={42} iconSize={19}/><View style={{flex:1}}><Text style={referralStyles.rewardEyebrow}>7-DAY BASE PASS</Text><Text style={referralStyles.rewardTitle}>Unlocked after verified signup</Text></View><Text style={referralStyles.rewardValue}>$45</Text></View><View style={referralStyles.rewardPills}>{['5 daily introductions','Mutual chat','Serious filters','Profile visitors'].map(item=><View key={item} style={referralStyles.rewardPill}><Text style={referralStyles.rewardPillText}>{item}</Text></View>)}</View></View>
-        <View style={referralStyles.steps}>{[
-          ['1','Share your private link'],['2','Your friend downloads and completes a verified profile'],['3','Your Base Pass activates after referral checks'],
-        ].map(([number,label])=><View key={number} style={referralStyles.step}><View style={referralStyles.stepNumber}><Text style={referralStyles.stepNumberText}>{number}</Text></View><Text style={referralStyles.stepText}>{label}</Text></View>)}</View>
-        <View style={referralStyles.codeRow}><View><Text style={referralStyles.codeLabel}>YOUR PRIVATE CODE</Text><Text style={referralStyles.code}>{referralCode}</Text></View><MiniPremiumIcon name="link" tone="dark" size={34} iconSize={16}/></View>
+        <View style={referralStyles.rewardCard}><View style={referralStyles.rewardTop}><MiniPremiumIcon name="diamond" tone="ruby" size={42} iconSize={19}/><View style={{flex:1}}><Text style={referralStyles.rewardEyebrow}>7 DAYS · $45 VALUE</Text><Text style={referralStyles.rewardTitle}>Your Base Pass, on us</Text></View><Text style={referralStyles.rewardValue}>FREE</Text></View><View style={referralStyles.rewardPills}>{['5 fresh picks daily','Mutual chat','Intent filters','See profile visitors'].map(item=><View key={item} style={referralStyles.rewardPill}><Text style={referralStyles.rewardPillText}>{item}</Text></View>)}</View></View>
+        <View style={[referralStyles.steps,wide&&referralStyles.stepsWide]}>{[
+          ['1','Send your invite'],['2','They join + verify'],['3','Your free week unlocks'],
+        ].map(([number,label])=><View key={number} style={[referralStyles.step,wide&&referralStyles.stepWide]}><View style={referralStyles.stepNumber}><Text style={referralStyles.stepNumberText}>{number}</Text></View><Text style={referralStyles.stepText}>{label}</Text></View>)}</View>
+        <View style={referralStyles.codeRow}><View><Text style={referralStyles.codeLabel}>YOUR INVITE CODE</Text><Text style={referralStyles.code}>{referralCode}</Text></View><MiniPremiumIcon name="link" tone="dark" size={34} iconSize={16}/></View>
         {!!shareStatus&&<Text style={referralStyles.status}>{shareStatus}</Text>}
-        <Button label="Share private invite" icon="share-social" variant="gold" onPress={()=>void shareInvite()}/>
-        <Button label="See membership plans" icon="diamond-outline" variant="secondary" onPress={onViewPlans}/>
+        <View style={[referralStyles.actions,wide&&referralStyles.actionsWide]}><View style={[referralStyles.action,wide&&referralStyles.actionWide]}><Button label="Send my invite" icon="share-social" variant="gold" onPress={()=>void shareInvite()}/></View><View style={[referralStyles.action,wide&&referralStyles.actionWide]}><Button label="Explore plans" icon="diamond-outline" variant="secondary" onPress={onViewPlans}/></View></View>
         <Pressable onPress={onClose} style={referralStyles.later}><Text style={referralStyles.laterText}>Maybe later</Text></Pressable>
-        <Text style={styles.legal}>One reward per verified referral. Self-referrals, duplicate identities and abusive invitations are not eligible. Safety and privacy tools remain free for everyone.</Text>
+        <Text style={styles.legal}>One reward per verified friend. Self-referrals and duplicate accounts are not eligible. Safety and privacy tools remain free for everyone.</Text>
       </ScrollView>
     </SafeAreaView></View>
   </Modal>;
@@ -4802,12 +4817,14 @@ const premiumButtonStyles=StyleSheet.create({
 
 const coupleModeStyles=StyleSheet.create({
   modeGrid:{gap:12},
-  modeCard:{padding:16,gap:14,borderRadius:8,backgroundColor:'rgba(35,8,14,.92)',borderWidth:1,borderColor:'rgba(255,255,255,.10)'},
-  modeCardOn:{backgroundColor:'rgba(105,12,32,.72)',borderColor:'rgba(245,201,89,.58)'},
+  modeCard:{padding:15,gap:13,borderRadius:8,backgroundColor:'rgba(35,8,14,.92)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',shadowColor:'#000',shadowOpacity:.18,shadowRadius:12},
+  modeCardOn:{backgroundColor:'rgba(105,12,32,.72)',borderColor:'rgba(245,201,89,.58)',shadowColor:colors.gold,shadowOpacity:.12,shadowRadius:16},
+  modeTag:{fontFamily:'Poppins_700Bold',fontSize:8.5,lineHeight:12,letterSpacing:0,color:colors.gold,marginBottom:2},
   modeTitle:{fontFamily:'Poppins_700Bold',fontSize:15,lineHeight:20,letterSpacing:0,color:colors.ivory},
-  modePoints:{gap:7,paddingTop:11,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.08)'},
-  modePoint:{flexDirection:'row',alignItems:'center',gap:8},
-  modePointText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.5,lineHeight:15,color:'#DFC9CF'},
+  modePoints:{flexDirection:'row',flexWrap:'wrap',gap:7,paddingTop:11,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.08)'},
+  modePoint:{minHeight:30,paddingHorizontal:9,paddingVertical:6,borderRadius:15,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.07)',flexDirection:'row',alignItems:'center',gap:5},
+  modePointOn:{backgroundColor:'rgba(212,175,55,.08)',borderColor:'rgba(212,175,55,.20)'},
+  modePointText:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,lineHeight:14,color:'#DFC9CF'},
   modePromise:{padding:13,borderRadius:8,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',flexDirection:'row',alignItems:'center',gap:10},
   setupHero:{alignItems:'center',gap:10,paddingHorizontal:8},
   inviteFound:{padding:13,borderRadius:8,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.26)',flexDirection:'row',alignItems:'center',gap:10},
@@ -4834,6 +4851,16 @@ const coupleModeStyles=StyleSheet.create({
   profileModeChoice:{flex:1,minHeight:40,paddingHorizontal:7,borderRadius:6,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6},
   profileModeChoiceOn:{backgroundColor:'rgba(128,18,40,.86)',borderWidth:1,borderColor:'rgba(212,175,55,.30)'},
   profileModeChoiceText:{fontFamily:'Poppins_700Bold',fontSize:10,color:colors.muted,textAlign:'center'},
+});
+
+const verificationStyles=StyleSheet.create({
+  card:{position:'relative',alignItems:'center',gap:12,padding:20,borderRadius:8,borderWidth:1,borderColor:'rgba(212,175,55,.26)',overflow:'hidden'},
+  glow:{position:'absolute',top:-90,width:210,height:210,borderRadius:105,backgroundColor:'rgba(229,9,47,.08)'},
+  statusPill:{minHeight:28,paddingHorizontal:10,borderRadius:14,backgroundColor:'rgba(8,2,4,.46)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',flexDirection:'row',alignItems:'center',gap:5},
+  statusText:{fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:0,color:'#F1DDA3'},
+  title:{fontFamily:'Poppins_700Bold',fontSize:19,lineHeight:25,letterSpacing:0,color:colors.ivory,textAlign:'center'},
+  body:{maxWidth:420,fontFamily:'Poppins_400Regular',fontSize:13,lineHeight:19,letterSpacing:0,color:'#D9BEC5',textAlign:'center'},
+  idCard:{paddingVertical:14,backgroundColor:'rgba(255,255,255,.035)'},
 });
 
 const coupleHomeStyles=StyleSheet.create({
@@ -5132,14 +5159,29 @@ const backendReadyStyles=StyleSheet.create({
   providerBody:{fontFamily:'Poppins_400Regular',fontSize:9.2,lineHeight:13,color:'#BFA9AF',marginTop:1},
 });
 
+const profileSetupStyles=StyleSheet.create({
+  photoSection:{gap:10},
+  photoHeader:{flexDirection:'row',alignItems:'center',gap:12},
+  photoCount:{minWidth:42,height:28,paddingHorizontal:9,borderRadius:14,backgroundColor:'rgba(212,175,55,.10)',borderWidth:1,borderColor:'rgba(212,175,55,.28)',alignItems:'center',justifyContent:'center'},
+  photoCountText:{fontFamily:'Poppins_700Bold',fontSize:10,color:colors.gold},
+  photoDesktop:{aspectRatio:undefined,height:210},
+  photoEmpty:{alignItems:'center',justifyContent:'center',gap:4,paddingHorizontal:5},
+  photoPrompt:{fontFamily:'Poppins_700Bold',fontSize:10.5,lineHeight:14,color:colors.ivory,textAlign:'center'},
+  photoHint:{fontFamily:'Poppins_400Regular',fontSize:8.5,lineHeight:12,color:colors.muted,textAlign:'center'},
+});
+
 const vibeStyles=StyleSheet.create({
   hero:{padding:15,borderRadius:8,backgroundColor:'rgba(229,9,47,.08)',borderWidth:1,borderColor:'rgba(229,9,47,.24)',alignItems:'center',gap:9},
   progressDots:{flexDirection:'row',gap:7,marginTop:4},
   progressDot:{width:28,height:5,borderRadius:4,backgroundColor:colors.line},
   progressDotOn:{backgroundColor:colors.gold},
   iconBubble:{width:34,height:34,borderRadius:17,backgroundColor:'rgba(255,255,255,.06)',alignItems:'center',justifyContent:'center'},
+  card:{height:86,padding:11,flexDirection:'row',alignItems:'center',justifyContent:'flex-start',gap:9},
+  copy:{flex:1,minWidth:0},
+  description:{fontFamily:'Poppins_400Regular',fontSize:8.7,lineHeight:12,color:'#A98E95',marginTop:2},
+  descriptionOn:{fontFamily:'Poppins_600SemiBold',color:colors.gold},
   vibeMicro:{fontFamily:'Poppins_400Regular',fontSize:9.5,color:'#BFA3AA'},
-  vibeCheck:{position:'absolute',right:10,top:10},
+  vibeCheck:{position:'absolute',right:7,top:7},
   tipCard:{padding:13,borderRadius:8,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.22)',flexDirection:'row',alignItems:'center',gap:10},
 });
 
@@ -5671,31 +5713,38 @@ const rosePopupStyles=StyleSheet.create({
 });
 
 const referralStyles=StyleSheet.create({
-  modalRoot:{flex:1,justifyContent:'flex-end'},
+  modalRoot:{flex:1,justifyContent:'flex-end',paddingHorizontal:Platform.OS==='web'?16:0},
   sheet:{maxHeight:'94%',paddingTop:0},
-  scroll:{gap:14,padding:16,paddingBottom:26},
-  close:{position:'absolute',right:26,top:26,zIndex:4,width:38,height:38,borderRadius:19,backgroundColor:'rgba(7,0,2,.72)',borderWidth:1,borderColor:'rgba(255,255,255,.14)',alignItems:'center',justifyContent:'center'},
-  hero:{minHeight:244,borderRadius:24,padding:24,alignItems:'center',justifyContent:'center',gap:10,borderWidth:1,borderColor:'rgba(212,175,55,.30)',overflow:'hidden'},
-  giftHalo:{width:84,height:84,borderRadius:42,backgroundColor:'rgba(212,175,55,.10)',alignItems:'center',justifyContent:'center'},
-  title:{fontFamily:'Poppins_700Bold',fontSize:27,lineHeight:34,color:colors.ivory,textAlign:'center'},
-  body:{fontFamily:'Poppins_400Regular',fontSize:12.5,lineHeight:19,color:'#D8C2C7',textAlign:'center',maxWidth:340},
-  rewardCard:{gap:12,padding:15,borderRadius:22,backgroundColor:'#23090F',borderWidth:1,borderColor:'rgba(229,9,47,.30)'},
+  sheetWide:{maxHeight:'90%',borderTopLeftRadius:8,borderTopRightRadius:8},
+  scroll:{gap:11,padding:14,paddingBottom:20},
+  close:{position:'absolute',right:22,top:22,zIndex:4,width:34,height:34,borderRadius:17,backgroundColor:'rgba(7,0,2,.76)',borderWidth:1,borderColor:'rgba(255,255,255,.14)',alignItems:'center',justifyContent:'center'},
+  hero:{minHeight:188,borderRadius:8,padding:20,alignItems:'center',justifyContent:'center',gap:8,borderWidth:1,borderColor:'rgba(212,175,55,.30)',overflow:'hidden'},
+  giftHalo:{width:70,height:70,borderRadius:35,backgroundColor:'rgba(212,175,55,.10)',alignItems:'center',justifyContent:'center'},
+  title:{fontFamily:'Poppins_700Bold',fontSize:23,lineHeight:29,color:colors.ivory,textAlign:'center'},
+  body:{fontFamily:'Poppins_400Regular',fontSize:11.5,lineHeight:17.5,color:'#D8C2C7',textAlign:'center',maxWidth:470},
+  rewardCard:{gap:10,padding:13,borderRadius:8,backgroundColor:'#23090F',borderWidth:1,borderColor:'rgba(229,9,47,.30)'},
   rewardTop:{flexDirection:'row',alignItems:'center',gap:10},
-  rewardEyebrow:{fontFamily:'Poppins_700Bold',fontSize:9,letterSpacing:1.2,color:colors.gold},
-  rewardTitle:{fontFamily:'Poppins_700Bold',fontSize:14,color:colors.ivory,marginTop:2},
-  rewardValue:{fontFamily:'Poppins_700Bold',fontSize:22,color:colors.gold},
+  rewardEyebrow:{fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:1.1,color:colors.gold},
+  rewardTitle:{fontFamily:'Poppins_700Bold',fontSize:13,color:colors.ivory,marginTop:1},
+  rewardValue:{fontFamily:'Poppins_700Bold',fontSize:18,color:colors.gold},
   rewardPills:{flexDirection:'row',flexWrap:'wrap',gap:6},
-  rewardPill:{paddingHorizontal:9,paddingVertical:6,borderRadius:13,backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.09)'},
-  rewardPillText:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#EBD7DC'},
+  rewardPill:{paddingHorizontal:8,paddingVertical:5,borderRadius:7,backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.09)'},
+  rewardPillText:{fontFamily:'Poppins_600SemiBold',fontSize:8,color:'#EBD7DC'},
   steps:{gap:8},
-  step:{minHeight:45,flexDirection:'row',alignItems:'center',gap:11,paddingHorizontal:12,borderRadius:16,backgroundColor:'rgba(255,255,255,.035)',borderWidth:1,borderColor:'rgba(255,255,255,.07)'},
-  stepNumber:{width:26,height:26,borderRadius:13,backgroundColor:'#85162B',alignItems:'center',justifyContent:'center'},
+  stepsWide:{flexDirection:'row'},
+  step:{minHeight:44,flexDirection:'row',alignItems:'center',gap:10,paddingHorizontal:11,paddingVertical:8,borderRadius:8,backgroundColor:'rgba(255,255,255,.035)',borderWidth:1,borderColor:'rgba(255,255,255,.07)'},
+  stepWide:{flex:1,minHeight:58,alignItems:'flex-start'},
+  stepNumber:{width:25,height:25,borderRadius:13,backgroundColor:'#85162B',alignItems:'center',justifyContent:'center'},
   stepNumberText:{fontFamily:'Poppins_700Bold',fontSize:10,color:colors.ivory},
-  stepText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.5,lineHeight:15,color:'#E4D1D5'},
-  codeRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',padding:13,borderRadius:18,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.24)'},
+  stepText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:9.8,lineHeight:14.5,color:'#E4D1D5'},
+  codeRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',padding:12,borderRadius:8,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.24)'},
   codeLabel:{fontFamily:'Poppins_700Bold',fontSize:7.8,letterSpacing:1.1,color:'#C8AD63'},
-  code:{fontFamily:'Poppins_700Bold',fontSize:17,color:colors.ivory,marginTop:2},
+  code:{fontFamily:'Poppins_700Bold',fontSize:15,color:colors.ivory,marginTop:2},
   status:{fontFamily:'Poppins_600SemiBold',fontSize:10,lineHeight:15,color:'#E8D28E',textAlign:'center'},
+  actions:{gap:8},
+  actionsWide:{flexDirection:'row'},
+  action:{width:'100%'},
+  actionWide:{flex:1,width:undefined},
   later:{alignSelf:'center',padding:8},
   laterText:{fontFamily:'Poppins_600SemiBold',fontSize:11,color:colors.muted},
   pricingBanner:{flexDirection:'row',alignItems:'center',gap:12,padding:15,borderRadius:22,backgroundColor:'rgba(212,175,55,.075)',borderWidth:1,borderColor:'rgba(212,175,55,.28)'},
@@ -5876,7 +5925,7 @@ const mediaStyles=StyleSheet.create({
   photoChoice:{flex:1,minHeight:138,borderRadius:22,padding:13,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.09)',alignItems:'center',justifyContent:'center',gap:7},
   photoChoiceTitle:{fontFamily:'Poppins_700Bold',fontSize:13,color:colors.ivory},
   photoChoiceBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,color:colors.muted,textAlign:'center'},
-  voiceRecorder:{gap:14,padding:16,borderRadius:radius.lg,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.line},
+  voiceRecorder:{gap:14,padding:15,borderRadius:8,backgroundColor:'rgba(35,8,14,.92)',borderWidth:1,borderColor:'rgba(212,175,55,.18)'},
   voiceRecordIcon:{width:43,height:43,borderRadius:22,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center',marginRight:12},
   voiceActions:{flexDirection:'row',gap:10},
   mediaAction:{flex:1,height:44,borderRadius:22,backgroundColor:'#5F1556',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7},
