@@ -5,17 +5,38 @@
   },
   "build": {
     "development": {
+      "environment": "development",
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "development",
+        "EXPO_PUBLIC_APP_ENV": "development",
+        "EXPO_PUBLIC_REQUIRE_REAL_BACKEND": "false"
+      }
     },
     "preview": {
+      "extends": "toronto-pilot"
+    },
+    "toronto-pilot": {
+      "environment": "preview",
       "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "pilot",
+        "EXPO_PUBLIC_APP_ENV": "staging",
+        "EXPO_PUBLIC_REQUIRE_REAL_BACKEND": "true"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
-      "autoIncrement": true
+      "environment": "production",
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "EXPO_PUBLIC_REQUIRE_REAL_BACKEND": "true"
+      }
     }
   },
   "submit": {
@@ -28,6 +49,12 @@
     "closed": {
       "android": {
         "track": "alpha",
+        "releaseStatus": "completed"
+      }
+    },
+    "toronto-pilot": {
+      "android": {
+        "track": "internal",
         "releaseStatus": "completed"
       }
     },
