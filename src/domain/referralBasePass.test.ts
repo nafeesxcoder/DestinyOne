@@ -16,6 +16,8 @@ describe('verified referral Base Pass', () => {
     expect(app.indexOf('setOnboardingComplete(true)')).toBeLessThan(app.indexOf('setReferralOfferOpen(true)'));
     expect(app).toContain('Invite a verified friend. Get Base free for 7 days.');
     expect(app).toContain('Share private invite');
+    expect(app).toContain('Invite a friend · Get 7 days');
+    expect(app).toContain('style={referralStyles.profileBanner}');
   });
 
   it('requires verification, profile completion and risk clearance', () => {
