@@ -58,6 +58,7 @@ import { buildRelationshipLearningState, type RelationshipJourneyEventName } fro
 import { primaryNavigation } from './src/domain/featureFocus';
 import { memberNeedsOnboarding } from './src/domain/memberBootstrap';
 import { canCommitMemberMutation, evaluateMemberDataRuntime, memberMutationFailureMessage, type MemberMutationResult } from './src/domain/memberDataRuntime';
+import { buildDailyIntroductionDeck } from './src/domain/dailyIntroductions';
 
 type Screen = 'splash'|'welcome'|'auth'|'otp'|'verify'|'profileSetup'|'vibes'|'intent'|'alignment'|'home'|'explore'|'circle'|'discovery'|'detail'|'mutual'|'icebreaker'|'chat'|'datePlan'|'safety'|'likes'|'profile'|'pricing'|'support'|'coach'|'events'|'executive'|'verifyHub'|'admin';
 
@@ -910,8 +911,7 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
   const {width}=useWindowDimensions();
   const useMatchGrid=width>=900;
   const compactHome=width<430;
-  const featured=items[0];
-  const rest=items.slice(1,25);
+  const {featured,remaining:rest,heldForFutureDays}=buildDailyIntroductionDeck(items);
   const growth=buildHomeGrowthLoop({visibleMatches:items,preferences,signals,dismissedCount,profile:profileGrowth});
   const retention=growth.retention;
   const primaryNudge=growth.nudges[0];
@@ -926,8 +926,8 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
   return <LinearGradient colors={['#23030A','#0B0104',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,{maxWidth:920,paddingHorizontal:0}]}>
     <View style={homeCleanStyles.header}>
       <View style={{flex:1}}>
-        <Text style={styles.kicker}>CURATED FOR YOUR FUTURE</Text>
-        <Text numberOfLines={1} style={[shared.h2,compactHome&&homeCleanStyles.headingCompact]}>Today's picks</Text>
+        <Text style={homeCleanStyles.brandLine}>DESTINY<Text style={homeCleanStyles.brandOne}>ONE</Text></Text>
+        <Text numberOfLines={1} style={[shared.h2,compactHome&&homeCleanStyles.headingCompact]}>Today's introductions</Text>
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel="Match filters" onPress={()=>navigate('discovery')} style={homeCleanStyles.headerButton}><PremiumIcon name="options-outline" tone="dark" size={36} iconSize={17}/></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={()=>navigate('profile')} style={homeCleanStyles.headerButton}><PremiumIcon name="person-outline" tone="ruby" size={36} iconSize={17}/></Pressable>
@@ -963,8 +963,9 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
         <Text style={homeCleanStyles.nudgeAction}>{primaryNudge.actionLabel}</Text>
       </Pressable>}
 
-      {rest.length>0&&<View style={homeCleanStyles.sectionRow}><Text style={styles.sectionLabel}>MORE COMPATIBLE PROFILES</Text><Text style={homeCleanStyles.sectionHint}>{rest.length} more</Text></View>}
+      {rest.length>0&&<View style={homeCleanStyles.sectionRow}><Text style={styles.sectionLabel}>TODAY'S OTHER INTRODUCTIONS</Text><Text style={homeCleanStyles.sectionHint}>{rest.length} remaining</Text></View>}
       <View style={useMatchGrid&&homeCleanStyles.matchGrid}>{rest.map(match=><View key={match.id} style={useMatchGrid&&homeCleanStyles.matchGridItem}><MatchCard compact={useMatchGrid} match={match} reasons={match.reasons??matchReasons(match,preferences)} onPress={()=>openDetail(match)} onInterested={()=>onInterested(match)} onSkip={()=>onSkip(match)} onRose={()=>onRose(match)}/></View>)}</View>
+      {heldForFutureDays>0&&<View style={homeCleanStyles.futureDeckNote}><MiniPremiumIcon name="time-outline" tone="gold" size={30} iconSize={14}/><View style={{flex:1}}><Text style={homeCleanStyles.futureDeckTitle}>A considered pace</Text><Text style={homeCleanStyles.futureDeckBody}>More compatible members are held for future daily introductions, so each profile gets real attention.</Text></View></View>}
 
       {!items.length&&<View style={[shared.card,homeCleanStyles.emptyCard]}>
         <PremiumIcon name={matchLoadState==='error'?'cloud-offline-outline':matchLoadState==='loading'?'hourglass-outline':'heart-outline'} tone={matchLoadState==='error'?'ruby':'plum'} size={58} iconSize={27}/>
@@ -1411,6 +1412,8 @@ function RelationshipCoach({match,preferences,onBack,onOpenFilters,onUseInChat}:
 }
 
 function EventsHub({defaultCity,onBack,onOpenDatePlan,navigate}:{defaultCity:string;onBack:()=>void;onOpenDatePlan:(place?:PlaceItem)=>void;navigate:(screen:Screen)=>void}){
+  const {width}=useWindowDimensions();
+  const compactMarket=width<430;
   const [section,setSection]=useState<'places'|'packages'|'events'>('places');
   const [query,setQuery]=useState('');
   const [kind,setKind]=useState<'All'|PlaceKind>('All');
@@ -1461,11 +1464,11 @@ function EventsHub({defaultCity,onBack,onOpenDatePlan,navigate}:{defaultCity:str
         <Text style={[styles.cardTitle,{marginLeft:12}]}>DestinyOne Date Marketplace</Text>
       </View>
       <ScrollView contentContainerStyle={coachStyles.content} showsVerticalScrollIndicator={false}>
-        <View style={coachStyles.hero}>
-          <PremiumIcon name="calendar" tone="rose" size={70} iconSize={32}/>
+        <View style={[coachStyles.hero,compactMarket&&marketplaceBrandStyles.heroCompact]}>
+          <PremiumIcon name="calendar" tone="rose" size={compactMarket?56:70} iconSize={compactMarket?26:32}/>
           <Text style={launchStyles.scriptHero}>Meet beyond the swipe</Text>
-          <Text style={[shared.h1,{textAlign:'center'}]}>Places, packages, events.</Text>
-          <Text style={[shared.body,{textAlign:'center'}]}>A safer first-date marketplace for Indians in USA/Canada: public venues, easy reservations, community mixers, video events and premium invite-only dinners.</Text>
+          <Text style={[shared.h1,{textAlign:'center'},compactMarket&&marketplaceBrandStyles.titleCompact]}>Plan the whole date.</Text>
+          <Text style={[shared.body,{textAlign:'center'},compactMarket&&marketplaceBrandStyles.bodyCompact]}>Public places, thoughtful packages and hosted events for serious couples across the USA and Canada.</Text>
         </View>
         <View style={coachStyles.eventStats}>
           <EventStat value={`${placeDirectory.length}`} label="curated places"/>
@@ -3247,7 +3250,7 @@ function MatchCard({match,reasons,onPress,onInterested,onSkip,onRose,compact=fal
     },
     onPanResponderTerminate:reset,
   })).current;
-  return <Animated.View {...panResponder.panHandlers} style={[styles.matchCard,!compact&&width<430&&{height:540},compact&&styles.matchCardCompact,swipeStyles.cardLift,{transform:[{translateX:pan.x},{translateY:pan.y},{rotate}]}]}>
+  return <Animated.View {...panResponder.panHandlers} style={[styles.matchCard,!compact&&width<430&&{height:500},compact&&styles.matchCardCompact,swipeStyles.cardLift,{transform:[{translateX:pan.x},{translateY:pan.y},{rotate}]}]}>
     <Pressable onPress={onPress} style={{width:'100%',height:'100%'}}>
       <Image source={{uri:match.photo}} style={styles.matchPhoto}/>
       <LinearGradient colors={['rgba(8,0,2,.12)','rgba(11,11,15,.08)','rgba(11,11,15,.98)']} style={StyleSheet.absoluteFill}/>
@@ -3256,7 +3259,7 @@ function MatchCard({match,reasons,onPress,onInterested,onSkip,onRose,compact=fal
       <Animated.View pointerEvents="none" style={[swipeStyles.swipeOverlay,swipeStyles.swipeYes,{opacity:yesOpacity}]}><Text style={swipeStyles.swipeLabel}>SERIOUS YES</Text></Animated.View>
       <Animated.View pointerEvents="none" style={[swipeStyles.swipeOverlay,swipeStyles.swipeNope,{opacity:nopeOpacity}]}><Text style={swipeStyles.swipeLabel}>NOT FOR ME</Text></Animated.View>
       <Animated.View pointerEvents="none" style={[swipeStyles.swipeRose,{opacity:roseOpacity}]}><PremiumIcon name="sparkles" tone="gold" size={46} iconSize={21}/><Text style={swipeStyles.swipeRoseText}>SEND SPARK</Text></Animated.View>
-      <View style={styles.matchTop}><View style={swipeStyles.premiumRibbon}><Chip label={match.match} gold/><View style={swipeStyles.matchSwipeHint}><MiniPremiumIcon name="swap-horizontal" tone="rose" size={24} iconSize={11}/><Text style={swipeStyles.matchSwipeHintText}>Swipe</Text></View></View></View>
+      <View style={styles.matchTop}><View style={swipeStyles.premiumRibbon}><Chip label={match.match} gold/></View></View>
       <View style={[styles.matchInfo,compact&&styles.matchInfoCompact]}><View style={shared.row}><View style={{flex:1}}><Text numberOfLines={1} style={[styles.matchName,compact&&styles.matchNameCompact]}>{match.name}, {match.age}</Text><Text numberOfLines={1} style={[styles.matchMeta,compact&&styles.matchMetaCompact]}>{match.profession} · {match.city}</Text></View><MiniPremiumIcon name="shield-checkmark" tone="plum" size={32} iconSize={15}/></View><View style={swipeStyles.profileSummary}><View style={swipeStyles.summaryItem}><Text style={swipeStyles.summaryLabel}>Intent</Text><Text numberOfLines={2} style={swipeStyles.summaryValue}>{match.intent}</Text></View><View style={swipeStyles.summaryDivider}/><View style={swipeStyles.summaryItem}><Text style={swipeStyles.summaryLabel}>Trust & values</Text><Text numberOfLines={2} style={swipeStyles.summaryValue}>{alignmentLabel} · {match.vouches.count} vouches</Text></View></View>{visibleReasons.length>0&&<View style={swipeStyles.reasonCard}><MiniPremiumIcon name="sparkles" tone="gold" size={28} iconSize={13}/><View style={{flex:1}}><Text style={swipeStyles.reasonTitle}>Why this feels aligned</Text><Text numberOfLines={2} style={swipeStyles.reasonBody}>{visibleReasons.join(' · ')}</Text></View></View>}<View style={styles.chipRow}>{visibleVibes.map(x=><Chip key={x} label={x}/>)}{hiddenVibes>0&&<View style={swipeStyles.morePill}><Text style={swipeStyles.morePillText}>+{hiddenVibes}</Text></View>}</View><View style={styles.cardActions}><Pressable accessibilityRole="button" accessibilityLabel={`Pass on ${match.name}`} onPress={onSkip} style={[styles.nope,compact&&styles.nopeCompact]}><PremiumIcon name="close" tone="dark" size={compact?46:52} iconSize={compact?21:24}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Send ${match.name} a Golden Spark`} onPress={onRose} style={[aiStyles.roseAction,compact&&aiStyles.roseActionCompact]}><PremiumIcon name="sparkles" tone="gold" size={30} iconSize={14}/><Text style={aiStyles.roseActionText}>Spark</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Interested in ${match.name}`} onPress={onInterested} style={[styles.yes,compact&&styles.yesCompact]}><MiniPremiumIcon name="heart" tone="ruby" size={compact?34:38} iconSize={compact?16:18}/><Text style={[styles.yesText,compact&&styles.yesTextCompact]}>Interested</Text></Pressable></View></View>
     </Pressable>
   </Animated.View>
@@ -4684,10 +4687,12 @@ const focusStyles=StyleSheet.create({
 
 const homeCleanStyles=StyleSheet.create({
   header:{minHeight:70,paddingHorizontal:18,paddingTop:7,paddingBottom:10,flexDirection:'row',alignItems:'center',gap:9},
-  headingCompact:{fontSize:22},
+  headingCompact:{fontSize:20},
+  brandLine:{fontFamily:'Poppins_700Bold',fontSize:9.5,letterSpacing:1.7,color:colors.ivory},
+  brandOne:{color:colors.gold},
   headerSub:{fontFamily:'Poppins_400Regular',fontSize:11.5,lineHeight:17,color:'#CDB5BB',marginTop:3},
   headerButton:{width:40,height:40,borderRadius:20,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.09)',alignItems:'center',justifyContent:'center'},
-  content:{paddingHorizontal:18,paddingBottom:100,gap:16},
+  content:{paddingHorizontal:18,paddingBottom:124,gap:16},
   sideRail:{position:'absolute',right:12,top:132,zIndex:5,gap:9},
   sideButton:{width:58,minHeight:58,borderRadius:20,backgroundColor:'rgba(27,4,10,.88)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',alignItems:'center',justifyContent:'center',gap:4,shadowColor:'#FF2448',shadowOpacity:.2,shadowRadius:14},
   goldButton:{borderColor:'rgba(212,175,55,.35)',backgroundColor:'rgba(42,18,8,.9)'},
@@ -4727,7 +4732,16 @@ const homeCleanStyles=StyleSheet.create({
   exploreTitleCompact:{fontSize:8.5,textAlign:'center',flex:0},
   matchGrid:{flexDirection:'row',flexWrap:'wrap',gap:14},
   matchGridItem:{width:'49%'},
+  futureDeckNote:{minHeight:64,paddingHorizontal:13,paddingVertical:11,borderRadius:8,backgroundColor:'rgba(212,175,55,.055)',borderWidth:1,borderColor:'rgba(212,175,55,.18)',flexDirection:'row',alignItems:'center',gap:10},
+  futureDeckTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
+  futureDeckBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:colors.muted,marginTop:2},
   emptyCard:{gap:12,alignItems:'center'},
+});
+
+const marketplaceBrandStyles=StyleSheet.create({
+  heroCompact:{paddingHorizontal:18,paddingVertical:16,gap:7,borderRadius:8},
+  titleCompact:{fontSize:30,lineHeight:36},
+  bodyCompact:{fontSize:13,lineHeight:19},
 });
 
 const growthLoopStyles=StyleSheet.create({
@@ -4993,7 +5007,7 @@ const supportStyles=StyleSheet.create({
 });
 
 const styles=StyleSheet.create({
-  matchCardCompact:{height:540},
+  matchCardCompact:{height:500},
   matchInfoCompact:{left:14,right:14,bottom:14,gap:7},
   matchNameCompact:{fontSize:23},
   matchMetaCompact:{fontSize:10.5},
