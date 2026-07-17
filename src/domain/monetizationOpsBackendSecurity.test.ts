@@ -26,4 +26,11 @@ describe('monetization operations backend security', () => {
     expect(migration).toContain('unique(user_id,idempotency_key)');
     expect(migration).toContain('request_billing_refund');
   });
+
+  it('rejects transaction ownership changes, invalid transitions and duplicate Spark grants', () => {
+    expect(migration).toContain("existing.user_id<>p_user_id or existing.product_key<>p_product_key");
+    expect(migration).toContain('billing_status_transition_allowed(prior_status,p_status)');
+    expect(migration).toContain("product.product_class='spark_pack' and prior_status is not null then 0");
+    expect(webhook).toContain("processed!==true");
+  });
 });

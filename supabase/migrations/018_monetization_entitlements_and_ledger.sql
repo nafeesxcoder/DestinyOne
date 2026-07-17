@@ -153,28 +153,65 @@ begin
   return jsonb_build_object('caseId',result.id,'status',result.status,'requestedAt',result.requested_at);
 end $$;
 
+create or replace function public.billing_status_transition_allowed(p_from text,p_to text)
+returns boolean language sql immutable set search_path=public,pg_temp as $$
+  select case
+    when p_from is null then p_to in ('verified','active','grace_period','billing_retry','expired','refunded','chargeback','revoked')
+    when p_from=p_to then true
+    when p_from='created' then p_to in ('pending_store','revoked')
+    when p_from='pending_store' then p_to in ('verified','revoked')
+    when p_from='verified' then p_to in ('active','grace_period','billing_retry','expired','refunded','chargeback','revoked')
+    when p_from='active' then p_to in ('grace_period','billing_retry','expired','partially_refunded','refunded','chargeback','revoked')
+    when p_from='grace_period' then p_to in ('active','billing_retry','expired','refunded','chargeback','revoked')
+    when p_from='billing_retry' then p_to in ('active','grace_period','expired','refunded','chargeback','revoked')
+    when p_from='partially_refunded' then p_to in ('active','refunded','chargeback','revoked')
+    when p_from='expired' then p_to in ('active','refunded','chargeback','revoked')
+    when p_from='chargeback' then p_to='revoked'
+    else false
+  end
+$$;
+
 create or replace function public.process_billing_webhook(
   p_platform text,p_external_event_id text,p_event_type text,p_payload_sha256 text,p_user_id uuid,
   p_product_key text,p_transaction_hash text,p_original_transaction_hash text,p_status text,
   p_purchased_at timestamptz,p_expires_at timestamptz,p_units integer
 )
 returns boolean language plpgsql security definer set search_path=public,pg_temp as $$
-declare hook public.billing_webhook_receipts; receipt public.billing_purchase_receipts; product public.billing_products; ledger_event text; delta integer;
+declare hook public.billing_webhook_receipts; receipt public.billing_purchase_receipts; existing public.billing_purchase_receipts; product public.billing_products; ledger_event text; delta integer; prior_status text;
 begin
   if auth.role()<>'service_role' then raise exception 'service role required'; end if;
   if p_status not in ('verified','active','grace_period','billing_retry','expired','partially_refunded','refunded','chargeback','revoked') then raise exception 'invalid billing status'; end if;
   insert into public.billing_webhook_receipts(platform,external_event_id,event_type,payload_sha256)
   values(p_platform,p_external_event_id,p_event_type,p_payload_sha256)
   on conflict(platform,external_event_id) do nothing returning * into hook;
-  if hook.id is null then return false; end if;
+  if hook.id is null then return true; end if;
   select * into product from public.billing_products where product_key=p_product_key and platform=p_platform and active;
-  if product.product_key is null then raise exception 'active billing product unavailable'; end if;
+  if product.product_key is null then
+    update public.billing_webhook_receipts set processing_error='active billing product unavailable',processed_at=now() where id=hook.id;
+    return false;
+  end if;
+  select * into existing from public.billing_purchase_receipts where platform=p_platform and external_transaction_hash=p_transaction_hash for update;
+  if existing.id is not null and (existing.user_id<>p_user_id or existing.product_key<>p_product_key) then
+    update public.billing_webhook_receipts set processing_error='transaction owner or product mismatch',processed_at=now() where id=hook.id;
+    return false;
+  end if;
+  prior_status:=existing.status;
+  if not public.billing_status_transition_allowed(prior_status,p_status) then
+    update public.billing_webhook_receipts set processing_error='unsupported status transition',processed_at=now() where id=hook.id;
+    return false;
+  end if;
   insert into public.billing_purchase_receipts(user_id,product_key,platform,external_transaction_hash,original_transaction_hash,status,server_verified_at,purchased_at,expires_at,last_event_at)
   values(p_user_id,p_product_key,p_platform,p_transaction_hash,p_original_transaction_hash,p_status,now(),p_purchased_at,p_expires_at,now())
   on conflict(platform,external_transaction_hash) do update set status=excluded.status,expires_at=excluded.expires_at,last_event_at=now(),updated_at=now(),server_verified_at=coalesce(public.billing_purchase_receipts.server_verified_at,now())
   returning * into receipt;
   ledger_event:=case when p_status in ('verified','active') then 'grant' when p_status in ('grace_period','billing_retry') then 'grace' when p_status='expired' then 'expire' when p_status in ('partially_refunded','refunded') then 'refund' when p_status='chargeback' then 'chargeback' else 'revoke' end;
-  delta:=case when p_status in ('verified','active') then greatest(coalesce(p_units,product.units),0) when p_status in ('grace_period','billing_retry') then 0 else -greatest(coalesce(p_units,product.units),0) end;
+  delta:=case
+    when p_status in ('verified','active') and product.product_class='spark_pack' and prior_status is not null then 0
+    when p_status in ('verified','active') and prior_status in ('verified','active','grace_period','billing_retry','partially_refunded') then 0
+    when p_status in ('verified','active') then greatest(coalesce(p_units,product.units),0)
+    when p_status in ('grace_period','billing_retry') or prior_status=p_status then 0
+    else -greatest(coalesce(p_units,product.units),0)
+  end;
   insert into public.billing_entitlement_ledger(user_id,receipt_id,entitlement_key,event_type,unit_delta,source_event_key,expires_at,metadata)
   values(p_user_id,receipt.id,product.entitlement_key,ledger_event,delta,p_platform||':'||p_external_event_id,p_expires_at,jsonb_build_object('platform',p_platform,'status',p_status));
   insert into public.billing_entitlement_snapshots(user_id,entitlement_key,status,units,source_receipt_id,expires_at)
@@ -193,7 +230,7 @@ begin
   return true;
 exception when others then
   update public.billing_webhook_receipts set processing_error=left(sqlerrm,500),processed_at=now() where id=hook.id;
-  raise;
+  return false;
 end $$;
 
 revoke all on public.billing_products,public.billing_purchase_receipts,public.billing_entitlement_ledger,public.billing_entitlement_snapshots,public.billing_webhook_receipts,public.billing_refund_cases,public.billing_daily_finance_snapshots from anon,authenticated;
@@ -201,8 +238,10 @@ grant select on public.billing_entitlement_snapshots,public.billing_refund_cases
 revoke execute on function public.get_current_entitlements() from public,anon;
 revoke execute on function public.restore_store_purchases() from public,anon;
 revoke execute on function public.request_billing_refund(uuid,text,text) from public,anon;
+revoke execute on function public.billing_status_transition_allowed(text,text) from public,anon,authenticated;
 revoke execute on function public.process_billing_webhook(text,text,text,text,uuid,text,text,text,text,timestamptz,timestamptz,integer) from public,anon,authenticated;
 grant execute on function public.get_current_entitlements() to authenticated;
 grant execute on function public.restore_store_purchases() to authenticated;
 grant execute on function public.request_billing_refund(uuid,text,text) to authenticated;
+grant execute on function public.billing_status_transition_allowed(text,text) to service_role;
 grant execute on function public.process_billing_webhook(text,text,text,text,uuid,text,text,text,text,timestamptz,timestamptz,integer) to service_role;

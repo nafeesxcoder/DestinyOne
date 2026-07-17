@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(128);
+select plan(129);
 
 select has_table('public','billing_products','server-owned billing catalog exists');
 select has_table('public','billing_purchase_receipts','hashed provider receipts exist');
@@ -13,6 +13,7 @@ select has_table('public','billing_daily_finance_snapshots','unit economics snap
 select has_function('public','get_current_entitlements',array[]::text[],'safe entitlement RPC exists');
 select has_function('public','restore_store_purchases',array[]::text[],'server-verified restore RPC exists');
 select has_function('public','request_billing_refund',array['uuid','text','text'],'idempotent refund request RPC exists');
+select function_privs_are('public','billing_status_transition_allowed',array['text','text'],'service_role',array['EXECUTE'],'billing transition guard is service-only');
 select function_privs_are('public','process_billing_webhook',array['text','text','text','text','uuid','text','text','text','text','timestamp with time zone','timestamp with time zone','integer'],'service_role',array['EXECUTE'],'billing processor is service-only');
 select table_privs_are('public','billing_purchase_receipts','authenticated',array[]::text[],'members cannot query raw purchase receipts');
 select table_privs_are('public','billing_entitlement_ledger','authenticated',array[]::text[],'members cannot mutate or query the raw ledger');

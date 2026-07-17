@@ -17,5 +17,7 @@ Deno.serve(async(req)=>{
   if(!event.platform||!event.eventId||!event.type||!event.userId||!event.productKey||!event.transactionId||!event.status)return json({error:'Invalid event'},400);
   const response=await fetch(`${supabaseUrl}/rest/v1/rpc/process_billing_webhook`,{method:'POST',headers:{Authorization:`Bearer ${serviceKey}`,apikey:serviceKey,'Content-Type':'application/json'},body:JSON.stringify({p_platform:event.platform,p_external_event_id:event.eventId,p_event_type:event.type,p_payload_sha256:await sha256(raw),p_user_id:event.userId,p_product_key:event.productKey,p_transaction_hash:await sha256(event.transactionId),p_original_transaction_hash:event.originalTransactionId?await sha256(event.originalTransactionId):null,p_status:event.status,p_purchased_at:event.purchasedAt??null,p_expires_at:event.expiresAt??null,p_units:event.units??1})});
   if(!response.ok)return json({error:'Billing event processing failed'},502);
-  return json({received:true,processed:await response.json()});
+  const processed=await response.json();
+  if(processed!==true)return json({error:'Billing event rejected for retry'},502);
+  return json({received:true,processed:true});
 });
