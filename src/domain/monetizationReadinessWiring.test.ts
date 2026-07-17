@@ -16,4 +16,9 @@ describe('monetization readiness wiring', () => {
     expect(app).toContain("if(appEnvironment==='production')");
     expect(app).toContain('No charge or entitlement was created.');
   });
+
+  it('anchors checkout sheets inside a full-screen modal root', () => {
+    expect(app).toContain('<View style={pricingStyles.checkoutModalRoot}><Pressable style={chatStyles.modalBackdrop}');
+    expect(app).toContain('checkoutModalRoot:{flex:1}');
+  });
 });
