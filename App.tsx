@@ -19,7 +19,7 @@ import { canSendGift, spendCoins } from './src/domain/commerce';
 import { isEligibleMemberAge, isValidEmail, isValidPassword, isValidPhone } from './src/domain/validation';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { configureAnalyticsConsent, track } from './src/lib/telemetry';
-import { appEnvironment, isSupabaseConfigured, requiresRealBackend } from './src/lib/supabase';
+import { appEnvironment, backendRuntime, isSupabaseConfigured, requiresRealBackend } from './src/lib/supabase';
 import { buildDateReservationSteps, createDateReservationIntent, dateReservationMode, dateReservationStatusCopy, estimateDateReservationQuote, formatPaymentMoney, paymentsConfigured, stripePublishableKey, type DateReservationQuote, type DateReservationStatus } from './src/services/payments';
 import { ApplePayReservationButton, StripePaymentProvider, checkApplePaySupport, confirmApplePayReservation } from './src/payments/stripe';
 import { buildGiftFulfillmentPlan, createPhysicalGiftOrder, digitalGiftWalletMode, estimateGiftOrderQuote, formatGiftMoney, giftOrderSummary, giftOrderingConfigured, physicalGiftOrderingMode, vouchRewardsMode, type GiftFulfillmentStatus, type GiftOrderQuote } from './src/services/gifts';
@@ -57,13 +57,14 @@ import { buildRelationshipJourney, type RelationshipReflection } from './src/dom
 import { buildRelationshipLearningState, type RelationshipJourneyEventName } from './src/domain/relationshipLearning';
 import { primaryNavigation } from './src/domain/featureFocus';
 import { memberNeedsOnboarding } from './src/domain/memberBootstrap';
+import { evaluateMemberDataRuntime } from './src/domain/memberDataRuntime';
 
 type Screen = 'splash'|'welcome'|'auth'|'otp'|'verify'|'profileSetup'|'vibes'|'intent'|'alignment'|'home'|'explore'|'circle'|'discovery'|'detail'|'mutual'|'icebreaker'|'chat'|'datePlan'|'safety'|'likes'|'profile'|'pricing'|'support'|'coach'|'events'|'executive'|'verifyHub'|'admin';
 
 const previewScreens:Screen[]=['splash','welcome','auth','otp','verify','profileSetup','vibes','intent','alignment','home','explore','circle','discovery','detail','mutual','icebreaker','chat','datePlan','safety','likes','profile','pricing','support','coach','events','executive','verifyHub','admin'];
 
 function getPreviewScreen():Screen|undefined{
-  if(Platform.OS!=='web'||appEnvironment==='production'||typeof window==='undefined')return undefined;
+  if(Platform.OS!=='web'||backendRuntime.mode!=='demo'||typeof window==='undefined')return undefined;
   const requested=new URLSearchParams(window.location.search).get('preview') as Screen|null;
   return requested&&previewScreens.includes(requested)?requested:undefined;
 }
@@ -71,11 +72,13 @@ function getPreviewScreen():Screen|undefined{
 type RoseAvailability = { freeAvailable: boolean; paidCredits: number };
 type RosePopupPayload = { match: Match; note: string; paid: boolean };
 type AppNotice = { title: string; body: string; icon: keyof typeof Ionicons.glyphMap; tone?: PremiumIconTone; actionLabel?: string; actionScreen?: Screen };
+type MemberMatchLoadState = 'preview' | 'loading' | 'ready' | 'error';
 const destinyOneLogo = require('./assets/destinyone-logo.png');
 const premiumRose = require('./assets/premium-red-rose.png');
 const icebreakerQuestion = 'Coffee date ☕ or road trip 🚗?';
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
+const memberDataRuntime = evaluateMemberDataRuntime(backendRuntime.mode);
 
 function getRoseAvailability(ledger: RoseLedger): RoseAvailability {
   const today = todayKey();
@@ -122,7 +125,7 @@ function DestinyOneApp() {
   const [profileDraft,setProfileDraft] = useState<ProfileDraft>(initialPersistedState.profileDraft);
   const [chatMessages,setChatMessages] = useState<Record<string,ChatMessage[]>>({});
   const [chatDrafts,setChatDrafts] = useState<Record<string,string>>({});
-  const [coinBalance,setCoinBalance] = useState(initialPersistedState.coinBalance);
+  const [coinBalance,setCoinBalance] = useState(memberDataRuntime.initialCoinBalance);
   const [profilePhotos,setProfilePhotos] = useState<string[]>([]);
   const [selfieUri,setSelfieUri] = useState('');
   const [voiceIntroUri,setVoiceIntroUri] = useState('');
@@ -146,42 +149,59 @@ function DestinyOneApp() {
   const [chatSettings,setChatSettings] = useState<Record<string,CoupleChatSettings>>(initialPersistedState.chatSettings);
   const [relationshipReflections,setRelationshipReflections] = useState<Record<string,RelationshipReflectionRecord>>(initialPersistedState.relationshipReflections);
   const [relationshipReminders,setRelationshipReminders] = useState<Record<string,RelationshipReminderRecord>>(initialPersistedState.relationshipReminders);
-  const [serverMatches,setServerMatches] = useState<Match[]|null>(appEnvironment==='production'?[]:null);
+  const [serverMatches,setServerMatches] = useState<Match[]|null>(memberDataRuntime.allowsMockMatches?null:[]);
+  const [matchLoadState,setMatchLoadState] = useState<MemberMatchLoadState>(memberDataRuntime.allowsMockMatches?'preview':'loading');
   const [hydrated,setHydrated] = useState(false);
+
+  const refreshServerMatches=async()=>{
+    if(memberDataRuntime.source!=='server')return;
+    setMatchLoadState('loading');
+    try{
+      setServerMatches(await fetchDailyMatches(5)??[]);
+      setMatchLoadState('ready');
+    }catch(error){
+      setServerMatches([]);
+      setMatchLoadState('error');
+      setAppNotice({title:'Matches unavailable',body:error instanceof Error?error.message:'Your curated matches could not be loaded securely. Please try again.',icon:'cloud-offline-outline',tone:'ruby'});
+    }
+  };
 
   useEffect(()=>{
     let active=true;
     const started=Date.now();
     loadAppState().then(async saved=>{
       if(!active)return;
-      setAuthDestination(saved.authDestination);
-      setVerified(saved.verified);
-      setProfileDraft({...initialPersistedState.profileDraft,...saved.profileDraft});
-      setVibeList(saved.vibes);
-      setIntent(saved.intent);
-      setAlignment(saved.alignment);
-      setChatMessages(saved.chats);
-      setCoinBalance(saved.coinBalance);
-      setProfilePhotos(saved.photos);
-      setSelfieUri(saved.selfieUri);
-      setVoiceIntroUri(saved.voiceIntroUri);
-      setVouches(saved.vouches);
-      setDiscoverySignals(saved.discoverySignals);
-      setSmartDiscovery(saved.smartDiscovery);
-      setCrossedPaths(saved.crossedPaths);
-      setBlockedIds(saved.blockedIds);
-      setReports(saved.reports);
-      setSafeCheckIns(saved.safeCheckIns);
-      setMatchFilters({...defaultMatchFilters,...saved.matchFilters});
-      setRoseLedger({...initialPersistedState.roseLedger,...saved.roseLedger});
-      setLastSeenVisible(saved.lastSeenVisible ?? true);
-      setAnalyticsConsent(saved.analyticsConsent ?? false);
-      setChatSettings(saved.chatSettings ?? {});
-      setRelationshipReflections(saved.relationshipReflections ?? {});
-      setRelationshipReminders(saved.relationshipReminders ?? {});
-      let nextScreen:Screen=saved.onboardingComplete?'home':'welcome';
-      setOnboardingComplete(saved.onboardingComplete);
-      if(appEnvironment==='production'){
+      let nextScreen:Screen='welcome';
+      if(memberDataRuntime.allowsLocalHydration){
+        setAuthDestination(saved.authDestination);
+        setVerified(saved.verified);
+        setProfileDraft({...initialPersistedState.profileDraft,...saved.profileDraft});
+        setVibeList(saved.vibes);
+        setIntent(saved.intent);
+        setAlignment(saved.alignment);
+        setChatMessages(saved.chats);
+        setCoinBalance(saved.coinBalance);
+        setProfilePhotos(saved.photos);
+        setSelfieUri(saved.selfieUri);
+        setVoiceIntroUri(saved.voiceIntroUri);
+        setVouches(saved.vouches);
+        setDiscoverySignals(saved.discoverySignals);
+        setSmartDiscovery(saved.smartDiscovery);
+        setCrossedPaths(saved.crossedPaths);
+        setBlockedIds(saved.blockedIds);
+        setReports(saved.reports);
+        setSafeCheckIns(saved.safeCheckIns);
+        setMatchFilters({...defaultMatchFilters,...saved.matchFilters});
+        setRoseLedger({...initialPersistedState.roseLedger,...saved.roseLedger});
+        setLastSeenVisible(saved.lastSeenVisible ?? true);
+        setAnalyticsConsent(saved.analyticsConsent ?? false);
+        setChatSettings(saved.chatSettings ?? {});
+        setRelationshipReflections(saved.relationshipReflections ?? {});
+        setRelationshipReminders(saved.relationshipReminders ?? {});
+        nextScreen=saved.onboardingComplete?'home':'welcome';
+        setOnboardingComplete(saved.onboardingComplete);
+      }
+      if(memberDataRuntime.source==='server'){
         try{
           const member=await loadCurrentMemberBootstrap();
           const needsOnboarding=member?memberNeedsOnboarding(member):false;
@@ -205,12 +225,15 @@ function DestinyOneApp() {
             setSmartDiscovery(serverPreferences.smart_discovery);
           }
           if(member&&!needsOnboarding){
-            try{setServerMatches(await fetchDailyMatches(5)??[])}catch{setServerMatches([])}
+            await refreshServerMatches();
+          }else{
+            setMatchLoadState('ready');
           }
         }catch(error){
           nextScreen='welcome';
           setOnboardingComplete(false);
           setVerified(false);
+          setMatchLoadState('error');
           setAppNotice({title:'Secure sign-in required',body:error instanceof Error?error.message:'The production backend could not restore your session.',icon:'shield-outline',tone:'ruby'});
         }
       }
@@ -221,7 +244,7 @@ function DestinyOneApp() {
   },[]);
 
   useEffect(()=>{
-    if(!hydrated)return;
+    if(!hydrated||!memberDataRuntime.allowsLocalPersistence)return;
     const timer=setTimeout(()=>{
       void saveAppState({onboardingComplete,authDestination,verified,profileDraft,vibes:vibeList,intent,alignment,chats:chatMessages,coinBalance,photos:profilePhotos,selfieUri,voiceIntroUri,vouches,discoverySignals,smartDiscovery,crossedPaths,blockedIds,reports,safeCheckIns,matchFilters,roseLedger,lastSeenVisible,analyticsConsent,chatSettings,relationshipReflections,relationshipReminders});
     },250);
@@ -470,7 +493,7 @@ function DestinyOneApp() {
     {screen==='vibes'&&<Vibes value={vibeList} onChange={setVibeList} onNext={()=>setScreen('intent')}/>} 
     {screen==='intent'&&<Intent value={intent} onChange={setIntent} onNext={()=>setScreen('alignment')}/>} 
     {screen==='alignment'&&<Alignment value={alignment} onChange={setAlignment} onNext={completeOnboarding}/>} 
-    {screen==='home'&&<HomeClean items={visibleMatches} preferences={{intent,vibes:vibeList,filters:matchFilters}} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={setScreen}/>} 
+    {screen==='home'&&<HomeClean items={visibleMatches} matchLoadState={matchLoadState} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={setScreen}/>} 
     {screen==='explore'&&<ExploreHub navigate={setScreen}/>} 
     {screen==='circle'&&<TrustedCircle vouches={vouches} coinBalance={coinBalance} rewardMode={vouchRewardsMode} onBack={()=>setScreen('explore')} onAddVouch={(quality)=>{if(vouchRewardsMode==='demo'&&vouches.length<3&&!vouches.includes(quality)){setVouches(current=>[...current,quality]);setCoinBalance(balance=>balance+100)}}}/>} 
     {screen==='discovery'&&<DiscoveryCenter filters={matchFilters} onFiltersChange={updateMatchFilters} signals={discoverySignals} smartDiscovery={smartDiscovery} crossedPaths={crossedPaths} onSmartChange={updateSmartDiscovery} onCrossedChange={setCrossedPaths} onClear={clearMatchingActivity} onBack={()=>setScreen('explore')}/>} 
@@ -840,7 +863,7 @@ function Alignment({value,onChange,onNext}:{value:Record<string,string>;onChange
   </FormPage>
 }
 
-function HomeClean({items,preferences,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{items:Match[];preferences:{intent:string;vibes:string[];filters:MatchFilters};signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
+function HomeClean({items,matchLoadState,onRetryMatches,preferences,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{items:Match[];matchLoadState:MemberMatchLoadState;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
   const {width}=useWindowDimensions();
   const useMatchGrid=width>=900;
   const compactHome=width<430;
@@ -898,10 +921,10 @@ function HomeClean({items,preferences,signals,dismissedCount,profileGrowth,cross
       <View style={useMatchGrid&&homeCleanStyles.matchGrid}>{rest.map(match=><View key={match.id} style={useMatchGrid&&homeCleanStyles.matchGridItem}><MatchCard compact={useMatchGrid} match={match} reasons={match.reasons??matchReasons(match,preferences)} onPress={()=>openDetail(match)} onInterested={()=>onInterested(match)} onSkip={()=>onSkip(match)} onRose={()=>onRose(match)}/></View>)}</View>
 
       {!items.length&&<View style={[shared.card,homeCleanStyles.emptyCard]}>
-        <PremiumIcon name="options-outline" tone="plum" size={58} iconSize={27}/>
-        <Text style={styles.cardTitle}>No profiles match these filters</Text>
-        <Text style={[styles.helper,{textAlign:'center'}]}>Try widening age, city, vibe or family filters.</Text>
-        <Button label="Adjust filters" onPress={()=>navigate('discovery')}/>
+        <PremiumIcon name={matchLoadState==='error'?'cloud-offline-outline':matchLoadState==='loading'?'hourglass-outline':'heart-outline'} tone={matchLoadState==='error'?'ruby':'plum'} size={58} iconSize={27}/>
+        <Text style={styles.cardTitle}>{matchLoadState==='error'?'Could not load your matches':matchLoadState==='loading'?'Curating your matches…':matchLoadState==='preview'?'No profiles match these filters':'Your next introduction is being curated'}</Text>
+        <Text style={[styles.helper,{textAlign:'center'}]}>{matchLoadState==='error'?'We will never replace unavailable member data with demo profiles. Check your connection and try again.':matchLoadState==='loading'?'Verified profiles are loading securely.':matchLoadState==='preview'?'Try widening age, city, vibe or family filters.':'No verified profiles meet your preferences right now. We will refresh your introductions as the community grows.'}</Text>
+        {matchLoadState==='error'?<Button label="Try again" icon="refresh" onPress={onRetryMatches}/>:matchLoadState==='preview'?<Button label="Adjust filters" onPress={()=>navigate('discovery')}/>:matchLoadState==='ready'?<Button label="Review preferences" icon="options-outline" onPress={()=>navigate('discovery')}/>:null}
       </View>}
     </ScrollView>
     <BottomNav active="home" navigate={navigate}/>
@@ -3152,6 +3175,7 @@ function ReservationCheckout({venue,quote,status,applePaySupported,error,onReser
 function DateToggle({title,body,value,onPress}:{title:string;body:string;value:boolean;onPress:()=>void}){return <Pressable onPress={onPress} style={dateStyles.toggle}><View style={{flex:1}}><Text style={dateStyles.toggleTitle}>{title}</Text><Text style={styles.helper}>{body}</Text></View><View style={[discoveryStyles.switch,value&&discoveryStyles.switchOn]}><View style={[discoveryStyles.switchThumb,value&&discoveryStyles.switchThumbOn]}/></View></Pressable>}
 
 function MatchCard({match,reasons,onPress,onInterested,onSkip,onRose,compact=false}:{match:Match;reasons:string[];onPress:()=>void;onInterested:()=>void;onSkip:()=>void;onRose:()=>void;compact?:boolean}){
+  const {width}=useWindowDimensions();
   const pan=useRef(new Animated.ValueXY()).current;
   const rotate=pan.x.interpolate({inputRange:[-180,0,180],outputRange:['-8deg','0deg','8deg']});
   const yesOpacity=pan.x.interpolate({inputRange:[20,120],outputRange:[0,1],extrapolate:'clamp'});
@@ -3174,7 +3198,7 @@ function MatchCard({match,reasons,onPress,onInterested,onSkip,onRose,compact=fal
     },
     onPanResponderTerminate:reset,
   })).current;
-  return <Animated.View {...panResponder.panHandlers} style={[styles.matchCard,compact&&styles.matchCardCompact,swipeStyles.cardLift,{transform:[{translateX:pan.x},{translateY:pan.y},{rotate}]}]}>
+  return <Animated.View {...panResponder.panHandlers} style={[styles.matchCard,!compact&&width<430&&{height:540},compact&&styles.matchCardCompact,swipeStyles.cardLift,{transform:[{translateX:pan.x},{translateY:pan.y},{rotate}]}]}>
     <Pressable onPress={onPress} style={{width:'100%',height:'100%'}}>
       <Image source={{uri:match.photo}} style={styles.matchPhoto}/>
       <LinearGradient colors={['rgba(8,0,2,.12)','rgba(11,11,15,.08)','rgba(11,11,15,.98)']} style={StyleSheet.absoluteFill}/>
