@@ -55,7 +55,7 @@ import { buildObservabilityReadinessSnapshot, type ObservabilityGate, type Obser
 import { buildAbuseFraudReadinessSnapshot, type AbuseFraudGate, type AbuseFraudReadinessSnapshot } from './src/domain/abuseFraudReadiness';
 import { buildRelationshipJourney, type RelationshipReflection } from './src/domain/relationshipJourney';
 import { buildRelationshipLearningState, type RelationshipJourneyEventName } from './src/domain/relationshipLearning';
-import { primaryNavigation } from './src/domain/featureFocus';
+import { chatMoreAttachments, chatPrimaryAttachments, primaryNavigation, relationshipJourneySteps } from './src/domain/featureFocus';
 import { memberNeedsOnboarding } from './src/domain/memberBootstrap';
 import { canCommitMemberMutation, evaluateMemberDataRuntime, memberMutationFailureMessage, type MemberMutationResult } from './src/domain/memberDataRuntime';
 import { buildDailyIntroductionDeck } from './src/domain/dailyIntroductions';
@@ -1007,6 +1007,7 @@ function ExploreHub({navigate}:{navigate:(screen:Screen)=>void}){
   return <LinearGradient colors={['#25040B','#0B0104',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,{maxWidth:920,paddingHorizontal:0}]}>
     <View style={focusStyles.header}><View style={{flex:1}}><Text style={styles.kicker}>DISCOVER WITH INTENTION</Text><Text style={shared.h2}>Your next step</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={()=>navigate('profile')} style={homeCleanStyles.headerButton}><PremiumIcon name="person-outline" tone="ruby" size={36} iconSize={17}/></Pressable></View>
     <ScrollView contentContainerStyle={focusStyles.content} showsVerticalScrollIndicator={false}>
+      <View style={focusStyles.journeyRail}>{relationshipJourneySteps.map((step,index)=><React.Fragment key={step.id}><Pressable accessibilityRole="button" accessibilityLabel={`${step.label} stage`} onPress={()=>navigate(step.target as Screen)} style={focusStyles.journeyStep}><MiniPremiumIcon name={step.icon as keyof typeof Ionicons.glyphMap} tone={index===0?'ruby':index===3?'gold':'dark'} size={32} iconSize={15}/><Text style={focusStyles.journeyLabel}>{step.label}</Text></Pressable>{index<relationshipJourneySteps.length-1&&<View style={focusStyles.journeyLine}/>}</React.Fragment>)}</View>
       <View style={[focusStyles.featuredRow,wide&&focusStyles.featuredRowWide]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Open Executive Circle" onPress={()=>navigate('executive')} style={[focusStyles.executiveCard,wide&&focusStyles.featuredWide]}><LinearGradient colors={['rgba(212,175,55,.18)','rgba(229,9,47,.08)']} style={StyleSheet.absoluteFill}/><View style={focusStyles.featureIcon}><PremiumIcon name="briefcase" tone="gold" size={50} iconSize={23}/></View><View style={{flex:1}}><Text style={styles.kicker}>EXECUTIVE CIRCLE</Text><Text style={focusStyles.featureTitle}>Selective professional introductions.</Text><Text style={focusStyles.featureBody}>Verified career, values and relationship intent for members who prefer a smaller, curated circle.</Text></View><Ionicons name="chevron-forward" size={19} color={colors.gold}/></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Open people who liked you" onPress={()=>navigate('likes')} style={[focusStyles.likesCard,wide&&focusStyles.likesWide]}><MiniPremiumIcon name="heart-circle" tone="ruby" size={42} iconSize={20}/><View style={{flex:1}}><Text style={focusStyles.likesTitle}>People who chose you</Text><Text style={focusStyles.featureBody}>Private interest, kept calm and intentional.</Text></View><Ionicons name="chevron-forward" size={18} color={colors.muted}/></Pressable>
@@ -3563,6 +3564,24 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
   const sendSnap=(uri:string,filter:string,sticker:string,viewOnce:boolean)=>{void dispatchMessage(createMessage({type:'snap',uri,snap:{filter,sticker,viewOnce,expiresAt:Date.now()+24*60*60*1000}}));setSnapOpen(false);setShowAttachments(false)};
   const sendFaceEmoji=(faceUri:string,emoji:string,filter:string)=>{void dispatchMessage(createMessage({type:'sticker',sticker:{faceUri,emoji,filter,label:'My face emoji'}}));setFaceEmojiOpen(false);setShowAttachments(false)};
   const startGame=(game:typeof coupleGames[number])=>{void dispatchMessage(createMessage({type:'text',text:`🎮 ${game.title}: ${game.prompt}`}));setGamesOpen(false);setShowAttachments(false)};
+  const openAttachment=(id:string)=>{
+    if(id==='date_market'){setShowAttachments(false);navigate('events');return}
+    if(id==='camera'){void sendCameraPhoto();return}
+    if(id==='gallery'){void sendPhoto();return}
+    if(id==='location'){void shareLiveLocation();return}
+    if(id==='document'){sendQuickShare('📄 Relationship values.pdf\nDocument · 1.8 MB · Shared securely');return}
+    if(id==='more'){setAttachmentPage('more');return}
+    if(id==='contact'){sendQuickShare(`👤 Trusted contact card\n${match.name} · DestinyOne verified match`);return}
+    if(id==='poll'){sendQuickShare('📊 Which date feels best?\n☕ Café   🍽️ Dinner   🎨 Activity');return}
+    if(id==='gif'){setGifOpen(true);return}
+    if(id==='gift'){setGiftOpen(true);return}
+    if(id==='games'){setGamesOpen(true);return}
+    if(id==='snap'){setSnapOpen(true);return}
+    if(id==='face'){setFaceEmojiOpen(true);return}
+    if(id==='spark'){setShowAttachments(false);onRose();return}
+    if(id==='disappearing'){setDisappearingMessages(value=>!value);setShowAttachments(false);return}
+    if(id==='back')setAttachmentPage('main');
+  };
   const activeTheme=coupleThemes.find(theme=>theme.name===settings.theme)??coupleThemes[0]!;
   const displayName=settings.nickname.trim()||match.name;
   const messageSafety=scanMessageSafety(text);
@@ -3602,25 +3621,9 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
       {!!text.trim()&&messageSafety.signals.length>0&&(
         <SafetyNudge scan={messageSafety} onOpenSafety={()=>navigate('safety')}/>
       )}
-      {showAttachments&&<View style={[chatStyles.attachmentTray,chatWidth>=600&&chatStyles.attachmentTrayWide]}>{attachmentPage==='main'?<>
-        <Attachment icon="document-text" label="Document" color="#7A1FE0" onPress={()=>sendQuickShare('📄 Relationship values.pdf\nDocument · 1.8 MB · Shared securely')}/>
-        <Attachment icon="camera" label="Camera" color="#E5092F" onPress={()=>void sendCameraPhoto()}/>
-        <Attachment icon="images" label="Gallery" color="#A71D35" onPress={()=>void sendPhoto()}/>
-        <Attachment icon="location" label="Location" color="#D4AF37" onPress={()=>void shareLiveLocation()}/>
-        <Attachment icon="person" label="Contact" color="#399A70" onPress={()=>sendQuickShare(`👤 Trusted contact card\n${match.name} · DestinyOne verified match`)}/>
-        <Attachment icon="stats-chart" label="Poll" color="#D4AF37" onPress={()=>sendQuickShare('📊 Which date feels best?\n☕ Café   🍽️ Dinner   🎨 Activity')}/>
-        <Attachment icon="calendar" label="Date Market" color="#A75A1D" onPress={()=>{setShowAttachments(false);navigate('events')}}/>
-        <Attachment icon="ellipsis-horizontal" label="More" color="#7A1FE0" onPress={()=>setAttachmentPage('more')}/>
-      </>:<>
-        <Attachment icon="happy" label="GIF" color="#B9293F" onPress={()=>setGifOpen(true)}/>
-        <Attachment icon="gift" label="Gift" color="#D4AF37" onPress={()=>setGiftOpen(true)}/>
-        <Attachment icon="game-controller" label="Games" color="#7A1FE0" onPress={()=>setGamesOpen(true)}/>
-        <Attachment icon="aperture" label="Snap" color="#B9293F" onPress={()=>setSnapOpen(true)}/>
-        <Attachment icon="person-circle" label="Face" color="#89162C" onPress={()=>setFaceEmojiOpen(true)}/>
-        <Attachment icon="sparkles" label="Spark" color="#D4AF37" onPress={()=>{setShowAttachments(false);onRose()}}/>
-        <Attachment icon="timer" label={disappearingMessages?'24h On':'24h Off'} color="#D4AF37" onPress={()=>{setDisappearingMessages(value=>!value);setShowAttachments(false)}}/>
-        <Attachment icon="arrow-back" label="Back" color="#7A1FE0" onPress={()=>setAttachmentPage('main')}/>
-      </>}</View>}
+      {showAttachments&&<View style={[chatStyles.attachmentTray,chatWidth>=600&&chatStyles.attachmentTrayWide]}>
+        {(attachmentPage==='main'?chatPrimaryAttachments:chatMoreAttachments).map(item=><Attachment key={item.id} icon={item.icon as keyof typeof Ionicons.glyphMap} label={item.id==='disappearing'?(disappearingMessages?'24h On':'24h Off'):item.label} color={item.color} onPress={()=>openAttachment(item.id)}/>) }
+      </View>}
       {showEmoji&&<View style={chatStyles.emojiPanel}><View style={chatStyles.emojiHeader}><Text style={chatStyles.emojiTitle}>Emojis</Text><Text style={chatStyles.emojiCount}>{quickEmojis.length} daily-use</Text></View><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={chatStyles.emojiTray}>{quickEmojis.map((emoji,index)=><Pressable key={`${emoji}-${index}`} style={chatStyles.emojiButton} onPress={()=>setText(value=>value+emoji)}><Text style={chatStyles.emoji}>{emoji}</Text></Pressable>)}</ScrollView></View>}
       {replyTarget&&<View style={chatStyles.replyPreview}><View style={chatStyles.replyAccent}/><View style={{flex:1}}><Text style={chatStyles.replyTitle}>Replying to your message</Text><Text numberOfLines={1} style={chatStyles.replyText}>{messageSummary(replyTarget)}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Cancel reply" onPress={()=>setReplyTarget(null)}><Ionicons name="close" size={20} color={colors.muted}/></Pressable></View>}
       <View style={[styles.composer,chatPremiumStyles.composer]}><Pressable accessibilityRole="button" accessibilityLabel={showAttachments?'Close attachments':'Add attachment'} onPress={()=>{setShowAttachments(value=>{if(!value)setAttachmentPage('main');return !value});setShowEmoji(false)}}><PremiumIcon name={showAttachments?'close':'add-circle-outline'} tone={showAttachments?'ruby':'dark'} size={36} iconSize={17}/></Pressable><View style={[chatStyles.inputWrap,{backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:recorderState.isRecording?colors.gold:'rgba(255,255,255,.10)'}]}><TextInput value={text} onChangeText={setText} onSubmitEditing={() => void sendText()} returnKeyType="send" placeholder={sending?'Sending…':recorderState.isRecording?'Recording voice note…':'Message…'} placeholderTextColor="#8C7888" editable={!recorderState.isRecording&&!sending} style={[styles.chatInput,chatPremiumStyles.chatInput]}/><Pressable accessibilityRole="button" accessibilityLabel={showEmoji?'Close emoji picker':'Open emoji picker'} onPress={()=>{setShowEmoji(value=>!value);setShowAttachments(false)}}><Ionicons name={showEmoji?'close':'happy-outline'} size={21} color={showEmoji?colors.gold:'#B59DA4'}/></Pressable></View><Pressable disabled={sending} accessibilityRole="button" accessibilityLabel={sending?'Sending message':text.trim()?'Send message':recorderState.isRecording?'Stop recording':'Record voice note'} onPress={sendOrRecord} style={chatStyles.sendButton}><Ionicons name={sending?'time-outline':text.trim()?'send':recorderState.isRecording?'stop':'mic'} size={20} color={colors.ivory}/></Pressable></View>
@@ -4699,6 +4702,10 @@ const homeStyles=StyleSheet.create({
 const focusStyles=StyleSheet.create({
   header:{minHeight:70,paddingHorizontal:18,paddingTop:7,paddingBottom:10,flexDirection:'row',alignItems:'center',gap:10},
   content:{paddingHorizontal:18,paddingBottom:104,gap:16},
+  journeyRail:{minHeight:70,paddingHorizontal:12,borderRadius:8,backgroundColor:'rgba(255,255,255,.035)',borderWidth:1,borderColor:'rgba(255,255,255,.075)',flexDirection:'row',alignItems:'center'},
+  journeyStep:{width:48,alignItems:'center',justifyContent:'center',gap:4},
+  journeyLabel:{fontFamily:'Poppins_700Bold',fontSize:8.5,color:'#DCC8CD'},
+  journeyLine:{flex:1,height:1,backgroundColor:'rgba(212,175,55,.22)'},
   featuredRow:{gap:10},
   featuredRowWide:{flexDirection:'row',alignItems:'stretch'},
   featuredWide:{flex:1},
@@ -5442,7 +5449,7 @@ const chatStyles=StyleSheet.create({
   safetyNudgeButtonText:{fontFamily:'Poppins_700Bold',fontSize:9,color:colors.pinkSoft},
   attachmentTray:{position:'absolute',left:12,right:12,bottom:62,zIndex:20,flexDirection:'row',flexWrap:'wrap',gap:8,padding:12,borderRadius:22,backgroundColor:'rgba(27,8,13,.99)',borderWidth:1,borderColor:'rgba(255,255,255,.12)',shadowColor:'#000',shadowOpacity:.5,shadowRadius:24,shadowOffset:{width:0,height:12},elevation:18},
   attachmentTrayWide:{right:undefined,width:388},
-  attachment:{width:'23%',minWidth:60,alignItems:'center',gap:4},
+  attachment:{width:'31%',minWidth:72,alignItems:'center',gap:4},
   attachmentIcon:{width:42,height:42,borderRadius:21,alignItems:'center',justifyContent:'center'},
   attachmentLabel:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:colors.muted},
   replyPreview:{minHeight:52,marginHorizontal:10,marginTop:7,padding:8,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'rgba(255,255,255,.05)',borderRadius:8,borderWidth:1,borderColor:'rgba(255,255,255,.08)'},

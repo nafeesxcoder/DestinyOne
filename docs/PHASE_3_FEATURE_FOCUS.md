@@ -36,6 +36,15 @@ connection. They are not primary navigation destinations.
 - Executive Circle, likes, and match preferences were click-tested in mock
   mode from Discover.
 
+## Focus enforcement update
+
+- Added a four-step `Meet → Align → Talk → Plan` relationship rail to Discover so supporting tools remain anchored to the core outcome.
+- Reduced the first Chat attachment page from eight equal-weight actions to six high-frequency actions: Date, Camera, Gallery, Location, Document and More.
+- Moved Contact, Poll, GIF, Gift, Games, Snap, Face, Spark and disappearing messages behind the intentional More layer without removing functionality.
+- Made feature-surface budgets explicit in the domain model for primary navigation, Home, Explore, Chat toolbar, primary attachments, secondary attachments and profile operations.
+- Added automated protection against duplicate primary attachment actions and surface-budget overflow.
+- Expanded the focus suite from three to six tests; the complete product suite now contains 272 tests across 67 files.
+
 ## Production gates still open
 
 - Production feature flags and remote rollback are not connected.
