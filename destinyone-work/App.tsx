@@ -1832,7 +1832,8 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
   const [section,setSection]=useState<'places'|'packages'|'events'>('places');
   const [query,setQuery]=useState('');
   const [kind,setKind]=useState<'All'|PlaceKind>('All');
-  const [marketCity,setMarketCity]=useState(cityCoordinates[defaultCity]?defaultCity:'Toronto, ON');
+  // Marketplace opens nationally; a member can narrow to any USA/Canada city.
+  const [marketCity,setMarketCity]=useState('');
   const [radius,setRadius]=useState(100);
   const [safeOnly,setSafeOnly]=useState(false);
   const [reservableOnly,setReservableOnly]=useState(false);
@@ -1876,7 +1877,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
     const text=placeSearchText(place);
     return (!normalized||text.includes(normalized))
       &&(kind==='All'||place.kind===kind)
-      &&(!marketCity.trim()||!!selectedCoordinates&&getDistance(place)<=radius)
+      &&(!selectedCoordinates||getDistance(place)<=radius)
       &&(!safeOnly||isSafeFirstDatePlace(place))
       &&(!reservableOnly||isReservablePlace(place))
       &&(!communityOnly||isCommunityPlace(place))
@@ -1906,7 +1907,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
         </View>
         <View style={coachStyles.eventStats}>
           <EventStat value={liveSearchState==='loading'?'Searching…':livePlaces.length?`${livePlaces.length} live`:`${placeDirectory.length}+`} label={livePlaces.length?'Google Places nearby':'curated picks'}/>
-          <EventStat value={`${radius} mi`} label={`around ${marketCity.split(',')[0]}`}/>
+          <EventStat value={marketCity?`${radius} mi`:'USA + Canada'} label={marketCity?`around ${marketCity.split(',')[0]}`:'browse every city'}/>
           <EventStat value="Public-first" label="safety standard"/>
         </View>
         <View style={styles.segment}>
@@ -1926,6 +1927,11 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
             <MiniPremiumIcon name="search" tone="rose" size={32} iconSize={15}/>
             <TextInput value={query} onChangeText={setQuery} placeholder="Search: safe café, Indian dinner, NYC tourist..." placeholderTextColor="#6F6875" style={selectorStyles.searchInput}/>
             {!!query&&<Pressable onPress={()=>setQuery('')}><MiniPremiumIcon name="close-circle" tone="dark" size={30} iconSize={14}/></Pressable>}
+          </View>
+          <View style={selectorStyles.searchBox}>
+            <MiniPremiumIcon name="location" tone="gold" size={32} iconSize={15}/>
+            <TextInput value={marketCity} onChangeText={setMarketCity} placeholder="Any USA or Canada city for live nearby places" placeholderTextColor="#6F6875" style={selectorStyles.searchInput}/>
+            {!!marketCity&&<Pressable accessibilityRole="button" accessibilityLabel="Show all USA and Canada places" onPress={()=>setMarketCity('')}><MiniPremiumIcon name="close-circle" tone="dark" size={30} iconSize={14}/></Pressable>}
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>
             {placeKinds.map(option=><Pressable key={option} onPress={()=>setKind(option)} style={[coachStyles.filterPill,kind===option&&coachStyles.filterPillOn]}><Text style={[coachStyles.filterText,kind===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}
