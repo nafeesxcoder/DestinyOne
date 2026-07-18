@@ -51,6 +51,9 @@ describe('production Auth and profile-media runtime', () => {
     signInWithOtp.mockResolvedValueOnce({ error: new Error('SMS provider is not enabled') });
     await expect(backend.beginAuthentication({ mode: 'phone', phone: '+1 415 555 0199' }))
       .rejects.toThrow('Phone verification is not available yet');
+    signInWithOtp.mockResolvedValueOnce({ error: new Error('{}') });
+    await expect(backend.beginAuthentication({ mode: 'email', email: 'member@example.com', password: 'Destiny123' }))
+      .rejects.toThrow('verified sender domain');
   });
 
   it('rejects empty, oversized, or unsupported profile media before upload', async () => {

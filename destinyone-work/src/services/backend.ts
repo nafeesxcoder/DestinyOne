@@ -18,7 +18,15 @@ function isRecoverablePhoneOtpError(error: unknown) {
 }
 
 function toFriendlyAuthError(error: unknown, mode: 'email' | 'phone') {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : JSON.stringify(error ?? {});
+  const normalized = message.trim();
+  if (mode === 'email' && (/^\{\}$/.test(normalized) || /unexpected_failure|error sending confirmation email|could not send email/i.test(normalized))) {
+    return 'We could not send the email code yet. DestinyOne email delivery needs a verified sender domain. Please try again once it is connected.';
+  }
   if (/over_.*email.*rate_limit|email.*rate.*limit|rate.*limit/i.test(message)) {
     return 'Too many email codes were requested. Please wait a few minutes, then try again.';
   }
