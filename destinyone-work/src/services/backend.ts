@@ -9,6 +9,11 @@ import { isValidEmail, isValidPassword, normalizeAuthPhone } from '../domain/val
 
 export const backendMode = backendRuntime.mode === 'blocked' ? 'missing' : backendRuntime.mode;
 export const allowsPreviewOtpFallback = backendRuntime.allowsDemoOtp;
+// This is a deliberate local-preview escape hatch while delivery providers are
+// being configured. It is impossible to enable in a production app build.
+export const allowsPreviewAuthBypass =
+  backendRuntime.appEnvironment !== 'production'
+  && process.env.EXPO_PUBLIC_ENABLE_PREVIEW_AUTH_BYPASS === 'true';
 
 const isDemoOtp = (token: string) => token === '123456' || token === '12345';
 
@@ -133,6 +138,7 @@ export async function beginAuthentication(request: AuthRequest) {
   if (request.mode === 'phone') {
     const phone = normalizeAuthPhone(request.phone);
     if (!phone) throw new Error('Enter a valid phone number with country code.');
+    if (allowsPreviewAuthBypass) return { demo: true, bypassed: true } as const;
     const { error } = await supabase.auth.signInWithOtp({ phone });
     if (error) {
       // Development preview should stay easy to enter while Supabase SMS/Twilio
@@ -151,6 +157,7 @@ export async function beginAuthentication(request: AuthRequest) {
   const email = request.email.trim().toLowerCase();
   if (!isValidEmail(email)) throw new Error('Enter a valid email address.');
   if (!isValidPassword(request.password)) throw new Error('Use at least 10 characters with uppercase, lowercase, and a number.');
+  if (allowsPreviewAuthBypass) return { demo: true, bypassed: true } as const;
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
@@ -166,6 +173,14 @@ export async function beginAuthentication(request: AuthRequest) {
 export async function verifyAuthentication(destination: string, token: string, password?: string) {
   ensureBackendConfigured();
   const isEmailDestination = destination.includes('@');
+
+  if (allowsPreviewAuthBypass) {
+    if (!isDemoOtp(token)) return false;
+    if (isEmailDestination && !isValidPassword(password ?? '')) {
+      throw new Error('Use at least 10 characters with uppercase, lowercase, and a number.');
+    }
+    return true;
+  }
 
   if (!isSupabaseConfigured) {
     if (isEmailDestination) {

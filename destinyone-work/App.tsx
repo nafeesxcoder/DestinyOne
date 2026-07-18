@@ -14,7 +14,7 @@ import { ChatMessage, CoupleChatSettings, DatePlanStatus, DiscoverySignal, Local
 import * as ImagePicker from 'expo-image-picker';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import * as Location from 'expo-location';
-import { allowsPreviewOtpFallback, backendMode, beginAuthentication, fetchDailyMatches, fetchMatchingPoolStatus, loadCurrentMemberBootstrap, requestAccountDeletion, signOut, submitModerationAppeal, submitSupportTicket, verifyAuthentication, type MatchingPoolStatus, type SupportTopic } from './src/services/backend';
+import { allowsPreviewAuthBypass, allowsPreviewOtpFallback, backendMode, beginAuthentication, fetchDailyMatches, fetchMatchingPoolStatus, loadCurrentMemberBootstrap, requestAccountDeletion, signOut, submitModerationAppeal, submitSupportTicket, verifyAuthentication, type MatchingPoolStatus, type SupportTopic } from './src/services/backend';
 import { matchReasons, rankMatches } from './src/domain/matching';
 import { canSendGift, spendCoins } from './src/domain/commerce';
 import { isEligibleMemberAge, isValidEmail, isValidPassword, isValidPhone } from './src/domain/validation';
@@ -698,7 +698,7 @@ function DestinyOneApp() {
   return <SafeAreaProvider><StatusBar style="light"/><View style={shared.screen}>
     {screen==='splash'&&<Splash/>}
     {screen==='welcome'&&<Welcome onNext={()=>setScreen('auth')}/>} 
-    {screen==='auth'&&<Auth onNext={(destination,skipOtp,password)=>{setAuthDestination(destination);setAuthPassword(password??'');setScreen(skipOtp?'verify':'otp')}} onBack={()=>setScreen('welcome')}/>} 
+    {screen==='auth'&&<Auth onNext={(destination,skipOtp,password)=>{setAuthDestination(destination);setAuthPassword(password??'');if(skipOtp)setAuthenticated(true);setScreen(skipOtp?'verify':'otp')}} onBack={()=>setScreen('welcome')}/>} 
     {screen==='otp'&&<Otp destination={authDestination} password={authPassword} onBack={()=>setScreen('auth')} onVerified={()=>{setAuthenticated(true);setScreen('verify')}}/>} 
     {screen==='verify'&&<Verify verified={verified} selfieUri={selfieUri} onSelfie={setSelfieUri} setVerified={setVerified} onNext={()=>setScreen('modeSelect')}/>} 
     {screen==='modeSelect'&&<ModeSelect mode={coupleMode.experienceMode} onChange={chooseExperienceMode} onNext={()=>setScreen(coupleMode.experienceMode==='couple'?'coupleSetup':'profileSetup')}/>} 
@@ -824,7 +824,7 @@ function Auth({onNext,onBack}:{onNext:(destination:string,skipOtp?:boolean,passw
   const emailValid=isValidEmail(email);
   const passwordValid=isValidPassword(password);
   const valid=mode==='phone'?phoneValid:emailValid&&passwordValid;
-  const submit=async()=>{setSubmitted(true);setAuthError('');setSocialStatus('');if(!valid)return;setLoading(true);try{if(mode==='phone'){await beginAuthentication({mode:'phone',phone});onNext(phone)}else{const cleanEmail=email.trim().toLowerCase();await beginAuthentication({mode:'email',email:cleanEmail,password});onNext(cleanEmail,false,password)}}catch(error){setAuthError(error instanceof Error?error.message:'Could not create your account. Please try again.')}finally{setLoading(false)}};
+  const submit=async()=>{setSubmitted(true);setAuthError('');setSocialStatus('');if(!valid)return;setLoading(true);try{if(mode==='phone'){await beginAuthentication({mode:'phone',phone});onNext(phone,allowsPreviewAuthBypass)}else{const cleanEmail=email.trim().toLowerCase();await beginAuthentication({mode:'email',email:cleanEmail,password});onNext(cleanEmail,allowsPreviewAuthBypass,password)}}catch(error){setAuthError(error instanceof Error?error.message:'Could not create your account. Please try again.')}finally{setLoading(false)}};
   const switchMode=(next:'phone'|'email')=>{setMode(next);setSubmitted(false);setAuthError('');setSocialStatus('')};
   const socialLogin=(provider:'Apple'|'Google'|'LinkedIn')=>{
     setLoading(true);
@@ -849,16 +849,16 @@ function Auth({onNext,onBack}:{onNext:(destination:string,skipOtp?:boolean,passw
     <View style={{gap:16}}>
       {mode==='phone'?<>
         <Field label="Phone number" placeholder="+1  (555)  000-0000" keyboardType="phone-pad" value={phone} onChangeText={setPhone} error={submitted&&!phoneValid?'Enter a valid 10-digit phone number.':''}/>
-        <Text style={styles.helper}>We’ll text you a one-time code. Your number stays private.</Text>
+        <Text style={styles.helper}>{allowsPreviewAuthBypass?'Preview access is enabled. Verification is temporarily paused.':'We’ll text you a one-time code. Your number stays private.'}</Text>
       </>:<>
         <Field label="Email address" placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} error={submitted&&!emailValid?'Enter a valid email address.':''}/>
         <Field label="Password" placeholder="10+ characters" secureTextEntry value={password} onChangeText={setPassword} error={submitted&&!passwordValid?'Use 10+ characters with uppercase, lowercase, and a number.':''}/>
-        <Text style={styles.helper}>We’ll send a quick code before your profile opens.</Text>
+        <Text style={styles.helper}>{allowsPreviewAuthBypass?'Preview access is enabled. Verification is temporarily paused.':'We’ll send a quick code before your profile opens.'}</Text>
       </>}
     </View>
     <View style={shared.spacer}/>
     {!!authError&&<Text style={styles.formError}>{authError}</Text>}
-    <Button disabled={loading} label={loading?'Please wait…':mode==='phone'?'Send verification code':'Send email verification code'} onPress={()=>void submit()}/>
+    <Button disabled={loading} label={loading?'Please wait…':allowsPreviewAuthBypass?'Enter preview':mode==='phone'?'Send verification code':'Send email verification code'} onPress={()=>void submit()}/>
     <Text style={styles.legal}>By continuing, you agree to our Terms and Privacy Policy.</Text>
   </FormPage>
 }
