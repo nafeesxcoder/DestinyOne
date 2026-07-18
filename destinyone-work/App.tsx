@@ -66,6 +66,7 @@ import { createLocalCoupleModeRepository } from './src/services/coupleModeReposi
 import { fetchCurrentCoupleConnectionHub, respondToCoupleConnectionRequest, saveCoupleModeMemberProfile, searchCouplePartnerByPhone, sendCoupleConnectionRequest, setServerCoupleMode, type CoupleConnectionHub, type CouplePartnerSummary } from './src/services/coupleConnection';
 import { getCitiesOfState } from '@countrystatecity/countries-browser';
 import { guardAuthenticatedScreen, requiresAuthenticatedSession } from './src/domain/authRoutes';
+import { searchLivePlaces, type LivePlace } from './src/services/places';
 
 type Screen = 'splash'|'welcome'|'auth'|'otp'|'verify'|'modeSelect'|'coupleSetup'|'profileSetup'|'vibes'|'intent'|'alignment'|'home'|'explore'|'circle'|'discovery'|'detail'|'mutual'|'icebreaker'|'chat'|'datePlan'|'safety'|'likes'|'profile'|'pricing'|'support'|'coach'|'events'|'executive'|'verifyHub'|'admin';
 
@@ -1845,6 +1846,8 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
   const [partnerOpen,setPartnerOpen]=useState(false);
   const [partnerStatus,setPartnerStatus]=useState('');
   const [partnerRequest,setPartnerRequest]=useState<PartnerRequest>({venue:'',city:'New York, NY',contact:'',packageTitle:'First Date Safe Café'});
+  const [livePlaces,setLivePlaces]=useState<LivePlace[]>([]);
+  const [liveSearchState,setLiveSearchState]=useState<'idle'|'loading'|'ready'|'error'>('idle');
   const visibleExperiences=mode==='couple'?coupleExperiences:eventExperiences;
   const normalized=query.trim().toLowerCase();
   const selectedCoordinates=cityCoordinates[marketCity];
@@ -1852,7 +1855,24 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
     const placeCoordinates=cityCoordinates[place.city];
     return selectedCoordinates&&placeCoordinates?distanceMiles(selectedCoordinates,placeCoordinates):Number.POSITIVE_INFINITY;
   };
-  const filtered=placeDirectory.filter(place=>{
+  useEffect(()=>{
+    if (!isSupabaseConfigured || !marketCity) { setLivePlaces([]); setLiveSearchState('idle'); return; }
+    let cancelled=false;
+    setLiveSearchState('loading');
+    const timer=setTimeout(()=>{
+      void searchLivePlaces({city:marketCity,query,category:kind}).then(result=>{
+        if(!cancelled){setLivePlaces(result);setLiveSearchState('ready');}
+      }).catch(()=>{
+        if(!cancelled){setLivePlaces([]);setLiveSearchState('error');}
+      });
+    },450);
+    return ()=>{cancelled=true;clearTimeout(timer)};
+  },[marketCity,query,kind]);
+  const liveDirectory:PlaceItem[]=livePlaces.map(place=>({
+    id:place.id,name:place.name,city:marketCity,country:marketCity.endsWith(', ON')||marketCity.endsWith(', BC')||marketCity.endsWith(', QC')||marketCity.endsWith(', AB')||marketCity.endsWith(', MB')||marketCity.endsWith(', NS')||marketCity.endsWith(', SK')?'Canada':'USA',kind:place.category,area:place.address,price:place.rating?`${place.rating.toFixed(1)} stars`:'See venue',vibe:`Live Google place${place.openNow===true?' · Open now':place.openNow===false?' · Closed now':''}`,bestTime:'Check live hours',safety:'Public business listing; confirm opening hours and meeting details before you travel.',icon:'📍',tags:['live','google-places',place.rating ? `${place.rating} rating` : ''],
+  }));
+  const directory=[...liveDirectory,...placeDirectory.filter(item=>!liveDirectory.some(live=>live.name===item.name))];
+  const filtered=directory.filter(place=>{
     const text=placeSearchText(place);
     return (!normalized||text.includes(normalized))
       &&(kind==='All'||place.kind===kind)
@@ -1885,7 +1905,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
           <Text style={[shared.body,{textAlign:'center'},compactMarket&&marketplaceBrandStyles.bodyCompact]}>Curated places, thoughtful packages and hosted events for serious couples.</Text>
         </View>
         <View style={coachStyles.eventStats}>
-          <EventStat value={`${placeDirectory.length}+`} label="curated picks"/>
+          <EventStat value={liveSearchState==='loading'?'Searching…':livePlaces.length?`${livePlaces.length} live`:`${placeDirectory.length}+`} label={livePlaces.length?'Google Places nearby':'curated picks'}/>
           <EventStat value={`${radius} mi`} label={`around ${marketCity.split(',')[0]}`}/>
           <EventStat value="Public-first" label="safety standard"/>
         </View>
@@ -1927,10 +1947,11 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
         </View>
         <View style={{gap:12}}>
           <View style={shared.row}>
-            <Text style={styles.sectionLabel}>{query||kind!=='All'||safeOnly||reservableOnly||communityOnly||premiumOnly?'SEARCH RESULTS':`BEST WITHIN ${radius} MILES`}</Text>
+          <Text style={styles.sectionLabel}>{query||kind!=='All'||safeOnly||reservableOnly||communityOnly||premiumOnly?'SEARCH RESULTS':`BEST WITHIN ${radius} MILES`}</Text>
             <View style={shared.spacer}/>
             <Text style={coachStyles.resultCount}>{filtered.length} found · {saved.length} saved</Text>
           </View>
+          {liveSearchState==='error'&&<Text style={[styles.helper,{textAlign:'center'}]}>Showing curated picks while live Places search reconnects.</Text>}
           {featured.map(place=><PlaceCard key={place.id} place={place} distance={getDistance(place)} saved={saved.includes(place.id)} onSave={()=>toggleSaved(place.id)} onDetail={()=>setSelected(place)} onPlan={()=>onOpenDatePlan(place)}/>)}
         </View>
         {filtered.length>8&&<View style={{gap:12}}>
