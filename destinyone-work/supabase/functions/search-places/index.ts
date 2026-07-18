@@ -37,6 +37,10 @@ function categoryFor(place: GooglePlace): PlaceCategory {
   return 'Activity';
 }
 
+function serviceHeaders(serviceRoleKey: string, extra: Record<string, string> = {}) {
+  return { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, ...extra };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -44,13 +48,16 @@ Deno.serve(async (req) => {
   const authorization = req.headers.get('Authorization');
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const googleMapsKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
   if (!authorization?.startsWith('Bearer ')) return json({ error: 'Authentication required' }, 401);
-  if (!supabaseUrl || !anonKey) return json({ error: 'Search service is not configured' }, 503);
+  if (!supabaseUrl || !anonKey || !serviceRoleKey) return json({ error: 'Search service is not configured' }, 503);
   if (!googleMapsKey) return json({ error: 'Live place search is being set up. Please try again shortly.' }, 503);
 
   const member = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { Authorization: authorization, apikey: anonKey } });
   if (!member.ok) return json({ error: 'Authentication required' }, 401);
+  const memberBody = await member.json() as { id?: string };
+  if (!memberBody.id) return json({ error: 'Authentication required' }, 401);
 
   try {
     const body = await req.json() as { city?: string; query?: string; category?: string };
@@ -62,6 +69,25 @@ Deno.serve(async (req) => {
 
     const searchTopic = query || (category && category !== 'All' ? category : 'romantic date places');
     const searchTerms = `${searchTopic} in ${city}`;
+    const cacheKey = `${city.toLowerCase()}|${searchTopic.toLowerCase()}`.slice(0, 300);
+    const now = new Date().toISOString();
+    const cached = await fetch(`${supabaseUrl}/rest/v1/google_places_search_cache?select=results&cache_key=eq.${encodeURIComponent(cacheKey)}&expires_at=gt.${encodeURIComponent(now)}`, {
+      headers: serviceHeaders(serviceRoleKey),
+    });
+    if (cached.ok) {
+      const entries = await cached.json() as { results?: unknown[] }[];
+      if (entries[0]?.results) return json({ places: entries[0].results, cached: true });
+    }
+
+    // A single member can cause at most 20 billable cache misses per hour.
+    const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const requestLog = await fetch(`${supabaseUrl}/rest/v1/google_places_search_requests?select=id&user_id=eq.${memberBody.id}&created_at=gte.${encodeURIComponent(hourAgo)}`, {
+      headers: serviceHeaders(serviceRoleKey),
+    });
+    if (!requestLog.ok) return json({ error: 'Search protection is temporarily unavailable.' }, 503);
+    const recentRequests = await requestLog.json() as unknown[];
+    if (recentRequests.length >= 20) return json({ error: 'You have reached the live place-search limit for this hour. Try again shortly.' }, 429);
+
     const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
       method: 'POST',
       headers: {
@@ -88,6 +114,19 @@ Deno.serve(async (req) => {
         openNow: place.currentOpeningHours?.openNow,
         mapsUrl: place.googleMapsUri,
       }));
+    const expiresAt = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
+    await Promise.all([
+      fetch(`${supabaseUrl}/rest/v1/google_places_search_cache`, {
+        method: 'POST',
+        headers: serviceHeaders(serviceRoleKey, { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }),
+        body: JSON.stringify({ cache_key: cacheKey, results: places, expires_at: expiresAt }),
+      }),
+      fetch(`${supabaseUrl}/rest/v1/google_places_search_requests`, {
+        method: 'POST',
+        headers: serviceHeaders(serviceRoleKey, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
+        body: JSON.stringify({ user_id: memberBody.id, cache_key: cacheKey }),
+      }),
+    ]);
     return json({ places });
   } catch (error) {
     console.error('Invalid places search request', error);

@@ -1619,7 +1619,7 @@ const coupleExperiences=[
 ];
 
 type PlaceKind='Restaurant'|'Cafe'|'Hotel'|'Wellness'|'Tourist'|'Activity'|'Park'|'Dessert'|'Lounge'|'Cultural';
-type PlaceItem={id:string;name:string;city:string;country:'USA'|'Canada';kind:PlaceKind;area:string;price:string;vibe:string;bestTime:string;safety:string;icon:string;tags:string[];photo?:string};
+type PlaceItem={id:string;name:string;city:string;country:'USA'|'Canada';kind:PlaceKind;area:string;price:string;vibe:string;bestTime:string;safety:string;icon:string;tags:string[];photo?:string;mapsUrl?:string};
 type DatePackage={id:string;title:string;tier:string;city:string;price:string;duration:string;includes:string[];safety:string;icon:keyof typeof Ionicons.glyphMap};
 type PartnerRequest={venue:string;city:string;contact:string;packageTitle:string};
 type CoupleBundle={id:string;title:string;city:string;price:string;priceCents:number;duration:string;mood:string;icon:keyof typeof Ionicons.glyphMap;includes:string[];flexibility:string;safety:string};
@@ -1869,7 +1869,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
     return ()=>{cancelled=true;clearTimeout(timer)};
   },[marketCity,query,kind]);
   const liveDirectory:PlaceItem[]=livePlaces.map(place=>({
-    id:place.id,name:place.name,city:marketCity,country:marketCity.endsWith(', ON')||marketCity.endsWith(', BC')||marketCity.endsWith(', QC')||marketCity.endsWith(', AB')||marketCity.endsWith(', MB')||marketCity.endsWith(', NS')||marketCity.endsWith(', SK')?'Canada':'USA',kind:place.category,area:place.address,price:place.rating?`${place.rating.toFixed(1)} stars`:'See venue',vibe:`Live Google place${place.openNow===true?' · Open now':place.openNow===false?' · Closed now':''}`,bestTime:'Check live hours',safety:'Public business listing; confirm opening hours and meeting details before you travel.',icon:'📍',tags:['live','google-places',place.rating ? `${place.rating} rating` : ''],
+    id:place.id,name:place.name,city:marketCity,country:marketCity.endsWith(', ON')||marketCity.endsWith(', BC')||marketCity.endsWith(', QC')||marketCity.endsWith(', AB')||marketCity.endsWith(', MB')||marketCity.endsWith(', NS')||marketCity.endsWith(', SK')?'Canada':'USA',kind:place.category,area:place.address,price:place.rating?`${place.rating.toFixed(1)} stars`:'See venue',vibe:`Live Google place${place.openNow===true?' · Open now':place.openNow===false?' · Closed now':''}`,bestTime:'Check live hours',safety:'Public business listing; confirm opening hours and meeting details before you travel.',icon:'📍',tags:['live','google-places',place.rating ? `${place.rating} rating` : ''],mapsUrl:place.mapsUrl,
   }));
   const directory=[...liveDirectory,...placeDirectory.filter(item=>!liveDirectory.some(live=>live.name===item.name))];
   const filtered=directory.filter(place=>{
@@ -1951,6 +1951,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
             <View style={shared.spacer}/>
             <Text style={coachStyles.resultCount}>{filtered.length} found · {saved.length} saved</Text>
           </View>
+          {livePlaces.length>0&&<Text style={[styles.legal,{textAlign:'center'}]}>Live place details from Google Maps</Text>}
           {liveSearchState==='error'&&<Text style={[styles.helper,{textAlign:'center'}]}>Showing curated picks while live Places search reconnects.</Text>}
           {featured.map(place=><PlaceCard key={place.id} place={place} distance={getDistance(place)} saved={saved.includes(place.id)} onSave={()=>toggleSaved(place.id)} onDetail={()=>setSelected(place)} onPlan={()=>onOpenDatePlan(place)}/>)}
         </View>
@@ -2281,6 +2282,7 @@ function PlaceCard({place,distance,saved,compact,onSave,onDetail,onPlan}:{place:
       <View style={coachStyles.placeLabelRow}>{labels.slice(0,compact?2:4).map(label=><View key={label} style={coachStyles.placeLabel}><Text style={coachStyles.placeLabelText}>{label}</Text></View>)}</View>
       <View style={coachStyles.eventFooter}>
         <View style={coachStyles.eventTag}><PremiumIcon name="time-outline" tone="gold" size={24} iconSize={11}/><Text style={coachStyles.eventTagText}>{place.bestTime}</Text></View>
+        {!!place.mapsUrl&&<Pressable accessibilityRole="link" accessibilityLabel={`Open ${place.name} in Google Maps`} onPress={()=>void Linking.openURL(place.mapsUrl!)} style={coachStyles.detailsButton}><Text style={coachStyles.detailsText}>Map</Text></Pressable>}
         <Pressable accessibilityRole="button" accessibilityLabel={`Details for ${place.name}`} onPress={onDetail} style={coachStyles.detailsButton}><Text style={coachStyles.detailsText}>Details</Text></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={`Plan ${place.name}`} onPress={onPlan} style={coachStyles.rsvpButton}><Text style={coachStyles.rsvpText}>Plan</Text></Pressable>
       </View>
@@ -2303,8 +2305,8 @@ function PlaceDetailModal({place,distance,saved,onClose,onSave,onPlan}:{place:Pl
         <DetailRow icon="calendar-outline" label="Reservation" value={isReservablePlace(place)?'Hold + quote + confirmation flow ready for API connection':'Walk-in/date-plan suggestion only'}/>
       </View>
       <View style={styles.chipRow}>{place.tags.map(tag=><Chip key={tag} label={tag}/>)}</View>
-      <View style={{gap:10}}><Button label={saved?'Saved idea':'Save idea'} icon={saved?'bookmark':'bookmark-outline'} variant="secondary" onPress={onSave}/><Button label="Plan this date" icon="calendar" onPress={onPlan}/></View>
-      <Text style={styles.legal}>Live hours, map links, restaurant inventory and reservation confirmation connect in production.</Text>
+      <View style={{gap:10}}><Button label={saved?'Saved idea':'Save idea'} icon={saved?'bookmark':'bookmark-outline'} variant="secondary" onPress={onSave}/>{!!place.mapsUrl&&<Button label="Open in Google Maps" icon="navigate" variant="gold" onPress={()=>void Linking.openURL(place.mapsUrl!)}/>}<Button label="Plan this date" icon="calendar" onPress={onPlan}/></View>
+      <Text style={styles.legal}>{place.mapsUrl?'Live place details from Google Maps. Confirm hours before travel.':'Live hours, map links, restaurant inventory and reservation confirmation connect in production.'}</Text>
     </SafeAreaView>
   </Modal>
 }
