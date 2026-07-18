@@ -43,6 +43,16 @@ describe('production Auth and profile-media runtime', () => {
     expect(updateUser).toHaveBeenCalledWith({ password: 'Destiny123' });
   });
 
+  it('turns provider and rate-limit failures into clear member-facing messages', async () => {
+    const { backend, signInWithOtp } = await loadBackend();
+    signInWithOtp.mockResolvedValueOnce({ error: new Error('over_email_send_rate_limit') });
+    await expect(backend.beginAuthentication({ mode: 'email', email: 'member@example.com', password: 'Destiny123' }))
+      .rejects.toThrow('Too many email codes');
+    signInWithOtp.mockResolvedValueOnce({ error: new Error('SMS provider is not enabled') });
+    await expect(backend.beginAuthentication({ mode: 'phone', phone: '+1 415 555 0199' }))
+      .rejects.toThrow('Phone verification is not available yet');
+  });
+
   it('rejects empty, oversized, or unsupported profile media before upload', async () => {
     const { backend } = await loadBackend();
     expect(backend.validateProfileMediaUpload('photo', { size: 1024, type: 'image/jpeg' }, 'photo.jpg')).toEqual({ contentType: 'image/jpeg', extension: 'jpg' });

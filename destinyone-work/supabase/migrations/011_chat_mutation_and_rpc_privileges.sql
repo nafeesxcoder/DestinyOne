@@ -176,7 +176,6 @@ revoke all on function public.submit_icebreaker_answer(uuid, text, text) from pu
 revoke all on function public.create_date_proposal(uuid, text, text, timestamptz, boolean) from public, anon, authenticated;
 revoke all on function public.respond_to_date_proposal(uuid, text) from public, anon, authenticated;
 revoke all on function public.complete_date_proposal(uuid) from public, anon, authenticated;
-revoke all on function public.upsert_relationship_reflection(uuid, text) from public, anon, authenticated;
 revoke all on function public.upsert_relationship_reflection(uuid, text, boolean) from public, anon, authenticated;
 revoke all on function public.set_relationship_reminder(uuid, boolean) from public, anon, authenticated;
 revoke all on function public.record_relationship_journey_event(text, jsonb) from public, anon, authenticated;

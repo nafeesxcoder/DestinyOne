@@ -396,7 +396,7 @@ export type Database = {
       request_account_deletion: { Args: Record<string, never>; Returns: string };
       record_profile_view: { Args: { viewed_user_id: string; duration_seconds?: number; source?: string }; Returns: string | null };
       mark_notification_read: { Args: { notification_id: string }; Returns: void };
-      submit_match_decision: { Args: { recipient_id: string; decision: 'interested' | 'pass' }; Returns: Json };
+      submit_match_decision: { Args: { p_recipient_id: string; p_decision: 'interested' | 'pass' }; Returns: Json };
       submit_icebreaker_answer: { Args: { p_match_id: string; p_question: string; p_answer: string }; Returns: Json };
       create_date_proposal: {
         Args: {

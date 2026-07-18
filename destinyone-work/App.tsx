@@ -14,13 +14,13 @@ import { ChatMessage, CoupleChatSettings, DatePlanStatus, DiscoverySignal, Local
 import * as ImagePicker from 'expo-image-picker';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import * as Location from 'expo-location';
-import { allowsPreviewOtpFallback, backendMode, beginAuthentication, fetchDailyMatches, fetchMatchingPoolStatus, loadCurrentMemberBootstrap, requestAccountDeletion, submitModerationAppeal, submitSupportTicket, verifyAuthentication, type MatchingPoolStatus, type SupportTopic } from './src/services/backend';
+import { allowsPreviewOtpFallback, backendMode, beginAuthentication, fetchDailyMatches, fetchMatchingPoolStatus, loadCurrentMemberBootstrap, requestAccountDeletion, signOut, submitModerationAppeal, submitSupportTicket, verifyAuthentication, type MatchingPoolStatus, type SupportTopic } from './src/services/backend';
 import { matchReasons, rankMatches } from './src/domain/matching';
 import { canSendGift, spendCoins } from './src/domain/commerce';
 import { isEligibleMemberAge, isValidEmail, isValidPassword, isValidPhone } from './src/domain/validation';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { configureAnalyticsConsent, track } from './src/lib/telemetry';
-import { appEnvironment, backendRuntime, isSupabaseConfigured, requiresRealBackend } from './src/lib/supabase';
+import { appEnvironment, backendRuntime, isSupabaseConfigured, requiresRealBackend, supabase } from './src/lib/supabase';
 import { buildDateReservationSteps, createDateReservationIntent, dateReservationMode, dateReservationStatusCopy, estimateDateReservationQuote, formatPaymentMoney, paymentsConfigured, stripePublishableKey, type DateReservationQuote, type DateReservationStatus } from './src/services/payments';
 import { ApplePayReservationButton, StripePaymentProvider, checkApplePaySupport, confirmApplePayReservation } from './src/payments/stripe';
 import { buildGiftFulfillmentPlan, createPhysicalGiftOrder, digitalGiftWalletMode, estimateGiftOrderQuote, formatGiftMoney, giftOrderSummary, giftOrderingConfigured, physicalGiftOrderingMode, vouchRewardsMode, type GiftFulfillmentStatus, type GiftOrderQuote } from './src/services/gifts';
@@ -65,6 +65,7 @@ import { buildCoupleModeAccess, coupleModeRoutes, guardCoupleModeRoute, initialC
 import { createLocalCoupleModeRepository } from './src/services/coupleModeRepository';
 import { fetchCurrentCoupleConnectionHub, respondToCoupleConnectionRequest, saveCoupleModeMemberProfile, searchCouplePartnerByPhone, sendCoupleConnectionRequest, setServerCoupleMode, type CoupleConnectionHub, type CouplePartnerSummary } from './src/services/coupleConnection';
 import { getCitiesOfState } from '@countrystatecity/countries-browser';
+import { guardAuthenticatedScreen, requiresAuthenticatedSession } from './src/domain/authRoutes';
 
 type Screen = 'splash'|'welcome'|'auth'|'otp'|'verify'|'modeSelect'|'coupleSetup'|'profileSetup'|'vibes'|'intent'|'alignment'|'home'|'explore'|'circle'|'discovery'|'detail'|'mutual'|'icebreaker'|'chat'|'datePlan'|'safety'|'likes'|'profile'|'pricing'|'support'|'coach'|'events'|'executive'|'verifyHub'|'admin';
 
@@ -194,6 +195,7 @@ function DestinyOneApp() {
   const [coupleHub,setCoupleHub] = useState<CoupleConnectionHub>({experienceMode:showcaseExperienceMode,connection:null,incomingRequests:[],outgoingRequests:[]});
   const [chatLaunchTool,setChatLaunchTool] = useState<CoupleLaunchTool>(null);
   const [hydrated,setHydrated] = useState(false);
+  const [authenticated,setAuthenticated] = useState(memberDataRuntime.source!=='server');
   const couplePartnerName=coupleMode.connection.partner?.displayName.trim()||'My Partner';
   const couplePartner:Match={
     ...matches[0]!,
@@ -320,6 +322,25 @@ function DestinyOneApp() {
     });
     return()=>{active=false};
   },[]);
+
+  useEffect(()=>{
+    if(memberDataRuntime.source!=='server')return;
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((event,session)=>{
+      const signedIn=Boolean(session?.user);
+      setAuthenticated(signedIn);
+      if(event==='SIGNED_OUT'){
+        setOnboardingComplete(false);
+        setAuthDestination('');
+        setScreen('welcome');
+      }
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  useEffect(()=>{
+    if(memberDataRuntime.source!=='server'||!hydrated||authenticated||!requiresAuthenticatedSession(screen))return;
+    setScreen(guardAuthenticatedScreen(screen,false) as Screen);
+  },[authenticated,hydrated,screen]);
 
   useEffect(()=>{
     if(!hydrated||!memberDataRuntime.allowsLocalPersistence)return;
@@ -671,13 +692,13 @@ function DestinyOneApp() {
     appendChatMessage(match,createRoseMessage(note));
     setRosePopup({match,note,paid});
   };
-  const resetDemo=async()=>{await Promise.all([clearAppState(),coupleModeRepository.clear()]);setCoupleMode(initialCoupleModeState);setChatLaunchTool(null);setVerified(initialPersistedState.verified);setProfileDraft(initialPersistedState.profileDraft);setVibeList(initialPersistedState.vibes);setIntent(initialPersistedState.intent);setAlignment(initialPersistedState.alignment);setChatMessages(initialPersistedState.chats);setChatDrafts({});setCoinBalance(initialPersistedState.coinBalance);setProfilePhotos(initialPersistedState.photos);setSelfieUri('');setVoiceIntroUri('');setVouches([]);setDiscoverySignals([]);setSmartDiscovery(true);setCrossedPaths(false);setBlockedIds([]);setReports([]);setSafeCheckIns([]);setMatchFilters(defaultMatchFilters);setRoseLedger(initialPersistedState.roseLedger);setLastSeenVisible(initialPersistedState.lastSeenVisible);setAnalyticsConsent(initialPersistedState.analyticsConsent);setChatSettings(initialPersistedState.chatSettings);setRelationshipReflections(initialPersistedState.relationshipReflections);setRelationshipReminders(initialPersistedState.relationshipReminders);setRosePopup(null);setAppNotice(null);setReferralOfferOpen(false);setDetailSafetyOpen(false);setDismissedIds([]);setProfileViewNotifiedIds([]);setAuthDestination('');setAuthPassword('');setOnboardingComplete(false);setScreen('welcome')};
+  const resetDemo=async()=>{if(memberDataRuntime.source==='server')await signOut();await Promise.all([clearAppState(),coupleModeRepository.clear()]);setCoupleMode(initialCoupleModeState);setChatLaunchTool(null);setVerified(initialPersistedState.verified);setProfileDraft(initialPersistedState.profileDraft);setVibeList(initialPersistedState.vibes);setIntent(initialPersistedState.intent);setAlignment(initialPersistedState.alignment);setChatMessages(initialPersistedState.chats);setChatDrafts({});setCoinBalance(initialPersistedState.coinBalance);setProfilePhotos(initialPersistedState.photos);setSelfieUri('');setVoiceIntroUri('');setVouches([]);setDiscoverySignals([]);setSmartDiscovery(true);setCrossedPaths(false);setBlockedIds([]);setReports([]);setSafeCheckIns([]);setMatchFilters(defaultMatchFilters);setRoseLedger(initialPersistedState.roseLedger);setLastSeenVisible(initialPersistedState.lastSeenVisible);setAnalyticsConsent(initialPersistedState.analyticsConsent);setChatSettings(initialPersistedState.chatSettings);setRelationshipReflections(initialPersistedState.relationshipReflections);setRelationshipReminders(initialPersistedState.relationshipReminders);setRosePopup(null);setAppNotice(null);setReferralOfferOpen(false);setDetailSafetyOpen(false);setDismissedIds([]);setProfileViewNotifiedIds([]);setAuthDestination('');setAuthPassword('');setOnboardingComplete(false);setScreen('welcome')};
   const deleteAccount=async()=>{try{await requestAccountDeletion()}finally{await resetDemo()}};
   return <SafeAreaProvider><StatusBar style="light"/><View style={shared.screen}>
     {screen==='splash'&&<Splash/>}
     {screen==='welcome'&&<Welcome onNext={()=>setScreen('auth')}/>} 
     {screen==='auth'&&<Auth onNext={(destination,skipOtp,password)=>{setAuthDestination(destination);setAuthPassword(password??'');setScreen(skipOtp?'verify':'otp')}} onBack={()=>setScreen('welcome')}/>} 
-    {screen==='otp'&&<Otp destination={authDestination} password={authPassword} onBack={()=>setScreen('auth')} onVerified={()=>setScreen('verify')}/>} 
+    {screen==='otp'&&<Otp destination={authDestination} password={authPassword} onBack={()=>setScreen('auth')} onVerified={()=>{setAuthenticated(true);setScreen('verify')}}/>} 
     {screen==='verify'&&<Verify verified={verified} selfieUri={selfieUri} onSelfie={setSelfieUri} setVerified={setVerified} onNext={()=>setScreen('modeSelect')}/>} 
     {screen==='modeSelect'&&<ModeSelect mode={coupleMode.experienceMode} onChange={chooseExperienceMode} onNext={()=>setScreen(coupleMode.experienceMode==='couple'?'coupleSetup':'profileSetup')}/>} 
     {screen==='coupleSetup'&&<CoupleSetup profile={profileDraft} hub={coupleHub} onBack={()=>setScreen(onboardingComplete?'profile':'modeSelect')} onSaveProfile={saveCoupleProfile} onSearch={searchCouplePartner} onRequest={requestCoupleConnection} onRespond={respondCoupleConnection} onOpenSpace={()=>setScreen('home')}/>} 
@@ -791,7 +812,7 @@ function MiniPremiumIcon({name,tone='ruby',size=30,iconSize=14}:{name:keyof type
 
 function Auth({onNext,onBack}:{onNext:(destination:string,skipOtp?:boolean,password?:string)=>void;onBack:()=>void}) {
   const [mode,setMode]=useState<'phone'|'email'>('phone');
-  const [phone,setPhone]=useState('');
+  const [phone,setPhone]=useState('+1');
   const [email,setEmail]=useState('');
   const [password,setPassword]=useState('');
   const [submitted,setSubmitted]=useState(false);

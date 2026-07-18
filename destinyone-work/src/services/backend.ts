@@ -17,6 +17,20 @@ function isRecoverablePhoneOtpError(error: unknown) {
   return /sms|phone|otp|twilio|provider|not enabled|unsupported|confirmation code/i.test(message);
 }
 
+function toFriendlyAuthError(error: unknown, mode: 'email' | 'phone') {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/over_.*email.*rate_limit|email.*rate.*limit|rate.*limit/i.test(message)) {
+    return 'Too many email codes were requested. Please wait a few minutes, then try again.';
+  }
+  if (mode === 'phone' && /sms|twilio|phone.*provider|provider.*not enabled|unsupported/i.test(message)) {
+    return 'Phone verification is not available yet. Please continue with email for now.';
+  }
+  if (/email.*invalid|invalid.*email/i.test(message)) return 'Enter a valid email address.';
+  if (/otp.*expired|token.*expired/i.test(message)) return 'That code expired. Request a new one and try again.';
+  if (/invalid.*otp|invalid.*token|token.*not found/i.test(message)) return 'That code does not match. Check the newest code and try again.';
+  return message || 'Authentication is temporarily unavailable. Please try again.';
+}
+
 function getEmailRedirectTo() {
   const maybeLocation = typeof globalThis !== 'undefined'
     ? (globalThis as { location?: { origin?: string } }).location
@@ -118,7 +132,7 @@ export async function beginAuthentication(request: AuthRequest) {
       if (allowsPreviewOtpFallback && isRecoverablePhoneOtpError(error)) {
         return { demo: true, fallbackReason: error.message } as const;
       }
-      throw error;
+      throw new Error(toFriendlyAuthError(error, 'phone'));
     }
     return { demo: false } as const;
   }
@@ -137,7 +151,7 @@ export async function beginAuthentication(request: AuthRequest) {
       data: { auth_flow: 'email_otp_with_password' },
     },
   });
-  if (error) throw error;
+  if (error) throw new Error(toFriendlyAuthError(error, 'email'));
   return { demo: false } as const;
 }
 
@@ -168,7 +182,7 @@ export async function verifyAuthentication(destination: string, token: string, p
       token,
       type: 'email',
     });
-    if (error) throw error;
+    if (error) throw new Error(toFriendlyAuthError(error, 'email'));
 
     // Optional password is collected in onboarding and set only after the email
     // OTP succeeds. Backend can later enforce password policy/server checks.
@@ -179,7 +193,7 @@ export async function verifyAuthentication(destination: string, token: string, p
   const phone = normalizeAuthPhone(destination);
   if (!phone) throw new Error('Enter a valid phone number with country code.');
   const { error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
-  if (error) throw error;
+  if (error) throw new Error(toFriendlyAuthError(error, 'phone'));
   return true;
 }
 
@@ -359,8 +373,8 @@ export async function submitMatchDecision(recipientId: string, decision: MatchDe
   ensureBackendConfigured();
   if (!isSupabaseConfigured) return null;
   const { data, error } = await supabase.rpc('submit_match_decision', {
-    recipient_id: recipientId,
-    decision,
+    p_recipient_id: recipientId,
+    p_decision: decision,
   });
   if (error) throw error;
   return data;
@@ -651,7 +665,9 @@ export function subscribeToChatMessages(matchId: string, onMessage: (message: Ch
 }
 
 export async function signOut() {
-  if (isSupabaseConfigured) await supabase.auth.signOut();
+  if (!isSupabaseConfigured) return;
+  const { error } = await supabase.auth.signOut({ scope: 'local' });
+  if (error) throw error;
 }
 
 export async function loadCurrentMemberBootstrap(): Promise<MemberBootstrap | null> {
