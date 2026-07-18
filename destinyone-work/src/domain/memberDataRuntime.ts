@@ -14,8 +14,11 @@ export type MemberMutationResult = {
   error?: string;
 };
 
-export function evaluateMemberDataRuntime(mode: BackendRuntimeMode): MemberDataRuntimePolicy {
-  const isPreview = mode === 'demo';
+export function evaluateMemberDataRuntime(mode: BackendRuntimeMode, forcePreview = false): MemberDataRuntimePolicy {
+  // forcePreview is supplied only by the development-only auth preview gate.
+  // It makes the entire experience consistent: local profile and mock actions
+  // should not attempt authenticated mutations when sign-in is intentionally skipped.
+  const isPreview = mode === 'demo' || forcePreview;
   return {
     source: isPreview ? 'preview' : 'server',
     allowsLocalHydration: isPreview,

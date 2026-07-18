@@ -22,6 +22,15 @@ describe('member data runtime policy', () => {
     });
   });
 
+  it('allows an explicitly requested development preview to use local state', () => {
+    expect(evaluateMemberDataRuntime('supabase', true)).toMatchObject({
+      source: 'preview',
+      allowsLocalHydration: true,
+      allowsLocalPersistence: true,
+      allowsMockMatches: true,
+    });
+  });
+
   it('commits preview actions locally but requires backend acknowledgement in server mode', () => {
     const preview = evaluateMemberDataRuntime('demo');
     const server = evaluateMemberDataRuntime('supabase');

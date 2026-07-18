@@ -103,7 +103,7 @@ const premiumRose = require('./assets/premium-red-rose.png');
 const icebreakerQuestion = 'Coffee date ☕ or road trip 🚗?';
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
-const memberDataRuntime = evaluateMemberDataRuntime(backendRuntime.mode);
+const memberDataRuntime = evaluateMemberDataRuntime(backendRuntime.mode, allowsPreviewAuthBypass);
 const coupleModeRepository=createLocalCoupleModeRepository(AsyncStorage);
 
 const showcaseCoupleModeState:CoupleModeState=showcaseExperienceMode==='couple'
