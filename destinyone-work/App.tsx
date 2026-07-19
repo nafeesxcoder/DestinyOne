@@ -1260,6 +1260,7 @@ function Alignment({value,onChange,onNext}:{value:Record<string,string>;onChange
 
 function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,preferences,alignment,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{items:Match[];matchLoadState:MemberMatchLoadState;matchingPoolStatus:MatchingPoolStatus|null;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};alignment:Record<string,string>;signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
   const {width}=useWindowDimensions();
+  const desktop=width>=860;
   const useMatchGrid=width>=900;
   const compactHome=width<430;
   const {featured,remaining:rest,heldForFutureDays}=buildDailyIntroductionDeck(items);
@@ -1274,7 +1275,9 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
   const poolNeedsVerification=matchingPoolStatus?.status==='verification_required';
   const poolNeedsPreferences=matchingPoolStatus?.status==='preferences_incomplete';
   const poolMessage=matchingPoolStatus?.suggestions[0]??'No verified profiles meet your preferences right now. We will refresh your introductions as the community grows.';
-  return <LinearGradient colors={['#FFFDFC','#F8F0EB',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,{maxWidth:920,paddingHorizontal:0}]}> 
+  return <LinearGradient colors={['#F8F3EE','#F4EBE5',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,desktop?homeCleanStyles.desktopSafe:{maxWidth:920,paddingHorizontal:0}]}> 
+    <View style={desktop&&homeCleanStyles.desktopShell}>
+    {desktop&&<HomeSidebar active="home" navigate={navigate}/>}<View style={desktop&&homeCleanStyles.desktopMain}>
     <View style={homeCleanStyles.header}>
       <View style={{flex:1}}>
         <Text style={homeCleanStyles.brandLine}>DESTINY<Text style={homeCleanStyles.brandOne}>ONE</Text></Text>
@@ -1327,8 +1330,16 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
         {matchLoadState==='error'?<Button label="Try again" icon="refresh" onPress={onRetryMatches}/>:matchLoadState==='preview'?<Button label="Adjust filters" onPress={()=>navigate('discovery')}/>:poolNeedsVerification?<Button label="Complete verification" icon="shield-checkmark-outline" onPress={()=>navigate('verifyHub')}/>:poolNeedsPreferences?<Button label="Complete preferences" icon="options-outline" onPress={()=>navigate('discovery')}/>:matchLoadState==='ready'?<Button label="Review preferences" icon="options-outline" onPress={()=>navigate('discovery')}/>:null}
       </View>}
     </ScrollView>
-    <BottomNav active="home" navigate={navigate}/>
+    </View>{!desktop&&<BottomNav active="home" navigate={navigate}/>} 
+    </View>
   </SafeAreaView></LinearGradient>
+}
+
+function HomeSidebar({active,navigate}:{active:string;navigate:(screen:Screen)=>void}){
+  const links=[
+    ['Home','home','home-outline'],['Discover','discovery','compass-outline'],['Matches','likes','heart-outline'],['Chat','chat','chatbubble-outline'],['Dates','events','calendar-outline'],['Executive','executive','briefcase-outline'],['Profile','profile','person-outline'],
+  ] as const;
+  return <View style={homeCleanStyles.sidebar}><Brand small/><Text style={homeCleanStyles.sidebarTagline}>Meaningful connections.<Text style={homeCleanStyles.sidebarTaglineGold}> Extraordinary futures.</Text></Text><View style={homeCleanStyles.sidebarLinks}>{links.map(([label,target,icon])=>{const selected=active===target;return <Pressable key={target} accessibilityRole="button" accessibilityLabel={label} onPress={()=>navigate(target as Screen)} style={[homeCleanStyles.sidebarLink,selected&&homeCleanStyles.sidebarLinkOn]}><Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={17} color={selected?'#FFFDFC':'#D5C3C2'}/><Text style={[homeCleanStyles.sidebarLinkText,selected&&homeCleanStyles.sidebarLinkTextOn]}>{label}</Text></Pressable>})}</View><Pressable accessibilityRole="button" accessibilityLabel="Open premium" onPress={()=>navigate('pricing')} style={homeCleanStyles.sidebarPremium}><PremiumIcon name="diamond" tone="gold" size={38} iconSize={17}/><Text style={homeCleanStyles.sidebarPremiumTitle}>DESTINYONE</Text><Text style={homeCleanStyles.sidebarPremiumTitle}>PREMIUM</Text><Text style={homeCleanStyles.sidebarPremiumBody}>More intentional introductions.</Text></Pressable></View>
 }
 
 function CoupleHome({state,hub,memberName,city,messages,onShare,onManage,onOpenTool,navigate}:{state:CoupleModeState;hub:CoupleConnectionHub;memberName:string;city:string;messages:ChatMessage[];onShare:()=>void;onManage:()=>void;onOpenTool:(tool:Exclude<CoupleLaunchTool,null>)=>void;navigate:(screen:Screen)=>void}){
@@ -5419,42 +5430,56 @@ const focusStyles=StyleSheet.create({
 });
 
 const homeCleanStyles=StyleSheet.create({
+  desktopSafe:{maxWidth:1280,paddingHorizontal:18},
+  desktopShell:{flex:1,flexDirection:'row',gap:24},
+  desktopMain:{flex:1,minWidth:0},
+  sidebar:{width:186,marginVertical:12,padding:18,borderRadius:12,backgroundColor:'#230B16',gap:12,shadowColor:'#6C1834',shadowOpacity:.18,shadowRadius:22,shadowOffset:{width:0,height:10}},
+  sidebarTagline:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:15,color:'#F1E4E1'},
+  sidebarTaglineGold:{color:'#D4AC58'},
+  sidebarLinks:{gap:3,marginTop:10},
+  sidebarLink:{minHeight:38,paddingHorizontal:10,borderRadius:8,flexDirection:'row',alignItems:'center',gap:10},
+  sidebarLinkOn:{backgroundColor:'#9B1C45',shadowColor:'#E33F68',shadowOpacity:.28,shadowRadius:12},
+  sidebarLinkText:{fontFamily:'Poppins_600SemiBold',fontSize:11,color:'#D5C3C2'},
+  sidebarLinkTextOn:{color:'#FFFDFC'},
+  sidebarPremium:{marginTop:'auto',padding:12,borderRadius:10,borderWidth:1,borderColor:'#73465A',backgroundColor:'#16070E',alignItems:'center',gap:3},
+  sidebarPremiumTitle:{fontFamily:'Poppins_700Bold',fontSize:9,letterSpacing:1.2,color:'#E8C76A'},
+  sidebarPremiumBody:{fontFamily:'Poppins_400Regular',fontSize:8.5,lineHeight:13,textAlign:'center',color:'#E4CFCE',marginTop:4},
   header:{minHeight:70,paddingHorizontal:18,paddingTop:7,paddingBottom:10,flexDirection:'row',alignItems:'center',gap:9},
   headingCompact:{fontSize:20},
-  brandLine:{fontFamily:'Poppins_700Bold',fontSize:9.5,letterSpacing:1.7,color:colors.ivory},
+  brandLine:{fontFamily:'Poppins_700Bold',fontSize:9.5,letterSpacing:1.7,color:'#381823'},
   brandOne:{color:colors.gold},
   headerSub:{fontFamily:'Poppins_400Regular',fontSize:11.5,lineHeight:17,color:'#CDB5BB',marginTop:3},
-  headerButton:{width:40,height:40,borderRadius:20,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.09)',alignItems:'center',justifyContent:'center'},
+  headerButton:{width:40,height:40,borderRadius:20,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',alignItems:'center',justifyContent:'center'},
   content:{paddingHorizontal:18,paddingBottom:124,gap:16},
   sideRail:{position:'absolute',right:12,top:132,zIndex:5,gap:9},
   sideButton:{width:58,minHeight:58,borderRadius:20,backgroundColor:'rgba(27,4,10,.88)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',alignItems:'center',justifyContent:'center',gap:4,shadowColor:'#FF2448',shadowOpacity:.2,shadowRadius:14},
   goldButton:{borderColor:'rgba(212,175,55,.35)',backgroundColor:'rgba(42,18,8,.9)'},
   sideText:{fontFamily:'Poppins_700Bold',fontSize:8.5,color:'#E9D8DC'},
-  hero:{minHeight:92,borderRadius:22,overflow:'hidden',padding:13,flexDirection:'row',alignItems:'center',gap:13,borderWidth:1,borderColor:'rgba(255,255,255,.09)',backgroundColor:'#1B0308'},
-  dailyCount:{width:72,minHeight:66,borderRadius:18,backgroundColor:'rgba(229,9,47,.13)',borderWidth:1,borderColor:'rgba(255,110,128,.20)',alignItems:'center',justifyContent:'center',padding:7},
+  hero:{minHeight:116,borderRadius:10,overflow:'hidden',padding:18,flexDirection:'row',alignItems:'center',gap:16,borderWidth:1,borderColor:'#E7D9CE',backgroundColor:'#FFFDFC',shadowColor:'#6C4C42',shadowOpacity:.08,shadowRadius:18,shadowOffset:{width:0,height:8}},
+  dailyCount:{width:78,minHeight:78,borderRadius:39,backgroundColor:'#FFF8F2',borderWidth:1,borderColor:'#D9BE89',alignItems:'center',justifyContent:'center',padding:7},
   heroCopy:{flex:1,gap:8},
-  heroTitle:{fontFamily:'Poppins_700Bold',fontSize:14,color:colors.ivory},
+  heroTitle:{fontFamily:'Poppins_700Bold',fontSize:15,color:'#32151F'},
   heroTop:{flexDirection:'row',alignItems:'center',gap:13},
   roseSeal:{width:58,height:58,borderRadius:29,backgroundColor:'#A80022',borderWidth:1,borderColor:'rgba(255,255,255,.20)',alignItems:'center',justifyContent:'center',shadowColor:'#FF2448',shadowOpacity:.5,shadowRadius:18},
   roseEmoji:{fontFamily:'Poppins_700Bold',fontSize:25,color:colors.ivory},
   script:{fontFamily:'Satisfy_400Regular',fontSize:31,color:colors.ivory},
-  heroBody:{fontFamily:'Poppins_400Regular',fontSize:12.2,lineHeight:18,color:'#D8BFC5',marginTop:1},
+  heroBody:{fontFamily:'Poppins_400Regular',fontSize:12.2,lineHeight:18,color:'#705D60',marginTop:1},
   chipWrap:{flexDirection:'row',flexWrap:'wrap',gap:6},
   cleanChip:{maxWidth:'100%',paddingHorizontal:9,paddingVertical:5,borderRadius:14,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'rgba(255,255,255,.09)'},
   cleanChipText:{fontFamily:'Poppins_600SemiBold',fontSize:9.2,color:'#F0D8DE'},
   statsRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingTop:2},
   statBlock:{maxWidth:112},
-  statNumber:{fontFamily:'Poppins_700Bold',fontSize:18,color:colors.ivory},
+  statNumber:{fontFamily:'Poppins_700Bold',fontSize:23,color:'#32151F'},
   statWord:{fontFamily:'Poppins_700Bold',fontSize:12,lineHeight:15,color:colors.ivory},
-  statLabel:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:colors.muted,marginTop:1},
+  statLabel:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#78696B',marginTop:1},
   statLine:{width:1,height:32,backgroundColor:'rgba(255,255,255,.12)'},
   crossedMini:{minHeight:54,borderRadius:20,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.20)',flexDirection:'row',alignItems:'center',gap:9,paddingHorizontal:13},
   crossedText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:11.5,lineHeight:16,color:'#F0D8BE'},
   featuredWrap:{gap:11},
   sectionRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},
   sectionHint:{fontFamily:'Poppins_600SemiBold',fontSize:10.5,color:colors.muted},
-  nudgeRow:{minHeight:62,paddingHorizontal:12,paddingVertical:9,borderRadius:18,backgroundColor:'rgba(212,175,55,.065)',borderWidth:1,borderColor:'rgba(212,175,55,.20)',flexDirection:'row',alignItems:'center',gap:9},
-  nudgeTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
+  nudgeRow:{minHeight:62,paddingHorizontal:12,paddingVertical:9,borderRadius:8,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E7D9CE',flexDirection:'row',alignItems:'center',gap:9},
+  nudgeTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:'#32151F'},
   nudgeBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,color:colors.muted,marginTop:1},
   nudgeAction:{fontFamily:'Poppins_700Bold',fontSize:9.5,color:colors.gold},
   exploreSection:{gap:10},
