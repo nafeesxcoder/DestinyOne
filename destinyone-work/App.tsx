@@ -4926,12 +4926,13 @@ function PricingPromise({icon,title,body}:{icon:keyof typeof Ionicons.glyphMap;t
 function FormPage({children,back,step,scroll: _scroll}:{children:React.ReactNode;back?:()=>void;step?:number;scroll?:boolean}){
   void _scroll;
   const inner=<View style={[shared.content,formPageStyles.content]}>{(back||step)&&<View style={{gap:18}}>{back?<Pressable onPress={back} style={styles.backButton}><PremiumIcon name="arrow-back" tone="dark" size={42} iconSize={20}/></Pressable>:<View style={{height:42}}/>}{step&&<StepBar step={step} total={6}/>}</View>}{children}</View>;
-  return <LinearGradient colors={['#FFFDFC',colors.black,'#F4E6E4']} locations={[0,.48,1]} style={{flex:1,overflow:'hidden'}}><View style={styles.formGlow}/><SafeAreaView style={shared.safe}><KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':Platform.OS==='android'?'height':undefined} style={formPageStyles.keyboard}><ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'on-drag'} showsVerticalScrollIndicator={false} contentContainerStyle={formPageStyles.scrollContent}>{inner}</ScrollView></KeyboardAvoidingView></SafeAreaView></LinearGradient>
+  return <LinearGradient colors={['#FFFDFC',colors.black,'#F4E6E4']} locations={[0,.48,1]} style={{flex:1}}><View style={styles.formGlow}/><SafeAreaView style={shared.safe}><KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':Platform.OS==='android'?'height':undefined} style={formPageStyles.keyboard}><ScrollView style={formPageStyles.scrollView} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'on-drag'} showsVerticalScrollIndicator={false} contentContainerStyle={formPageStyles.scrollContent}>{inner}</ScrollView></KeyboardAvoidingView></SafeAreaView></LinearGradient>
 }
 
 const formPageStyles=StyleSheet.create({
-  keyboard:{flex:1},
-  scrollContent:{flexGrow:1,paddingBottom:34},
+  keyboard:{flex:1,minHeight:0},
+  scrollView:{flex:1,minHeight:0},
+  scrollContent:{flexGrow:1,paddingTop:12,paddingBottom:156},
   content:{flexGrow:1,width:'100%',maxWidth:620,alignSelf:'center',paddingBottom:28},
 });
 function Segment({label,active,onPress}:{label:string;active:boolean;onPress:()=>void}){return <Pressable onPress={onPress} style={[styles.segmentItem,active&&styles.segmentActive]}><Text style={[styles.segmentText,active&&{color:'#FFFDFC'}]}>{label}</Text></Pressable>}
@@ -4962,10 +4963,10 @@ function BottomNav({active,navigate,mode='seeking',onOpenTool}:{active:string;na
 
 const selectorStyles=StyleSheet.create({
   searchBox:{minHeight:55,borderRadius:radius.md,borderWidth:1,borderColor:colors.line,backgroundColor:colors.surface,flexDirection:'row',alignItems:'center',gap:9,paddingHorizontal:14},
-  searchInput:{flex:1,minHeight:52,color:colors.ivory,fontFamily:'Poppins_400Regular',fontSize:14},
+  searchInput:{flex:1,minHeight:52,color:'#24171A',fontFamily:'Poppins_400Regular',fontSize:14},
   suggestionPanel:{borderRadius:12,borderWidth:1,borderColor:colors.line,backgroundColor:'#FFFDFC',overflow:'hidden'},
   suggestionRow:{minHeight:42,paddingHorizontal:13,flexDirection:'row',alignItems:'center',borderBottomWidth:1,borderBottomColor:'#F1E6DE'},
-  suggestionText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:12,color:colors.ivory},
+  suggestionText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:12,color:'#24171A'},
   selectedPill:{alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:11,paddingVertical:7,borderRadius:17,backgroundColor:'rgba(212,175,55,.12)',borderWidth:1,borderColor:'rgba(212,175,55,.35)'},
   selectedText:{fontFamily:'Poppins_600SemiBold',fontSize:11,color:'#F5DFA9'},
   religionChip:{minHeight:38,paddingHorizontal:12,borderRadius:19,borderWidth:1,borderColor:colors.line,backgroundColor:colors.surface2,flexDirection:'row',alignItems:'center',gap:6},
@@ -4974,16 +4975,16 @@ const selectorStyles=StyleSheet.create({
   selectField:{gap:7},
   selectButton:{minHeight:57,borderRadius:10,borderWidth:1,borderColor:'#E6D7CC',backgroundColor:'#FFFDFC',flexDirection:'row',alignItems:'center',gap:10,paddingHorizontal:12,shadowColor:'#4A1826',shadowOpacity:.07,shadowRadius:8},
   selectButtonOn:{borderColor:'rgba(183,138,47,.55)',backgroundColor:'#FFF8ED'},
-  selectValue:{flex:1,minWidth:0,fontFamily:'Poppins_600SemiBold',fontSize:12.5,color:colors.ivory},
+  selectValue:{flex:1,minWidth:0,fontFamily:'Poppins_600SemiBold',fontSize:12.5,color:'#24171A'},
   selectPlaceholder:{fontFamily:'Poppins_400Regular',color:'#766A73'},
   optionSheet:{maxHeight:'82%',paddingBottom:12},
   citySheet:{height:'88%',maxHeight:780,paddingBottom:12},
   sheetSearch:{minHeight:48,borderRadius:10,borderWidth:1,borderColor:'#E6D7CC',backgroundColor:'#FFFDFC',flexDirection:'row',alignItems:'center',gap:9,paddingHorizontal:13},
-  sheetSearchInput:{flex:1,minHeight:46,color:colors.ivory,fontFamily:'Poppins_400Regular',fontSize:13},
+  sheetSearchInput:{flex:1,minHeight:46,color:'#24171A',fontFamily:'Poppins_400Regular',fontSize:13},
   optionList:{gap:7,paddingBottom:18},
   optionRow:{minHeight:48,borderRadius:10,borderWidth:1,borderColor:'#E9DDD4',backgroundColor:'#FFFDFC',paddingHorizontal:13,flexDirection:'row',alignItems:'center',gap:10},
   optionRowOn:{borderColor:'rgba(183,138,47,.65)',backgroundColor:'#FFF3D7'},
-  optionTitle:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:12.5,color:colors.ivory},
+  optionTitle:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:12.5,color:'#24171A'},
   optionBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,color:colors.muted,marginTop:1},
   customOption:{minHeight:55,borderRadius:8,borderWidth:1,borderColor:'rgba(212,175,55,.34)',backgroundColor:'rgba(212,175,55,.08)',paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:10},
   emptyState:{minHeight:118,alignItems:'center',justifyContent:'center',gap:6,padding:16},
@@ -4991,14 +4992,14 @@ const selectorStyles=StyleSheet.create({
   countryOption:{flex:1,borderRadius:6,alignItems:'center',justifyContent:'center'},
   countryOptionOn:{backgroundColor:'#8F1028'},
   countryText:{fontFamily:'Poppins_600SemiBold',fontSize:11.5,color:colors.muted},
-  countryTextOn:{color:colors.ivory},
+  countryTextOn:{color:'#FFFDFC'},
   sheetLabel:{fontFamily:'Poppins_700Bold',fontSize:9,letterSpacing:1.2,color:colors.gold},
   regionBar:{minHeight:56,borderRadius:10,paddingHorizontal:12,backgroundColor:'#FFF8E8',borderWidth:1,borderColor:'rgba(183,138,47,.30)',flexDirection:'row',alignItems:'center',gap:10},
-  regionName:{fontFamily:'Poppins_700Bold',fontSize:13,color:colors.ivory,marginTop:2},
-  changeRegion:{minHeight:34,paddingHorizontal:12,borderRadius:17,backgroundColor:'rgba(255,255,255,.07)',alignItems:'center',justifyContent:'center'},
+  regionName:{fontFamily:'Poppins_700Bold',fontSize:13,color:'#24171A',marginTop:2},
+  changeRegion:{minHeight:34,paddingHorizontal:12,borderRadius:17,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',alignItems:'center',justifyContent:'center'},
   changeRegionText:{fontFamily:'Poppins_600SemiBold',fontSize:10.5,color:'#F2DCA7'},
   dataNotice:{borderRadius:8,padding:10,backgroundColor:'rgba(212,175,55,.07)',borderWidth:1,borderColor:'rgba(212,175,55,.18)',flexDirection:'row',alignItems:'center',gap:8},
-  dataNoticeText:{flex:1,fontFamily:'Poppins_400Regular',fontSize:9.8,lineHeight:14,color:'#DCC9A1'},
+  dataNoticeText:{flex:1,fontFamily:'Poppins_400Regular',fontSize:9.8,lineHeight:14,color:'#5D4D45'},
 });
 
 const authStyles=StyleSheet.create({
