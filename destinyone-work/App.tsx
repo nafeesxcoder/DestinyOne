@@ -3746,14 +3746,21 @@ function MatchCard({match,reasons,onPress,onInterested,onSkip,onRose,compact=fal
   return <Animated.View {...panResponder.panHandlers} style={[styles.matchCard,!compact&&width<430&&{height:500},compact&&styles.matchCardCompact,swipeStyles.cardLift,{transform:[{translateX:pan.x},{translateY:pan.y},{rotate}]}]}>
     <Pressable onPress={onPress} style={{width:'100%',height:'100%'}}>
       <Image source={{uri:match.photo}} style={styles.matchPhoto}/>
-      <LinearGradient colors={['rgba(8,0,2,.12)','rgba(11,11,15,.08)','rgba(11,11,15,.98)']} style={StyleSheet.absoluteFill}/>
+      <LinearGradient colors={['rgba(10,4,6,.04)','rgba(20,8,12,.12)','rgba(17,7,10,.82)']} style={StyleSheet.absoluteFill}/>
       <View style={swipeStyles.matchGlow}/>
       <View style={swipeStyles.photoVignette}/>
       <Animated.View pointerEvents="none" style={[swipeStyles.swipeOverlay,swipeStyles.swipeYes,{opacity:yesOpacity}]}><Text style={swipeStyles.swipeLabel}>SERIOUS YES</Text></Animated.View>
       <Animated.View pointerEvents="none" style={[swipeStyles.swipeOverlay,swipeStyles.swipeNope,{opacity:nopeOpacity}]}><Text style={swipeStyles.swipeLabel}>NOT FOR ME</Text></Animated.View>
       <Animated.View pointerEvents="none" style={[swipeStyles.swipeRose,{opacity:roseOpacity}]}><PremiumIcon name="sparkles" tone="gold" size={46} iconSize={21}/><Text style={swipeStyles.swipeRoseText}>SEND SPARK</Text></Animated.View>
       <View style={styles.matchTop}><View style={swipeStyles.premiumRibbon}><Chip label={match.match} gold/></View></View>
-      <View style={[styles.matchInfo,compact&&styles.matchInfoCompact]}><View style={shared.row}><View style={{flex:1}}><Text numberOfLines={1} style={[styles.matchName,compact&&styles.matchNameCompact]}>{match.name}, {match.age}</Text><Text numberOfLines={1} style={[styles.matchMeta,compact&&styles.matchMetaCompact]}>{match.profession} · {match.city}</Text></View><MiniPremiumIcon name="shield-checkmark" tone="plum" size={32} iconSize={15}/></View><View style={swipeStyles.profileSummary}><View style={swipeStyles.summaryItem}><Text style={swipeStyles.summaryLabel}>Intent</Text><Text numberOfLines={2} style={swipeStyles.summaryValue}>{match.intent}</Text></View><View style={swipeStyles.summaryDivider}/><View style={swipeStyles.summaryItem}><Text style={swipeStyles.summaryLabel}>Trust & values</Text><Text numberOfLines={2} style={swipeStyles.summaryValue}>{alignmentLabel} · {match.vouches.count} vouches</Text></View></View>{visibleReasons.length>0&&<View style={swipeStyles.reasonCard}><MiniPremiumIcon name="sparkles" tone="gold" size={28} iconSize={13}/><View style={{flex:1}}><Text style={swipeStyles.reasonTitle}>Why this feels aligned</Text><Text numberOfLines={2} style={swipeStyles.reasonBody}>{visibleReasons.join(' · ')}</Text></View></View>}<View style={styles.chipRow}>{visibleVibes.map(x=><Chip key={x} label={x}/>)}{hiddenVibes>0&&<View style={swipeStyles.morePill}><Text style={swipeStyles.morePillText}>+{hiddenVibes}</Text></View>}</View><View style={styles.cardActions}><Pressable accessibilityRole="button" accessibilityLabel={`Pass on ${match.name}`} onPress={onSkip} style={[styles.nope,compact&&styles.nopeCompact]}><PremiumIcon name="close" tone="dark" size={compact?46:52} iconSize={compact?21:24}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Send ${match.name} a Golden Spark`} onPress={onRose} style={[aiStyles.roseAction,compact&&aiStyles.roseActionCompact]}><PremiumIcon name="sparkles" tone="gold" size={30} iconSize={14}/><Text style={aiStyles.roseActionText}>Spark</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Interested in ${match.name}`} onPress={onInterested} style={[styles.yes,compact&&styles.yesCompact]}><MiniPremiumIcon name="heart" tone="ruby" size={compact?34:38} iconSize={compact?16:18}/><Text style={[styles.yesText,compact&&styles.yesTextCompact]}>Interested</Text></Pressable></View></View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Save this profile" onPress={onRose} style={matchReferenceStyles.saveButton}><Ionicons name="heart" size={21} color={colors.pink}/></Pressable>
+      <View style={[matchReferenceStyles.cardContent,compact&&matchReferenceStyles.cardContentCompact]}>
+        <View><Text numberOfLines={1} style={[matchReferenceStyles.name,compact&&matchReferenceStyles.nameCompact]}>{match.name}, {match.age}</Text><Text numberOfLines={1} style={matchReferenceStyles.meta}>{match.city} · {match.profession}</Text></View>
+        <View style={matchReferenceStyles.valueRow}><View style={matchReferenceStyles.valuePill}><Ionicons name="heart-outline" size={12} color={colors.pinkSoft}/><Text style={matchReferenceStyles.valueText}>{match.intent}</Text></View><View style={matchReferenceStyles.valuePill}><Ionicons name="sparkles-outline" size={12} color={colors.gold}/><Text style={matchReferenceStyles.valueText}>{alignmentLabel} future</Text></View></View>
+        <View style={matchReferenceStyles.reasonLine}><MiniPremiumIcon name="sparkles" tone="gold" size={25} iconSize={11}/><Text numberOfLines={1} style={matchReferenceStyles.reasonText}>{visibleReasons[0] ?? "Values aligned"}</Text></View>
+        <View style={matchReferenceStyles.tags}>{visibleVibes.map(vibe=><View key={vibe} style={matchReferenceStyles.tag}><Text style={matchReferenceStyles.tagText}>{vibe}</Text></View>)}</View>
+        <View style={matchReferenceStyles.actions}><Pressable accessibilityRole="button" accessibilityLabel="Pass on this profile" onPress={onSkip} style={matchReferenceStyles.passAction}><Ionicons name="close" size={22} color={colors.pink}/><Text style={matchReferenceStyles.passText}>PASS</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Like this profile" onPress={onInterested} style={matchReferenceStyles.likeAction}><Ionicons name="heart" size={20} color="#FFFDFC"/><View><Text style={matchReferenceStyles.likeText}>LIKE</Text><Text style={matchReferenceStyles.likeSubtext}>Send interest</Text></View></Pressable></View>
+      </View>
     </Pressable>
   </Animated.View>
 }
@@ -5862,6 +5869,29 @@ const swipeStyles=StyleSheet.create({
   morePillText:{fontFamily:'Poppins_700Bold',fontSize:10,color:colors.ivory},
   actionHint:{alignSelf:'flex-start',paddingHorizontal:10,paddingVertical:6,borderRadius:16,backgroundColor:'rgba(0,0,0,.24)',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
   actionHintText:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:'#D9B9BF'},
+});
+
+const matchReferenceStyles=StyleSheet.create({
+  saveButton:{position:'absolute',right:18,top:18,width:48,height:48,borderRadius:24,backgroundColor:'#FFFDFC',alignItems:'center',justifyContent:'center',shadowColor:'#27121A',shadowOpacity:.16,shadowRadius:12,shadowOffset:{width:0,height:5}},
+  cardContent:{position:'absolute',left:18,right:18,bottom:16,gap:9},
+  cardContentCompact:{left:14,right:14,bottom:12,gap:6},
+  name:{fontFamily:'Poppins_700Bold',fontSize:32,color:'#FFFDFC',textShadowColor:'rgba(25,8,13,.38)',textShadowRadius:10},
+  nameCompact:{fontSize:24},
+  meta:{fontFamily:'Poppins_500Medium',fontSize:11.5,color:'#F5E6E3',marginTop:2},
+  valueRow:{flexDirection:'row',gap:7},
+  valuePill:{flex:1,minHeight:44,paddingHorizontal:10,paddingVertical:7,borderRadius:8,backgroundColor:'rgba(20,11,14,.72)',borderWidth:1,borderColor:'rgba(255,255,255,.18)',justifyContent:'center',gap:3},
+  valueText:{fontFamily:'Poppins_600SemiBold',fontSize:10.2,lineHeight:13,color:'#FFFDFC'},
+  reasonLine:{minHeight:36,paddingHorizontal:9,borderRadius:8,backgroundColor:'rgba(75,57,13,.68)',borderWidth:1,borderColor:'rgba(231,192,90,.50)',flexDirection:'row',alignItems:'center',gap:7},
+  reasonText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10,color:'#FFF4D1'},
+  tags:{flexDirection:'row',flexWrap:'wrap',gap:6},
+  tag:{paddingHorizontal:10,paddingVertical:6,borderRadius:14,backgroundColor:'rgba(81,13,36,.86)',borderWidth:1,borderColor:'rgba(255,154,176,.28)'},
+  tagText:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#FFF3F4'},
+  actions:{flexDirection:'row',gap:10,marginTop:2},
+  passAction:{flex:1,height:58,borderRadius:29,backgroundColor:'#FFFDFC',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,shadowColor:'#24131A',shadowOpacity:.18,shadowRadius:12,shadowOffset:{width:0,height:5}},
+  passText:{fontFamily:'Poppins_700Bold',fontSize:13,letterSpacing:1,color:'#8E1837'},
+  likeAction:{flex:1.35,height:58,borderRadius:29,backgroundColor:'#B11442',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,shadowColor:'#A80C36',shadowOpacity:.42,shadowRadius:14,shadowOffset:{width:0,height:7}},
+  likeText:{fontFamily:'Poppins_700Bold',fontSize:13,letterSpacing:1,color:'#FFFDFC'},
+  likeSubtext:{fontFamily:'Poppins_400Regular',fontSize:8.5,color:'#FFE8EC',marginTop:-1},
 });
 
 const giftFlowStyles=StyleSheet.create({
