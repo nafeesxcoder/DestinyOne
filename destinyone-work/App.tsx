@@ -1619,7 +1619,7 @@ const coupleExperiences=[
 ];
 
 type PlaceKind='Restaurant'|'Cafe'|'Hotel'|'Wellness'|'Tourist'|'Activity'|'Park'|'Dessert'|'Lounge'|'Cultural';
-type PlaceItem={id:string;name:string;city:string;country:'USA'|'Canada';kind:PlaceKind;area:string;price:string;vibe:string;bestTime:string;safety:string;icon:string;tags:string[];photo?:string;mapsUrl?:string};
+type PlaceItem={id:string;name:string;city:string;country:'USA'|'Canada';kind:PlaceKind;area:string;price:string;vibe:string;bestTime:string;safety:string;icon:string;tags:string[];rating?:number;ratingCount?:number;photo?:string;mapsUrl?:string};
 type DatePackage={id:string;title:string;tier:string;city:string;price:string;duration:string;includes:string[];safety:string;icon:keyof typeof Ionicons.glyphMap};
 type PartnerRequest={venue:string;city:string;contact:string;packageTitle:string};
 type CoupleBundle={id:string;title:string;city:string;price:string;priceCents:number;duration:string;mood:string;icon:keyof typeof Ionicons.glyphMap;includes:string[];flexibility:string;safety:string};
@@ -1850,6 +1850,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
   const [livePlaces,setLivePlaces]=useState<LivePlace[]>([]);
   const [liveSearchState,setLiveSearchState]=useState<'idle'|'loading'|'ready'|'error'>('idle');
   const [liveSearchError,setLiveSearchError]=useState('');
+  const [cityPickerVisible,setCityPickerVisible]=useState(false);
   const visibleExperiences=mode==='couple'?coupleExperiences:eventExperiences;
   const normalized=query.trim().toLowerCase();
   const selectedCoordinates=cityCoordinates[marketCity];
@@ -1871,7 +1872,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
     return ()=>{cancelled=true;clearTimeout(timer)};
   },[marketCity,query,kind]);
   const liveDirectory:PlaceItem[]=livePlaces.map(place=>({
-    id:place.id,name:place.name,city:marketCity,country:marketCity.endsWith(', ON')||marketCity.endsWith(', BC')||marketCity.endsWith(', QC')||marketCity.endsWith(', AB')||marketCity.endsWith(', MB')||marketCity.endsWith(', NS')||marketCity.endsWith(', SK')?'Canada':'USA',kind:place.category,area:place.address,price:place.rating?`${place.rating.toFixed(1)} stars`:'See venue',vibe:`Live Google place${place.openNow===true?' · Open now':place.openNow===false?' · Closed now':''}`,bestTime:'Check live hours',safety:'Public business listing; confirm opening hours and meeting details before you travel.',icon:'📍',tags:['live','google-places',place.rating ? `${place.rating} rating` : ''],mapsUrl:place.mapsUrl,
+    id:place.id,name:place.name,city:marketCity,country:marketCity.endsWith(', ON')||marketCity.endsWith(', BC')||marketCity.endsWith(', QC')||marketCity.endsWith(', AB')||marketCity.endsWith(', MB')||marketCity.endsWith(', NS')||marketCity.endsWith(', SK')?'Canada':'USA',kind:place.category,area:place.address,price:place.rating?`${place.rating.toFixed(1)} stars`:'See venue',vibe:`A lovely ${place.category.toLowerCase()} idea${place.openNow===true?' · Open now':place.openNow===false?' · Closed now':''}`,bestTime:'Check live hours',safety:'Public venue; confirm opening hours and meeting details before you travel.',icon:'📍',tags:['live nearby',place.rating ? `${place.rating} rating` : ''],rating:place.rating,ratingCount:place.ratingCount,mapsUrl:place.mapsUrl,
   }));
   const directory=[...liveDirectory,...placeDirectory.filter(item=>!liveDirectory.some(live=>live.name===item.name))];
   const filtered=directory.filter(place=>{
@@ -1883,8 +1884,14 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
       &&(!reservableOnly||isReservablePlace(place))
       &&(!communityOnly||isCommunityPlace(place))
       &&(!premiumOnly||isPremiumPlace(place));
-  }).sort((left,right)=>getDistance(left)-getDistance(right));
+  }).sort((left,right)=>{
+    const ratingDifference=(right.rating??0)-(left.rating??0);
+    if(ratingDifference!==0)return ratingDifference;
+    const reviewDifference=(right.ratingCount??0)-(left.ratingCount??0);
+    return reviewDifference!==0?reviewDifference:getDistance(left)-getDistance(right);
+  });
   const featured=filtered.slice(0,8);
+  const dateMoments=(['Restaurant','Cafe','Dessert','Park','Activity','Cultural','Hotel','Wellness'] as PlaceKind[]).map(category=>filtered.find(place=>place.kind===category)).filter((place):place is PlaceItem=>Boolean(place)).slice(0,5);
   const tonightPicks=filtered.filter(place=>isSafeFirstDatePlace(place)&&isReservablePlace(place)).slice(0,3);
   const rsvp=(event:typeof eventExperiences[number])=>setRsvpEvent(event);
   const toggleSaved=(id:string)=>setSaved(current=>current.includes(id)?current.filter(item=>item!==id):[...current,id]);
@@ -1907,7 +1914,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
           <Text style={[shared.body,{textAlign:'center'},compactMarket&&marketplaceBrandStyles.bodyCompact]}>Curated places, thoughtful packages and hosted events for serious couples.</Text>
         </View>
         <View style={coachStyles.eventStats}>
-          <EventStat value={liveSearchState==='loading'?'Searching…':livePlaces.length?`${livePlaces.length} live`:`${placeDirectory.length}+`} label={livePlaces.length?'Google Places nearby':'curated picks'}/>
+          <EventStat value={liveSearchState==='loading'?'Searching…':livePlaces.length?`${livePlaces.length} live`:`${placeDirectory.length}+`} label={livePlaces.length?'nearby ideas':'curated picks'}/>
           <EventStat value={marketCity?`${radius} mi`:'USA + Canada'} label={marketCity?`around ${marketCity.split(',')[0]}`:'browse every city'}/>
           <EventStat value="Public-first" label="safety standard"/>
         </View>
@@ -1931,9 +1938,12 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
           </View>
           <View style={selectorStyles.searchBox}>
             <MiniPremiumIcon name="location" tone="gold" size={32} iconSize={15}/>
-            <TextInput value={marketCity} onChangeText={setMarketCity} placeholder="Any USA or Canada city for live nearby places" placeholderTextColor="#6F6875" style={selectorStyles.searchInput}/>
+            <Pressable accessibilityRole="button" accessibilityLabel="Choose a USA or Canada city" onPress={()=>setCityPickerVisible(true)} style={{flex:1}}>
+              <Text numberOfLines={1} style={[selectorStyles.searchInput,!marketCity&&{color:'#6F6875'}]}>{marketCity||'Choose a USA or Canada city'}</Text>
+            </Pressable>
             {!!marketCity&&<Pressable accessibilityRole="button" accessibilityLabel="Show all USA and Canada places" onPress={()=>setMarketCity('')}><MiniPremiumIcon name="close-circle" tone="dark" size={30} iconSize={14}/></Pressable>}
           </View>
+          <Pressable accessibilityRole="button" onPress={()=>setCityPickerVisible(true)} style={marketplaceBrandStyles.cityChooser}><MiniPremiumIcon name="location-outline" tone="gold" size={28} iconSize={13}/><Text style={marketplaceBrandStyles.cityChooserText}>{marketCity?'Change city':'Search all USA and Canada cities'}</Text><Ionicons name="chevron-forward" size={16} color={colors.gold}/></Pressable>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>
             {placeKinds.map(option=><Pressable key={option} onPress={()=>setKind(option)} style={[coachStyles.filterPill,kind===option&&coachStyles.filterPillOn]}><Text style={[coachStyles.filterText,kind===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}
           </ScrollView>
@@ -1958,7 +1968,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
             <View style={shared.spacer}/>
             <Text style={coachStyles.resultCount}>{filtered.length} found · {saved.length} saved</Text>
           </View>
-          {livePlaces.length>0&&<Text style={[styles.legal,{textAlign:'center'}]}>Live place details from Google Maps</Text>}
+          {marketCity&&kind==='All'&&dateMoments.length>0&&<View style={{gap:10}}><Text style={styles.sectionLabel}>FIVE LOVELY IDEAS IN {marketCity.toUpperCase()}</Text><Text style={styles.helper}>A dinner, a sweet stop, a walk and a little quality time - picked from the highest-rated nearby ideas.</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:10}}>{dateMoments.map(place=><Pressable key={`moment-${place.id}`} accessibilityRole="button" onPress={()=>{setKind(place.kind);setSelected(place)}} style={marketplaceBrandStyles.dateMoment}><MiniPremiumIcon name={placeKindIcon(place.kind)} tone={place.kind==='Park'||place.kind==='Cultural'?'gold':'rose'} size={32} iconSize={15}/><Text style={marketplaceBrandStyles.dateMomentKind}>{place.kind}</Text><Text numberOfLines={2} style={marketplaceBrandStyles.dateMomentName}>{place.name}</Text><Text style={marketplaceBrandStyles.dateMomentMeta}>{place.rating?`${place.rating.toFixed(1)} rating`:'Lovely nearby pick'}</Text></Pressable>)}</ScrollView></View>}
           {liveSearchState==='error'&&<Text style={[styles.helper,{textAlign:'center'}]}>{liveSearchError||'Showing curated picks while live Places search reconnects.'}</Text>}
           {featured.map(place=><PlaceCard key={place.id} place={place} distance={getDistance(place)} saved={saved.includes(place.id)} onSave={()=>toggleSaved(place.id)} onDetail={()=>setSelected(place)} onPlan={()=>onOpenDatePlan(place)}/>)}
         </View>
@@ -2017,6 +2027,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
         <Text style={styles.legal}>Availability and hours can change. Confirm details before you travel, and meet in public.</Text>
       </ScrollView>
       <PlaceDetailModal place={selected} distance={selected?getDistance(selected):undefined} saved={!!selected&&saved.includes(selected.id)} onClose={()=>setSelected(null)} onSave={()=>selected&&toggleSaved(selected.id)} onPlan={()=>{if(selected)onOpenDatePlan(selected)}}/>
+      <CityPickerSheet visible={cityPickerVisible} value={marketCity} onClose={()=>setCityPickerVisible(false)} onSelect={value=>{setMarketCity(value);setCityPickerVisible(false)}}/>
       <EventRsvpSheet event={rsvpEvent} onClose={()=>setRsvpEvent(null)} onPlan={()=>{setRsvpEvent(null);onOpenDatePlan()}}/>
       <PartnerInterestSheet visible={partnerOpen} request={partnerRequest} onChange={updatePartnerRequest} onClose={()=>setPartnerOpen(false)} onSubmit={submitPartnerRequest}/>
       <MarketplaceCheckoutSheet bundle={bundleCheckout} onClose={()=>setBundleCheckout(null)}/>
@@ -2048,7 +2059,7 @@ function CouplesPlanBuilder({city,radius,onCityChange,onRadiusChange,onExplore,o
       <View style={couplesMarketStyles.itinerary}>{bundle.includes.map((item,index)=><View key={item} style={couplesMarketStyles.itineraryRow}><View style={couplesMarketStyles.stepNumber}><Text style={couplesMarketStyles.stepNumberText}>{index+1}</Text></View><Text style={couplesMarketStyles.itineraryText}>{item}</Text></View>)}</View>
       <View style={couplesMarketStyles.policyRow}><MiniPremiumIcon name="refresh-circle" tone="gold" size={28} iconSize={13}/><Text style={couplesMarketStyles.policyText}>{bundle.flexibility}</Text></View>
       <View style={couplesMarketStyles.policyRow}><MiniPremiumIcon name="shield-checkmark" tone="rose" size={28} iconSize={13}/><Text style={couplesMarketStyles.policyText}>{bundle.safety}</Text></View>
-      <Button label="Reserve complete plan" icon="wallet" variant="gold" onPress={()=>onBook(bundle)}/>
+      <Button label="Save complete date plan" icon="bookmark" variant="gold" onPress={()=>onBook(bundle)}/>
       <Pressable onPress={()=>setReady(false)} style={couplesMarketStyles.startOver}><Text style={couplesMarketStyles.startOverText}>Change plan</Text></Pressable>
     </View>}
   </View>
@@ -2064,10 +2075,10 @@ function MarketplaceCheckoutSheet({bundle,onClose}:{bundle:CoupleBundle|null;onC
   const confirmed=status==='confirmed';
   const timeline=buildMarketplaceBookingTimeline(status);
   const advance=()=>setStatus(current=>current==='quote_ready'?'awaiting_match_acceptance':current==='awaiting_match_acceptance'?'awaiting_payment':current==='awaiting_payment'?'provider_confirming':'confirmed');
-  const actionLabel=status==='quote_ready'?'Share plan for acceptance':status==='awaiting_match_acceptance'?'Preview both accepted':status==='awaiting_payment'?`Prepare ${payment} securely`:status==='provider_confirming'?'Preview provider confirmation':'Manage booking';
+  const actionLabel=status==='quote_ready'?'Share plan for acceptance':status==='awaiting_match_acceptance'?'Mark both as ready':status==='awaiting_payment'?`Save ${payment} preference`:status==='provider_confirming'?'Finish date plan':'Manage saved plan';
   const refund=calculateMarketplaceRefund({amountCents:bundle.priceCents,cancellationCutoffAt:new Date(Date.now()+24*60*60*1000).toISOString(),cancelledAt:new Date().toISOString()});
-  return <Modal visible transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={chatStyles.sheet}><SheetHeader title={cancelled?'Booking cancelled':confirmed?'Itinerary reserved':'Complete your booking'} subtitle={`${bundle.city} · ${bundle.duration}`} onClose={onClose}/><ScrollView contentContainerStyle={{gap:12,paddingBottom:10}} showsVerticalScrollIndicator={false}>
-    <View style={couplesMarketStyles.checkoutHero}><PremiumIcon name={cancelled?'refresh-circle':confirmed?'checkmark-circle':'wallet'} tone="gold" size={56} iconSize={26}/><View style={{flex:1}}><Text style={styles.cardTitle}>{cancelled?'Cancellation complete':confirmed?'Your complete plan is ready':bundle.title}</Text><Text style={styles.helper}>{cancelled?`${formatPaymentMoney(refund.amountCents)} preview refund · no real charge made`:confirmed?`Confirmation ${confirmation}`:'One checkout and one support contact for the full itinerary.'}</Text></View></View>
+  return <Modal visible transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={chatStyles.sheet}><SheetHeader title={cancelled?'Plan cancelled':confirmed?'Date plan saved':'Make this date yours'} subtitle={`${bundle.city} · ${bundle.duration}`} onClose={onClose}/><ScrollView contentContainerStyle={{gap:12,paddingBottom:10}} showsVerticalScrollIndicator={false}>
+    <View style={couplesMarketStyles.checkoutHero}><PremiumIcon name={cancelled?'refresh-circle':confirmed?'checkmark-circle':'wallet'} tone="gold" size={56} iconSize={26}/><View style={{flex:1}}><Text style={styles.cardTitle}>{cancelled?'Plan removed':confirmed?'Your complete plan is ready':bundle.title}</Text><Text style={styles.helper}>{cancelled?'Nothing was booked or charged.':confirmed?`Plan reference ${confirmation}`:'Choose the details together, then keep the itinerary in one private place.'}</Text></View></View>
     <View style={coachStyles.detailRows}><DetailRow icon="location-outline" label="Destination" value={bundle.city}/><DetailRow icon="time-outline" label="Duration" value={bundle.duration}/><DetailRow icon="receipt-outline" label="Estimated total" value={bundle.price}/><DetailRow icon="refresh-circle-outline" label="Changes" value={bundle.flexibility}/></View>
     {!cancelled&&<View style={coachStyles.marketPillarGrid}>{timeline.map(item=>{const current=item.status===status;const complete=timeline.findIndex(step=>step.status===item.status)<timeline.findIndex(step=>step.status===status)||confirmed;return <View key={item.status} style={[coachStyles.marketPillar,(current||complete)&&coachStyles.marketPillarOn]}><MiniPremiumIcon name={complete?'checkmark-circle':current?'radio-button-on':'ellipse-outline'} tone={complete?'gold':current?'rose':'dark'} size={24} iconSize={11}/><View style={{flex:1}}><Text style={coachStyles.marketPillarTitle}>{item.title}</Text><Text style={coachStyles.marketPillarBody}>{item.body}</Text></View></View>})}</View>}
     <View style={couplesMarketStyles.checkoutItems}>{bundle.includes.map((item,index)=><View key={item} style={couplesMarketStyles.checkoutItem}><MiniPremiumIcon name={index===0?'bed':index===1?'restaurant':index===2?'ticket':'sparkles'} tone={index%2?'ruby':'gold'} size={32} iconSize={15}/><View style={{flex:1}}><Text style={couplesMarketStyles.checkoutItemTitle}>{item}</Text><Text style={couplesMarketStyles.checkoutItemMeta}>{cancelled?'Released in preview':confirmed?'Grouped under one confirmation':'Freshness rechecked before payment'}</Text></View>{confirmed&&!cancelled&&<MiniPremiumIcon name="checkmark-circle" tone="gold" size={26} iconSize={12}/>}</View>)}</View>
@@ -2075,7 +2086,7 @@ function MarketplaceCheckoutSheet({bundle,onClose}:{bundle:CoupleBundle|null;onC
     {!confirmed&&!cancelled&&<><View style={couplesMarketStyles.totalRow}><Text style={styles.cardTitle}>Estimated total</Text><Text style={couplesMarketStyles.totalPrice}>{bundle.price}</Text></View><Button label={actionLabel} icon={status==='quote_ready'?'share-outline':status==='awaiting_match_acceptance'?'people':status==='awaiting_payment'?'lock-closed':'business'} onPress={advance}/></>}
     {confirmed&&!cancelled&&<><View style={coachStyles.savedNote}><MiniPremiumIcon name="shield-checkmark" tone="gold" size={28} iconSize={13}/><Text style={coachStyles.savedNoteText}>Receipt, provider confirmation, change policy and one support contact stay with this itinerary.</Text></View><Button label="Request cancellation" icon="refresh-circle" variant="secondary" onPress={()=>setCancelled(true)}/><Button label="Done" icon="checkmark" onPress={onClose}/></>}
     {cancelled&&<><View style={coachStyles.savedNote}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={28} iconSize={13}/><Text style={coachStyles.savedNoteText}>{refund.reason} Production waits for the payment webhook before showing refund complete.</Text></View><Button label="Done" icon="checkmark" onPress={onClose}/></>}
-    <Text style={styles.legal}>Preview mode does not charge a card or reserve live inventory. Production booking activates only after provider contracts, server-side price checks, payment webhooks and cancellation support are connected.</Text>
+    <Text style={styles.legal}>This preview saves a date plan only. Live reservations and payments activate after each venue connection, live availability check and secure payment setup are complete.</Text>
   </ScrollView></SafeAreaView></Modal>
 }
 
@@ -2289,7 +2300,7 @@ function PlaceCard({place,distance,saved,compact,onSave,onDetail,onPlan}:{place:
       <View style={coachStyles.placeLabelRow}>{labels.slice(0,compact?2:4).map(label=><View key={label} style={coachStyles.placeLabel}><Text style={coachStyles.placeLabelText}>{label}</Text></View>)}</View>
       <View style={coachStyles.eventFooter}>
         <View style={coachStyles.eventTag}><PremiumIcon name="time-outline" tone="gold" size={24} iconSize={11}/><Text style={coachStyles.eventTagText}>{place.bestTime}</Text></View>
-        {!!place.mapsUrl&&<Pressable accessibilityRole="link" accessibilityLabel={`Open ${place.name} in Google Maps`} onPress={()=>void Linking.openURL(place.mapsUrl!)} style={coachStyles.detailsButton}><Text style={coachStyles.detailsText}>Map</Text></Pressable>}
+        {!!place.mapsUrl&&<Pressable accessibilityRole="link" accessibilityLabel={`Open directions for ${place.name}`} onPress={()=>void Linking.openURL(place.mapsUrl!)} style={coachStyles.detailsButton}><Text style={coachStyles.detailsText}>Directions</Text></Pressable>}
         <Pressable accessibilityRole="button" accessibilityLabel={`Details for ${place.name}`} onPress={onDetail} style={coachStyles.detailsButton}><Text style={coachStyles.detailsText}>Details</Text></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={`Plan ${place.name}`} onPress={onPlan} style={coachStyles.rsvpButton}><Text style={coachStyles.rsvpText}>Plan</Text></Pressable>
       </View>
@@ -2312,8 +2323,8 @@ function PlaceDetailModal({place,distance,saved,onClose,onSave,onPlan}:{place:Pl
         <DetailRow icon="calendar-outline" label="Reservation" value={isReservablePlace(place)?'Hold + quote + confirmation flow ready for API connection':'Walk-in/date-plan suggestion only'}/>
       </View>
       <View style={styles.chipRow}>{place.tags.map(tag=><Chip key={tag} label={tag}/>)}</View>
-      <View style={{gap:10}}><Button label={saved?'Saved idea':'Save idea'} icon={saved?'bookmark':'bookmark-outline'} variant="secondary" onPress={onSave}/>{!!place.mapsUrl&&<Button label="Open in Google Maps" icon="navigate" variant="gold" onPress={()=>void Linking.openURL(place.mapsUrl!)}/>}<Button label="Plan this date" icon="calendar" onPress={onPlan}/></View>
-      <Text style={styles.legal}>{place.mapsUrl?'Live place details from Google Maps. Confirm hours before travel.':'Live hours, map links, restaurant inventory and reservation confirmation connect in production.'}</Text>
+      <View style={{gap:10}}><Button label={saved?'Saved idea':'Save idea'} icon={saved?'bookmark':'bookmark-outline'} variant="secondary" onPress={onSave}/>{!!place.mapsUrl&&<Button label="Open directions" icon="navigate" variant="gold" onPress={()=>void Linking.openURL(place.mapsUrl!)}/>}<Button label="Add to our date plan" icon="calendar" onPress={onPlan}/></View>
+      <Text style={styles.legal}>{place.mapsUrl?'Live venue details can change. Confirm hours before travel.':'Live hours, directions, inventory and reservation confirmation connect after the venue is activated.'}</Text>
     </SafeAreaView>
   </Modal>
 }
@@ -5467,6 +5478,12 @@ const marketplaceBrandStyles=StyleSheet.create({
   plannerToggle:{minHeight:68,paddingHorizontal:14,paddingVertical:11,borderRadius:8,backgroundColor:'rgba(212,175,55,.07)',borderWidth:1,borderColor:'rgba(212,175,55,.24)',flexDirection:'row',alignItems:'center',gap:11},
   plannerTitle:{fontFamily:'Poppins_700Bold',fontSize:12.5,color:colors.ivory},
   plannerBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:colors.muted,marginTop:2},
+  cityChooser:{minHeight:34,paddingHorizontal:10,borderRadius:8,borderWidth:1,borderColor:'rgba(212,175,55,.22)',backgroundColor:'rgba(212,175,55,.055)',flexDirection:'row',alignItems:'center',gap:7},
+  cityChooserText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.5,color:'#F1D9A2'},
+  dateMoment:{width:142,minHeight:122,padding:11,borderRadius:8,borderWidth:1,borderColor:'rgba(212,175,55,.20)',backgroundColor:'rgba(33,10,15,.95)',gap:6},
+  dateMomentKind:{fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:.7,textTransform:'uppercase',color:colors.gold},
+  dateMomentName:{fontFamily:'Poppins_700Bold',fontSize:11.2,lineHeight:15,color:colors.ivory},
+  dateMomentMeta:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:'#D7B9C1'},
 });
 
 const passportStyles=StyleSheet.create({

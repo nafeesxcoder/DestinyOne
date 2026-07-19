@@ -55,12 +55,16 @@ function searchTopicsFor(query: string | undefined, category: string | undefined
   };
   if (category && category !== 'All' && categoryTopics[category]) return categoryTopics[category];
 
-  // One city search should be genuinely useful across the whole date journey,
-  // not just return a dozen generic businesses from a single query.
+  // A city browse should immediately feel like a date planner: dinner, a
+  // sweet/coffee stop, a walk, something to do and an overnight escape.
+  // Each query is cached, and the client promotes the highest-rated result
+  // from each category into its five "lovely ideas" rail.
   return [
-    'date night restaurants cafes dessert lounges',
+    'romantic date night restaurants',
+    'coffee shops dessert bakeries',
+    'beautiful parks gardens walks',
+    'fun couples activities museums art galleries',
     'boutique hotels spas wellness experiences',
-    'things to do parks museums tourist attractions activities',
   ];
 }
 
