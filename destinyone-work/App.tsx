@@ -1280,16 +1280,17 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
     {desktop&&<HomeSidebar active="home" navigate={navigate}/>}<View style={desktop&&homeCleanStyles.desktopMain}>
     <View style={homeCleanStyles.header}>
       <View style={{flex:1}}>
-        <Text style={homeCleanStyles.brandLine}>DESTINY<Text style={homeCleanStyles.brandOne}>ONE</Text></Text>
-        <Text numberOfLines={1} style={[shared.h2,compactHome&&homeCleanStyles.headingCompact]}>Today's introductions</Text>
+        <Text style={homeCleanStyles.greeting}>Good evening, Arjun <Text style={homeCleanStyles.wave}>👋</Text></Text>
+        <Text numberOfLines={1} style={homeCleanStyles.greetingSub}>Thoughtful connections. Meaningful futures.</Text>
       </View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={()=>navigate('support')} style={homeCleanStyles.notificationButton}><Ionicons name="notifications-outline" size={21} color="#32151F"/><View style={homeCleanStyles.notificationBadge}><Text style={homeCleanStyles.notificationBadgeText}>3</Text></View></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Match filters" onPress={()=>navigate('discovery')} style={homeCleanStyles.headerButton}><PremiumIcon name="options-outline" tone="dark" size={36} iconSize={17}/></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={()=>navigate('profile')} style={homeCleanStyles.headerButton}><PremiumIcon name="person-outline" tone="ruby" size={36} iconSize={17}/></Pressable>
     </View>
 
     <ScrollView contentContainerStyle={homeCleanStyles.content} showsVerticalScrollIndicator={false}>
       <View style={homeCleanStyles.hero}>
-        <LinearGradient colors={['rgba(255,36,72,.15)','rgba(255,255,255,.025)']} style={StyleSheet.absoluteFill}/>
+        <LinearGradient colors={['#FFF5F7','#FFFDFC']} style={StyleSheet.absoluteFill}/>
         <View style={homeCleanStyles.dailyCount}>
           <Text style={homeCleanStyles.statNumber}>{retention.dailyMatches}</Text>
           <Text style={homeCleanStyles.statLabel}>curated today</Text>
@@ -1298,6 +1299,7 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
           <Text style={homeCleanStyles.heroTitle}>Chosen around your future.</Text>
           <Text style={homeCleanStyles.heroBody}>Five thoughtful introductions. Clear intent before chemistry, with room for a real conversation.</Text>
         </View>
+        <View style={homeCleanStyles.avatarStack}>{items.slice(0,3).map((item,index)=><Image key={item.id} source={{uri:item.photo}} style={[homeCleanStyles.heroAvatar,{marginLeft:index?-11:0}]}/>)}</View>
       </View>
 
       <IntentPassportCard input={passportInput} compact onEdit={()=>navigate('alignment')}/>
@@ -1312,6 +1314,8 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
         <View style={homeCleanStyles.sectionRow}><Text style={styles.sectionLabel}>YOUR TOP MATCH</Text><Text style={homeCleanStyles.sectionHint}>Tap to see the full story</Text></View>
         <MatchCard match={featured} reasons={featured.reasons??matchReasons(featured,preferences)} onPress={()=>openDetail(featured)} onInterested={()=>onInterested(featured)} onSkip={()=>onSkip(featured)} onRose={()=>onRose(featured)}/>
       </View>}
+
+      <View style={homeCleanStyles.exploreIdeas}><View><Text style={homeCleanStyles.exploreHeading}>Explore ideas together</Text><Text style={homeCleanStyles.exploreSubheading}>Start better conversations</Text></View><View style={homeCleanStyles.exploreTiles}><Pressable onPress={()=>navigate('coach')} style={homeCleanStyles.exploreTile}><MiniPremiumIcon name="calendar-outline" tone="rose" size={32} iconSize={15}/><Text style={homeCleanStyles.exploreTileTitle}>Future Plans</Text><Text style={homeCleanStyles.exploreTileMeta}>12 questions</Text></Pressable><Pressable onPress={()=>navigate('explore')} style={homeCleanStyles.exploreTile}><MiniPremiumIcon name="shield-checkmark-outline" tone="plum" size={32} iconSize={15}/><Text style={homeCleanStyles.exploreTileTitle}>Deal Breakers</Text><Text style={homeCleanStyles.exploreTileMeta}>8 questions</Text></Pressable><Pressable onPress={()=>navigate('explore')} style={homeCleanStyles.exploreTile}><MiniPremiumIcon name="happy-outline" tone="gold" size={32} iconSize={15}/><Text style={homeCleanStyles.exploreTileTitle}>Fun & Vibes</Text><Text style={homeCleanStyles.exploreTileMeta}>10 questions</Text></Pressable></View></View>
 
       {primaryNudge&&<Pressable onPress={()=>openNudge(primaryNudge)} style={homeCleanStyles.nudgeRow}>
         <MiniPremiumIcon name={primaryNudge.icon as keyof typeof Ionicons.glyphMap} tone="gold" size={34} iconSize={16}/>
@@ -5452,6 +5456,12 @@ const homeCleanStyles=StyleSheet.create({
   sidebarPremiumTitle:{fontFamily:'Poppins_700Bold',fontSize:9,letterSpacing:1.2,color:'#E8C76A'},
   sidebarPremiumBody:{fontFamily:'Poppins_400Regular',fontSize:8.5,lineHeight:13,textAlign:'center',color:'#E4CFCE',marginTop:4},
   header:{minHeight:70,paddingHorizontal:18,paddingTop:7,paddingBottom:10,flexDirection:'row',alignItems:'center',gap:9},
+  greeting:{fontFamily:'Georgia',fontSize:26,color:'#24171A'},
+  wave:{fontFamily:'Poppins_400Regular',fontSize:20},
+  greetingSub:{fontFamily:'Poppins_400Regular',fontSize:11.5,color:'#75686A',marginTop:2},
+  notificationButton:{width:44,height:44,borderRadius:22,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',alignItems:'center',justifyContent:'center',position:'relative'},
+  notificationBadge:{position:'absolute',right:-1,top:-2,width:17,height:17,borderRadius:9,backgroundColor:'#C11B47',alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'#FFFDFC'},
+  notificationBadgeText:{fontFamily:'Poppins_700Bold',fontSize:8,color:'#FFFDFC'},
   headingCompact:{fontSize:20},
   brandLine:{fontFamily:'Poppins_700Bold',fontSize:9.5,letterSpacing:1.7,color:'#381823'},
   brandOne:{color:colors.gold},
@@ -5465,6 +5475,8 @@ const homeCleanStyles=StyleSheet.create({
   hero:{minHeight:116,borderRadius:10,overflow:'hidden',padding:18,flexDirection:'row',alignItems:'center',gap:16,borderWidth:1,borderColor:'#E7D9CE',backgroundColor:'#FFFDFC',shadowColor:'#6C4C42',shadowOpacity:.08,shadowRadius:18,shadowOffset:{width:0,height:8}},
   dailyCount:{width:78,minHeight:78,borderRadius:39,backgroundColor:'#FFF8F2',borderWidth:1,borderColor:'#D9BE89',alignItems:'center',justifyContent:'center',padding:7},
   heroCopy:{flex:1,gap:8},
+  avatarStack:{flexDirection:'row',alignItems:'center',paddingRight:2},
+  heroAvatar:{width:34,height:34,borderRadius:17,borderWidth:2,borderColor:'#FFFDFC'},
   heroTitle:{fontFamily:'Poppins_700Bold',fontSize:15,color:'#32151F'},
   heroTop:{flexDirection:'row',alignItems:'center',gap:13},
   roseSeal:{width:58,height:58,borderRadius:29,backgroundColor:'#A80022',borderWidth:1,borderColor:'rgba(255,255,255,.20)',alignItems:'center',justifyContent:'center',shadowColor:'#FF2448',shadowOpacity:.5,shadowRadius:18},
@@ -5501,6 +5513,13 @@ const homeCleanStyles=StyleSheet.create({
   futureDeckTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
   futureDeckBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:colors.muted,marginTop:2},
   emptyCard:{gap:12,alignItems:'center'},
+  exploreIdeas:{padding:16,borderRadius:18,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E7D9CE',gap:12},
+  exploreHeading:{fontFamily:'Georgia',fontSize:16,color:'#32151F'},
+  exploreSubheading:{fontFamily:'Poppins_400Regular',fontSize:10,color:'#8A797A',marginTop:2},
+  exploreTiles:{flexDirection:'row',gap:8},
+  exploreTile:{flex:1,minHeight:100,padding:9,borderRadius:12,backgroundColor:'#FCF7F4',borderWidth:1,borderColor:'#F0E3DB',gap:5},
+  exploreTileTitle:{fontFamily:'Poppins_700Bold',fontSize:10.2,lineHeight:13,color:'#3A2228'},
+  exploreTileMeta:{fontFamily:'Poppins_400Regular',fontSize:8.5,color:'#8A7778'},
 });
 
 const marketplaceBrandStyles=StyleSheet.create({
