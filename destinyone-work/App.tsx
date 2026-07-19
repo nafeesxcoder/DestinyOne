@@ -1281,18 +1281,18 @@ function HomeClean({memberName,items,matchLoadState,matchingPoolStatus,onRetryMa
   return <LinearGradient colors={['#F8F3EE','#F4EBE5',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,desktop?homeCleanStyles.desktopSafe:{maxWidth:920,paddingHorizontal:0}]}> 
     <View style={desktop&&homeCleanStyles.desktopShell}>
     {desktop&&<HomeSidebar active="home" navigate={navigate}/>}<View style={desktop&&homeCleanStyles.desktopMain}>
-    <View style={homeCleanStyles.header}>
+    <View style={[homeCleanStyles.header,width<390&&homeCleanStyles.headerCompact]}>
       <View style={{flex:1}}>
-        <Text style={homeCleanStyles.greeting}>{timeGreeting}, {greetingName} <Text style={homeCleanStyles.wave}>👋</Text></Text>
+        <Text style={[homeCleanStyles.greeting,width<390&&homeCleanStyles.greetingCompact]}>{timeGreeting}, {greetingName} <Text style={homeCleanStyles.wave}>👋</Text></Text>
         <Text numberOfLines={1} style={homeCleanStyles.greetingSub}>Thoughtful connections. Meaningful futures.</Text>
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={()=>navigate('support')} style={homeCleanStyles.notificationButton}><Ionicons name="notifications-outline" size={21} color="#32151F"/><View style={homeCleanStyles.notificationBadge}><Text style={homeCleanStyles.notificationBadgeText}>3</Text></View></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Match filters" onPress={()=>navigate('discovery')} style={homeCleanStyles.headerButton}><PremiumIcon name="options-outline" tone="dark" size={36} iconSize={17}/></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={()=>navigate('profile')} style={homeCleanStyles.headerButton}><PremiumIcon name="person-outline" tone="ruby" size={36} iconSize={17}/></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={()=>navigate('support')} style={[homeCleanStyles.notificationButton,width<390&&homeCleanStyles.headerButtonCompact]}><Ionicons name="notifications-outline" size={width<390?18:21} color="#32151F"/><View style={homeCleanStyles.notificationBadge}><Text style={homeCleanStyles.notificationBadgeText}>3</Text></View></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Match filters" onPress={()=>navigate('discovery')} style={[homeCleanStyles.headerButton,width<390&&homeCleanStyles.headerButtonCompact]}><PremiumIcon name="options-outline" tone="dark" size={width<390?34:36} iconSize={width<390?15:17}/></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={()=>navigate('profile')} style={[homeCleanStyles.headerButton,width<390&&homeCleanStyles.headerButtonCompact]}><PremiumIcon name="person-outline" tone="ruby" size={width<390?34:36} iconSize={width<390?15:17}/></Pressable>
     </View>
 
     <ScrollView contentContainerStyle={homeCleanStyles.content} showsVerticalScrollIndicator={false}>
-      <View style={homeCleanStyles.hero}>
+      <View style={[homeCleanStyles.hero,width<390&&homeCleanStyles.heroCompact]}>
         <LinearGradient colors={['#FFF5F7','#FFFDFC']} style={StyleSheet.absoluteFill}/>
         <View style={homeCleanStyles.dailyCount}>
           <Text style={homeCleanStyles.statNumber}>{retention.dailyMatches}</Text>
@@ -1302,7 +1302,7 @@ function HomeClean({memberName,items,matchLoadState,matchingPoolStatus,onRetryMa
           <Text style={homeCleanStyles.heroTitle}>Chosen around your future.</Text>
           <Text style={homeCleanStyles.heroBody}>Five thoughtful introductions. Clear intent before chemistry, with room for a real conversation.</Text>
         </View>
-        <View style={homeCleanStyles.avatarStack}>{items.slice(0,3).map((item,index)=><Image key={item.id} source={{uri:item.photo}} style={[homeCleanStyles.heroAvatar,{marginLeft:index?-11:0}]}/>)}</View>
+        {width>=390&&<View style={homeCleanStyles.avatarStack}>{items.slice(0,3).map((item,index)=><Image key={item.id} source={{uri:item.photo}} style={[homeCleanStyles.heroAvatar,{marginLeft:index?-11:0}]}/>)}</View>}
       </View>
 
       <IntentPassportCard input={passportInput} compact onEdit={()=>navigate('alignment')}/>
@@ -5341,7 +5341,7 @@ const profilePremiumStyles=StyleSheet.create({
   statusGem:{position:'absolute',right:4,bottom:6},
   nameRow:{flexDirection:'row',alignItems:'center',gap:8},
   name:{fontFamily:'Poppins_700Bold',fontSize:25,color:'#24171A'},
-  meta:{fontFamily:'Poppins_400Regular',fontSize:12.5,color:'#6F5A61'},
+  meta:{fontFamily:'Poppins_400Regular',fontSize:12.5,color:'#60454D'},
   stats:{width:'100%',flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:10,paddingHorizontal:8,borderRadius:20,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',marginTop:2},
   stat:{flex:1,alignItems:'center'},
   statValue:{fontFamily:'Poppins_700Bold',fontSize:15,color:'#24171A'},
@@ -5357,7 +5357,7 @@ const profilePremiumStyles=StyleSheet.create({
   actionTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:'#24171A',marginTop:10},
   actionBody:{fontFamily:'Poppins_400Regular',fontSize:9.2,lineHeight:13.5,color:colors.muted,marginTop:2},
   shareStatus:{marginTop:-12,padding:12,borderRadius:18,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.22)',flexDirection:'row',alignItems:'center',gap:9},
-  shareStatusText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.8,lineHeight:16,color:'#EFD8B0'},
+  shareStatusText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.8,lineHeight:16,color:'#6F5A32'},
 });
 
 const backendReadyStyles=StyleSheet.create({
@@ -5460,7 +5460,9 @@ const homeCleanStyles=StyleSheet.create({
   sidebarPremiumTitle:{fontFamily:'Poppins_700Bold',fontSize:9,letterSpacing:1.2,color:'#E8C76A'},
   sidebarPremiumBody:{fontFamily:'Poppins_400Regular',fontSize:8.5,lineHeight:13,textAlign:'center',color:'#E4CFCE',marginTop:4},
   header:{minHeight:70,paddingHorizontal:18,paddingTop:7,paddingBottom:10,flexDirection:'row',alignItems:'center',gap:9},
+  headerCompact:{minHeight:64,paddingHorizontal:12,gap:5},
   greeting:{fontFamily:'Georgia',fontSize:26,color:'#24171A'},
+  greetingCompact:{fontSize:21,lineHeight:25},
   wave:{fontFamily:'Poppins_400Regular',fontSize:20},
   greetingSub:{fontFamily:'Poppins_400Regular',fontSize:11.5,color:'#75686A',marginTop:2},
   notificationButton:{width:44,height:44,borderRadius:22,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',alignItems:'center',justifyContent:'center',position:'relative'},
@@ -5471,12 +5473,14 @@ const homeCleanStyles=StyleSheet.create({
   brandOne:{color:colors.gold},
   headerSub:{fontFamily:'Poppins_400Regular',fontSize:11.5,lineHeight:17,color:'#CDB5BB',marginTop:3},
   headerButton:{width:40,height:40,borderRadius:20,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',alignItems:'center',justifyContent:'center'},
+  headerButtonCompact:{width:34,height:34,borderRadius:17},
   content:{paddingHorizontal:18,paddingBottom:124,gap:16},
   sideRail:{position:'absolute',right:12,top:132,zIndex:5,gap:9},
   sideButton:{width:58,minHeight:58,borderRadius:20,backgroundColor:'rgba(27,4,10,.88)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',alignItems:'center',justifyContent:'center',gap:4,shadowColor:'#FF2448',shadowOpacity:.2,shadowRadius:14},
   goldButton:{borderColor:'rgba(212,175,55,.35)',backgroundColor:'rgba(42,18,8,.9)'},
   sideText:{fontFamily:'Poppins_700Bold',fontSize:8.5,color:'#E9D8DC'},
   hero:{minHeight:116,borderRadius:10,overflow:'hidden',padding:18,flexDirection:'row',alignItems:'center',gap:16,borderWidth:1,borderColor:'#E7D9CE',backgroundColor:'#FFFDFC',shadowColor:'#6C4C42',shadowOpacity:.08,shadowRadius:18,shadowOffset:{width:0,height:8}},
+  heroCompact:{padding:14,gap:10,alignItems:'flex-start'},
   dailyCount:{width:78,minHeight:78,borderRadius:39,backgroundColor:'#FFF8F2',borderWidth:1,borderColor:'#D9BE89',alignItems:'center',justifyContent:'center',padding:7},
   heroCopy:{flex:1,gap:8},
   avatarStack:{flexDirection:'row',alignItems:'center',paddingRight:2},
@@ -5625,21 +5629,21 @@ const ventureStyles=StyleSheet.create({
   hero:{alignItems:'center',gap:10,padding:20,borderRadius:30,backgroundColor:'rgba(229,9,47,.09)',borderWidth:1,borderColor:'rgba(229,9,47,.26)',overflow:'hidden'},
   heroBadge:{width:64,height:64,borderRadius:32,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center',shadowColor:colors.pink,shadowOpacity:.36,shadowRadius:18},
   metricGrid:{flexDirection:'row',flexWrap:'wrap',gap:10},
-  metricCard:{width:'48%',minHeight:118,borderRadius:22,padding:14,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'rgba(183,138,47,.38)',gap:8,shadowColor:'#6F1627',shadowOpacity:.08,shadowRadius:10,shadowOffset:{width:0,height:5}},
+  metricCard:{width:'48%',minHeight:118,borderRadius:22,padding:14,backgroundColor:'#2A0B14',borderWidth:1,borderColor:'rgba(183,138,47,.42)',gap:8,shadowColor:'#6F1627',shadowOpacity:.12,shadowRadius:10,shadowOffset:{width:0,height:5}},
   metricIcon:{width:38,height:38,borderRadius:19,backgroundColor:'rgba(212,175,55,.12)',alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'rgba(212,175,55,.26)'},
-  metricLabel:{fontFamily:'Poppins_700Bold',fontSize:9.5,letterSpacing:1.1,color:colors.pinkSoft,textTransform:'uppercase'},
-  metricValue:{fontFamily:'Poppins_700Bold',fontSize:13.5,lineHeight:18,color:'#24171A'},
+  metricLabel:{fontFamily:'Poppins_700Bold',fontSize:9.5,letterSpacing:1.1,color:'#F08AA6',textTransform:'uppercase'},
+  metricValue:{fontFamily:'Poppins_700Bold',fontSize:13.5,lineHeight:18,color:'#FFF8F5'},
   actionGrid:{gap:10},
   section:{gap:12},
   priceSeal:{marginTop:6,paddingHorizontal:16,paddingVertical:10,borderRadius:22,backgroundColor:'rgba(212,175,55,.13)',borderWidth:1,borderColor:'rgba(212,175,55,.36)',alignItems:'center'},
   priceSealText:{fontFamily:'Poppins_700Bold',fontSize:15,color:colors.gold},
-  priceSealSub:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#F1DDB0',marginTop:2},
+  priceSealSub:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#6E5630',marginTop:2},
   tabRow:{flexDirection:'row',flexWrap:'wrap',gap:8,padding:8,borderRadius:24,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E6D7CC',shadowColor:'#8F2946',shadowOpacity:.08,shadowRadius:14},
   tabButton:{height:40,paddingHorizontal:13,borderRadius:20,alignItems:'center',justifyContent:'center',backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',shadowColor:'#6F1627',shadowOpacity:.05,shadowRadius:8},
   tabButtonOn:{backgroundColor:'#A40B28',borderColor:'#A40B28',shadowColor:colors.pink,shadowOpacity:.25,shadowRadius:12},
   tabText:{fontFamily:'Poppins_700Bold',fontSize:10,color:'#6F5A61'},
   statusCard:{padding:13,borderRadius:20,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.24)',flexDirection:'row',alignItems:'flex-start',gap:10},
-  statusTitle:{fontFamily:'Poppins_700Bold',fontSize:12.5,color:colors.ivory,marginBottom:3},
+  statusTitle:{fontFamily:'Poppins_700Bold',fontSize:12.5,color:'#24171A',marginBottom:3},
   applicationCard:{gap:13,padding:15,borderRadius:24,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.line},
   errorCard:{padding:10,borderRadius:16,backgroundColor:'rgba(228,107,114,.10)',borderWidth:1,borderColor:'rgba(228,107,114,.28)',flexDirection:'row',alignItems:'center',gap:8},
   errorText:{flex:1,fontFamily:'Poppins_700Bold',fontSize:10.5,lineHeight:15,color:'#FFD3D8'},
@@ -6525,21 +6529,21 @@ const dateStyles=StyleSheet.create({
   dateBubble:{minWidth:245,padding:14,backgroundColor:'#410A17',borderWidth:1,borderColor:'#8E1C35'},
   messageDateHeader:{flexDirection:'row',alignItems:'center',gap:10},
   messageCalendar:{width:40,height:40,borderRadius:20,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center'},
-  messageEyebrow:{fontFamily:'Poppins_700Bold',fontSize:8,letterSpacing:1,color:colors.pinkSoft},
-  messageVenue:{fontFamily:'Poppins_700Bold',fontSize:17,color:colors.ivory,marginTop:2},
+  messageEyebrow:{fontFamily:'Poppins_700Bold',fontSize:8,letterSpacing:1,color:'#F6A4B9'},
+  messageVenue:{fontFamily:'Poppins_700Bold',fontSize:17,color:'#FFF8F5',marginTop:2},
   messagePackageTier:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:colors.gold,marginTop:1},
   messageDivider:{height:1,backgroundColor:'rgba(255,255,255,.12)',marginVertical:11},
   messageLine:{flexDirection:'row',alignItems:'center',gap:7,marginBottom:7},
-  messageLineText:{fontFamily:'Poppins_400Regular',fontSize:11,color:colors.ivory,flex:1},
+  messageLineText:{fontFamily:'Poppins_400Regular',fontSize:11,color:'#F3D7DE',flex:1},
   safePill:{alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:5,paddingHorizontal:8,paddingVertical:5,borderRadius:12,backgroundColor:'rgba(88,201,128,.12)',marginTop:4},
   safePillText:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:'#9DE0B4'},
   dateFlow:{marginTop:12,padding:10,borderRadius:15,backgroundColor:'rgba(255,255,255,.05)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',flexDirection:'row',justifyContent:'space-between',gap:6},
   dateFlowItem:{flex:1,alignItems:'center',gap:4},
   dateFlowDot:{width:8,height:8,borderRadius:4,backgroundColor:'rgba(255,255,255,.22)'},
   dateFlowDotDone:{backgroundColor:colors.gold,shadowColor:colors.gold,shadowOpacity:.35,shadowRadius:5},
-  dateFlowText:{fontFamily:'Poppins_600SemiBold',fontSize:7.5,color:colors.muted,textAlign:'center'},
+  dateFlowText:{fontFamily:'Poppins_600SemiBold',fontSize:7.5,color:'#D9B7C0',textAlign:'center'},
   dateFlowTextOn:{color:'#F7DFA8'},
-  waitingText:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:colors.pinkSoft,marginTop:10},
+  waitingText:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#F6A4B9',marginTop:10},
 });
 
 const safetyStyles=StyleSheet.create({
