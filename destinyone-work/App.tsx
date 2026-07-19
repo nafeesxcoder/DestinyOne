@@ -1380,7 +1380,7 @@ function IntentPassportCard({input,compact=false,onEdit}:{input:IntentPassportIn
     <View style={passportStyles.header}>
       <MiniPremiumIcon name="finger-print-outline" tone="gold" size={compact?34:40} iconSize={compact?16:19}/>
       <View style={{flex:1}}><Text style={styles.sectionLabel}>MY INTENT PASSPORT</Text><Text style={passportStyles.summary}>{passport.summary}</Text></View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Edit Intent Passport" onPress={onEdit} style={passportStyles.edit}><Ionicons name="create-outline" size={16} color={colors.gold}/></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Edit Intent Passport" onPress={onEdit} style={passportStyles.edit}><Ionicons name="create-outline" size={16} color={colors.gold}/><Text style={passportStyles.editText}>Edit</Text></Pressable>
     </View>
     <View style={passportStyles.fieldGrid}>{visibleFields.map(field=><View key={field.id} style={passportStyles.field}><Text style={passportStyles.fieldLabel}>{field.label}</Text><Text numberOfLines={2} style={[passportStyles.fieldValue,!field.complete&&passportStyles.fieldPrivate]}>{field.value}</Text></View>)}</View>
     {compact&&<Text style={passportStyles.privacy}>Shared deliberately. Never shown as a compatibility percentage.</Text>}
@@ -5519,17 +5519,18 @@ const marketplaceBrandStyles=StyleSheet.create({
 });
 
 const passportStyles=StyleSheet.create({
-  card:{gap:13,padding:15,borderRadius:8,backgroundColor:'#160A0C',borderWidth:1,borderColor:'rgba(212,175,55,.24)'},
-  cardCompact:{padding:13,gap:10},
+  card:{gap:13,padding:18,borderRadius:18,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E7D9CE',shadowColor:'#6D5147',shadowOpacity:.08,shadowRadius:15,shadowOffset:{width:0,height:7}},
+  cardCompact:{padding:16,gap:11},
   header:{flexDirection:'row',alignItems:'center',gap:10},
-  summary:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory,marginTop:2},
-  edit:{width:34,height:34,borderRadius:17,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.20)'},
+  summary:{fontFamily:'Poppins_700Bold',fontSize:14,color:'#331721',marginTop:2},
+  edit:{minWidth:64,height:34,paddingHorizontal:10,borderRadius:17,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:5,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E7D9CE'},
+  editText:{fontFamily:'Poppins_600SemiBold',fontSize:10,color:'#4A2430'},
   fieldGrid:{flexDirection:'row',flexWrap:'wrap',gap:7},
-  field:{flexGrow:1,flexBasis:'30%',minWidth:96,minHeight:54,paddingHorizontal:10,paddingVertical:8,borderRadius:8,backgroundColor:'rgba(255,255,255,.035)',borderWidth:1,borderColor:'rgba(255,255,255,.07)'},
-  fieldLabel:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:colors.muted},
-  fieldValue:{fontFamily:'Poppins_700Bold',fontSize:10.2,lineHeight:14,color:'#F3E3E6',marginTop:3},
+  field:{flexGrow:1,flexBasis:'30%',minWidth:96,minHeight:66,paddingHorizontal:12,paddingVertical:10,borderRadius:12,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#ECE0D7'},
+  fieldLabel:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#7A6668'},
+  fieldValue:{fontFamily:'Poppins_700Bold',fontSize:11.2,lineHeight:15,color:'#341923',marginTop:3},
   fieldPrivate:{color:'#9A858A'},
-  privacy:{fontFamily:'Poppins_400Regular',fontSize:9.2,lineHeight:13.5,color:'#A99298'},
+  privacy:{fontFamily:'Poppins_400Regular',fontSize:9.2,lineHeight:13.5,color:'#7A6668'},
   bridge:{gap:13,padding:16,borderRadius:8,backgroundColor:'#1B0D0A',borderWidth:1,borderColor:'rgba(212,175,55,.30)'},
   bridgeHeader:{flexDirection:'row',alignItems:'center',gap:10},
   bridgeTitle:{fontFamily:'Poppins_700Bold',fontSize:18,color:colors.ivory,marginTop:2},
