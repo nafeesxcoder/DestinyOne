@@ -41,23 +41,37 @@ function serviceHeaders(serviceRoleKey: string, extra: Record<string, string> = 
   return { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, ...extra };
 }
 
+async function previewFingerprint(req: Request) {
+  const forwardedFor = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const client = forwardedFor || req.headers.get('cf-connecting-ip') || req.headers.get('user-agent') || 'unknown-preview-client';
+  const bytes = new TextEncoder().encode(client);
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(hash)).map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const authorization = req.headers.get('Authorization');
+  const previewOrigin = 'https://destinyone-preview-shivay.shivay247.chatgpt.site';
+  const isPreviewRequest = req.headers.get('origin') === previewOrigin;
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const googleMapsKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
-  if (!authorization?.startsWith('Bearer ')) return json({ error: 'Authentication required' }, 401);
   if (!supabaseUrl || !anonKey || !serviceRoleKey) return json({ error: 'Search service is not configured' }, 503);
   if (!googleMapsKey) return json({ error: 'Live place search is being set up. Please try again shortly.' }, 503);
 
-  const member = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { Authorization: authorization, apikey: anonKey } });
-  if (!member.ok) return json({ error: 'Authentication required' }, 401);
-  const memberBody = await member.json() as { id?: string };
-  if (!memberBody.id) return json({ error: 'Authentication required' }, 401);
+  let memberId: string | undefined;
+  if (authorization?.startsWith('Bearer ')) {
+    const member = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { Authorization: authorization, apikey: anonKey } });
+    if (member.ok) {
+      const memberBody = await member.json() as { id?: string };
+      memberId = memberBody.id;
+    }
+  }
+  if (!memberId && !isPreviewRequest) return json({ error: 'Authentication required' }, 401);
 
   try {
     const body = await req.json() as { city?: string; query?: string; category?: string };
@@ -79,14 +93,21 @@ Deno.serve(async (req) => {
       if (entries[0]?.results) return json({ places: entries[0].results, cached: true });
     }
 
-    // A single member can cause at most 20 billable cache misses per hour.
+    // A member can cause at most 20 fresh searches per hour. The public web
+    // preview is lower: 8 per hashed browser/network fingerprint per hour.
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const requestLog = await fetch(`${supabaseUrl}/rest/v1/google_places_search_requests?select=id&user_id=eq.${memberBody.id}&created_at=gte.${encodeURIComponent(hourAgo)}`, {
+    const previewClient = !memberId ? await previewFingerprint(req) : undefined;
+    const requestTable = previewClient ? 'google_places_preview_requests' : 'google_places_search_requests';
+    const requestFilter = previewClient
+      ? `client_fingerprint=eq.${previewClient}`
+      : `user_id=eq.${memberId}`;
+    const requestLog = await fetch(`${supabaseUrl}/rest/v1/${requestTable}?select=id&${requestFilter}&created_at=gte.${encodeURIComponent(hourAgo)}`, {
       headers: serviceHeaders(serviceRoleKey),
     });
     if (!requestLog.ok) return json({ error: 'Search protection is temporarily unavailable.' }, 503);
     const recentRequests = await requestLog.json() as unknown[];
-    if (recentRequests.length >= 20) return json({ error: 'You have reached the live place-search limit for this hour. Try again shortly.' }, 429);
+    const requestLimit = previewClient ? 8 : 20;
+    if (recentRequests.length >= requestLimit) return json({ error: 'You have reached the live place-search limit for this hour. Try again shortly.' }, 429);
 
     const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
       method: 'POST',
@@ -121,10 +142,10 @@ Deno.serve(async (req) => {
         headers: serviceHeaders(serviceRoleKey, { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }),
         body: JSON.stringify({ cache_key: cacheKey, results: places, expires_at: expiresAt }),
       }),
-      fetch(`${supabaseUrl}/rest/v1/google_places_search_requests`, {
+      fetch(`${supabaseUrl}/rest/v1/${requestTable}`, {
         method: 'POST',
         headers: serviceHeaders(serviceRoleKey, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
-        body: JSON.stringify({ user_id: memberBody.id, cache_key: cacheKey }),
+        body: JSON.stringify(previewClient ? { client_fingerprint: previewClient, cache_key: cacheKey } : { user_id: memberId, cache_key: cacheKey }),
       }),
     ]);
     return json({ places });

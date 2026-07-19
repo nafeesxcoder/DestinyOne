@@ -56,6 +56,18 @@ function ensureBackendConfigured() {
   if (backendReadinessError) throw new Error(backendReadinessError);
 }
 
+async function establishPreviewSession() {
+  if (!isSupabaseConfigured || !allowsPreviewAuthBypass) return;
+  const { data: existing } = await supabase.auth.getSession();
+  if (existing.session) return;
+
+  // Anonymous auth gives the preview a real, bounded Supabase identity. This
+  // keeps server-protected APIs such as Google Places usable without exposing
+  // an SMS or email verification shortcut in production.
+  const { error } = await supabase.auth.signInAnonymously();
+  if (error) console.info('[DestinyOne preview] Anonymous session unavailable; local preview remains available.');
+}
+
 export type ProfileMediaKind = 'photo' | 'voice' | 'verification';
 type ChatMediaKind = 'image' | 'gif' | 'snap' | 'sticker' | 'voice';
 
@@ -138,7 +150,10 @@ export async function beginAuthentication(request: AuthRequest) {
   if (request.mode === 'phone') {
     const phone = normalizeAuthPhone(request.phone);
     if (!phone) throw new Error('Enter a valid phone number with country code.');
-    if (allowsPreviewAuthBypass) return { demo: true, bypassed: true } as const;
+    if (allowsPreviewAuthBypass) {
+      await establishPreviewSession();
+      return { demo: true, bypassed: true } as const;
+    }
     const { error } = await supabase.auth.signInWithOtp({ phone });
     if (error) {
       // Development preview should stay easy to enter while Supabase SMS/Twilio
@@ -157,7 +172,10 @@ export async function beginAuthentication(request: AuthRequest) {
   const email = request.email.trim().toLowerCase();
   if (!isValidEmail(email)) throw new Error('Enter a valid email address.');
   if (!isValidPassword(request.password)) throw new Error('Use at least 10 characters with uppercase, lowercase, and a number.');
-  if (allowsPreviewAuthBypass) return { demo: true, bypassed: true } as const;
+  if (allowsPreviewAuthBypass) {
+    await establishPreviewSession();
+    return { demo: true, bypassed: true } as const;
+  }
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {

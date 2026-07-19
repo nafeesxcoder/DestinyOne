@@ -7,6 +7,8 @@ afterEach(() => {
 
 async function loadBackend() {
   const signInWithOtp = vi.fn().mockResolvedValue({ error: null });
+  const getSession = vi.fn().mockResolvedValue({ data: { session: { user: { id: 'member-id' } } } });
+  const signInAnonymously = vi.fn().mockResolvedValue({ error: null });
   const verifyOtp = vi.fn().mockResolvedValue({ error: null });
   const updateUser = vi.fn().mockResolvedValue({ error: null });
   const rpc = vi.fn();
@@ -15,7 +17,7 @@ async function loadBackend() {
     backendRuntime: { mode: 'supabase', allowsDemoOtp: false },
     isSupabaseConfigured: true,
     supabase: {
-      auth: { signInWithOtp, verifyOtp, updateUser },
+      auth: { signInWithOtp, verifyOtp, updateUser, getSession, signInAnonymously },
       rpc,
       storage: { from: vi.fn() },
     },
