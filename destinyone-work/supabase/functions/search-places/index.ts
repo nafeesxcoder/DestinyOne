@@ -37,6 +37,33 @@ function categoryFor(place: GooglePlace): PlaceCategory {
   return 'Activity';
 }
 
+function searchTopicsFor(query: string | undefined, category: string | undefined) {
+  const cleanQuery = query?.trim();
+  if (cleanQuery) return [cleanQuery];
+
+  const categoryTopics: Record<string, string[]> = {
+    Restaurant: ['date night restaurants'],
+    Cafe: ['coffee shops cafes tea houses'],
+    Hotel: ['boutique hotels rooftop hotels'],
+    Wellness: ['spas wellness experiences'],
+    Tourist: ['tourist attractions landmarks'],
+    Activity: ['fun date activities things to do'],
+    Park: ['parks gardens outdoor walks'],
+    Dessert: ['dessert bakeries ice cream'],
+    Lounge: ['cocktail lounges wine bars'],
+    Cultural: ['museums art galleries cultural experiences'],
+  };
+  if (category && category !== 'All' && categoryTopics[category]) return categoryTopics[category];
+
+  // One city search should be genuinely useful across the whole date journey,
+  // not just return a dozen generic businesses from a single query.
+  return [
+    'date night restaurants cafes dessert lounges',
+    'boutique hotels spas wellness experiences',
+    'things to do parks museums tourist attractions activities',
+  ];
+}
+
 function serviceHeaders(serviceRoleKey: string, extra: Record<string, string> = {}) {
   return { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, ...extra };
 }
@@ -81,9 +108,9 @@ Deno.serve(async (req) => {
     if (!city || city.length < 2 || city.length > 100) return json({ error: 'Choose a valid USA or Canada city.' }, 400);
     if ((query?.length ?? 0) > 100 || (category?.length ?? 0) > 40) return json({ error: 'Search is too long.' }, 400);
 
-    const searchTopic = query || (category && category !== 'All' ? category : 'romantic date places');
-    const searchTerms = `${searchTopic} in ${city}`;
-    const cacheKey = `${city.toLowerCase()}|${searchTopic.toLowerCase()}`.slice(0, 300);
+    const normalizedQuery = query && query.toLowerCase() === city.toLowerCase() ? undefined : query;
+    const searchTopics = searchTopicsFor(normalizedQuery, category);
+    const cacheKey = `${city.toLowerCase()}|${category ?? 'All'}|${normalizedQuery?.toLowerCase() ?? 'browse'}`.slice(0, 300);
     const now = new Date().toISOString();
     const cached = await fetch(`${supabaseUrl}/rest/v1/google_places_search_cache?select=results&cache_key=eq.${encodeURIComponent(cacheKey)}&expires_at=gt.${encodeURIComponent(now)}`, {
       headers: serviceHeaders(serviceRoleKey),
@@ -109,21 +136,25 @@ Deno.serve(async (req) => {
     const requestLimit = previewClient ? 8 : 20;
     if (recentRequests.length >= requestLimit) return json({ error: 'You have reached the live place-search limit for this hour. Try again shortly.' }, 429);
 
-    const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    const responses = await Promise.all(searchTopics.map(topic => fetch('https://places.googleapis.com/v1/places:searchText', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': googleMapsKey,
         'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.primaryType,places.types,places.rating,places.userRatingCount,places.businessStatus,places.currentOpeningHours.openNow,places.googleMapsUri',
       },
-      body: JSON.stringify({ textQuery: searchTerms, maxResultCount: 12, languageCode: 'en' }),
-    });
-    if (!response.ok) {
-      console.error('Google Places search failed', response.status);
+      body: JSON.stringify({ textQuery: `${topic} in ${city}`, maxResultCount: 12, languageCode: 'en' }),
+    })));
+    if (responses.every(response => !response.ok)) {
+      console.error('Google Places search failed', responses.map(response => response.status).join(','));
       return json({ error: 'Live place search is temporarily unavailable.' }, 502);
     }
-    const payload = await response.json() as { places?: GooglePlace[] };
-    const places = (payload.places ?? [])
+    const payloads = await Promise.all(responses.filter(response => response.ok).map(response => response.json() as Promise<{ places?: GooglePlace[] }>));
+    const uniquePlaces = new Map<string, GooglePlace>();
+    payloads.flatMap(payload => payload.places ?? []).forEach(place => {
+      if (place.id && !uniquePlaces.has(place.id)) uniquePlaces.set(place.id, place);
+    });
+    const places = [...uniquePlaces.values()]
       .filter((place) => place.id && place.displayName?.text && place.businessStatus !== 'CLOSED_PERMANENTLY')
       .map((place) => ({
         id: `google-${place.id}`,
