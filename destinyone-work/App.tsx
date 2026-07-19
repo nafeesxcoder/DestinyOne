@@ -707,7 +707,7 @@ function DestinyOneApp() {
     {screen==='vibes'&&<Vibes value={vibeList} onChange={setVibeList} onNext={()=>setScreen('intent')}/>} 
     {screen==='intent'&&<Intent value={intent} onChange={setIntent} onNext={()=>setScreen('alignment')}/>} 
     {screen==='alignment'&&<Alignment value={alignment} onChange={setAlignment} onNext={completeOnboarding}/>} 
-    {screen==='home'&&(coupleMode.experienceMode==='couple'?<CoupleHome state={coupleMode} hub={coupleHub} memberName={profileDraft.firstName} city={profileDraft.city} messages={chatMessages[conversationPartner.id]??[]} onShare={shareCoupleSpace} onManage={()=>setScreen('coupleSetup')} onOpenTool={openCoupleTool} navigate={navigateTo}/>:<HomeClean items={visibleMatches} matchLoadState={matchLoadState} matchingPoolStatus={matchingPoolStatus} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} alignment={alignment} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={navigateTo}/>)} 
+    {screen==='home'&&(coupleMode.experienceMode==='couple'?<CoupleHome state={coupleMode} hub={coupleHub} memberName={profileDraft.firstName} city={profileDraft.city} messages={chatMessages[conversationPartner.id]??[]} onShare={shareCoupleSpace} onManage={()=>setScreen('coupleSetup')} onOpenTool={openCoupleTool} navigate={navigateTo}/>:<HomeClean memberName={profileDraft.firstName} items={visibleMatches} matchLoadState={matchLoadState} matchingPoolStatus={matchingPoolStatus} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} alignment={alignment} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={navigateTo}/>)} 
     {screen==='explore'&&<ExploreHub navigate={navigateTo}/>} 
     {screen==='circle'&&<TrustedCircle vouches={vouches} coinBalance={coinBalance} rewardMode={vouchRewardsMode} onBack={()=>setScreen('explore')} onAddVouch={(quality)=>{if(vouchRewardsMode==='demo'&&vouches.length<3&&!vouches.includes(quality)){setVouches(current=>[...current,quality]);setCoinBalance(balance=>balance+100)}}}/>} 
     {screen==='discovery'&&<DiscoveryCenter filters={matchFilters} onFiltersChange={updateMatchFilters} signals={discoverySignals} smartDiscovery={smartDiscovery} crossedPaths={crossedPaths} onSmartChange={updateSmartDiscovery} onCrossedChange={setCrossedPaths} onClear={clearMatchingActivity} onBack={()=>setScreen('explore')}/>} 
@@ -1258,7 +1258,7 @@ function Alignment({value,onChange,onNext}:{value:Record<string,string>;onChange
   </FormPage>
 }
 
-function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,preferences,alignment,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{items:Match[];matchLoadState:MemberMatchLoadState;matchingPoolStatus:MatchingPoolStatus|null;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};alignment:Record<string,string>;signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
+function HomeClean({memberName,items,matchLoadState,matchingPoolStatus,onRetryMatches,preferences,alignment,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{memberName:string;items:Match[];matchLoadState:MemberMatchLoadState;matchingPoolStatus:MatchingPoolStatus|null;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};alignment:Record<string,string>;signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
   const {width}=useWindowDimensions();
   const desktop=width>=860;
   const useMatchGrid=width>=900;
@@ -1267,6 +1267,9 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
   const growth=buildHomeGrowthLoop({visibleMatches:items,preferences,signals,dismissedCount,profile:profileGrowth});
   const retention=growth.retention;
   const primaryNudge=growth.nudges[0];
+  const hour=new Date().getHours();
+  const timeGreeting=hour<12?'Good morning':hour<17?'Good afternoon':hour<22?'Good evening':'Good night';
+  const greetingName=memberName.trim()||'there';
   const openNudge=(nudge:GrowthNudge)=>{
     if(nudge.actionScreen==='detail'&&featured){openDetail(featured);return}
     navigate(nudge.actionScreen);
@@ -1280,7 +1283,7 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
     {desktop&&<HomeSidebar active="home" navigate={navigate}/>}<View style={desktop&&homeCleanStyles.desktopMain}>
     <View style={homeCleanStyles.header}>
       <View style={{flex:1}}>
-        <Text style={homeCleanStyles.greeting}>Good evening, Arjun <Text style={homeCleanStyles.wave}>👋</Text></Text>
+        <Text style={homeCleanStyles.greeting}>{timeGreeting}, {greetingName} <Text style={homeCleanStyles.wave}>👋</Text></Text>
         <Text numberOfLines={1} style={homeCleanStyles.greetingSub}>Thoughtful connections. Meaningful futures.</Text>
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={()=>navigate('support')} style={homeCleanStyles.notificationButton}><Ionicons name="notifications-outline" size={21} color="#32151F"/><View style={homeCleanStyles.notificationBadge}><Text style={homeCleanStyles.notificationBadgeText}>3</Text></View></Pressable>
@@ -2302,7 +2305,7 @@ function PlaceCard({place,distance,saved,compact,onSave,onDetail,onPlan}:{place:
     <View style={[couplesMarketStyles.placePhotoWrap,compact&&couplesMarketStyles.placePhotoCompact]}>
       <Pressable accessibilityRole="button" accessibilityLabel={`View ${place.name}`} onPress={onDetail} style={StyleSheet.absoluteFill}>
         <Image source={{uri:placePhoto(place)}} style={couplesMarketStyles.placePhoto}/>
-        <LinearGradient colors={['transparent','rgba(12,2,5,.88)']} style={StyleSheet.absoluteFill}/>
+        <LinearGradient colors={['rgba(12,2,5,.12)','rgba(12,2,5,.94)']} style={StyleSheet.absoluteFill}/>
         <View style={couplesMarketStyles.photoBadges}><View style={couplesMarketStyles.distanceBadge}><MiniPremiumIcon name={placeKindIcon(place.kind)} tone="gold" size={24} iconSize={11}/><Text style={couplesMarketStyles.distanceText}>{Number.isFinite(distance)?`${Math.round(distance??0)} mi`:'Nearby'}</Text></View><View style={couplesMarketStyles.priceBadge}><Text style={couplesMarketStyles.priceBadgeText}>{place.price}</Text></View></View>
         <View style={couplesMarketStyles.photoTitle}><Text style={couplesMarketStyles.photoKind}>{place.kind.toUpperCase()}</Text><Text style={couplesMarketStyles.photoName}>{place.name}</Text><Text style={couplesMarketStyles.photoMeta}>{place.area} · {place.city}</Text></View>
       </Pressable>
@@ -2329,7 +2332,7 @@ function PlaceDetailModal({place,distance,saved,onClose,onSave,onPlan}:{place:Pl
     <Pressable style={chatStyles.modalBackdrop} onPress={onClose}/>
     <SafeAreaView style={chatStyles.sheet}>
       <SheetHeader title={place.name} subtitle={`${place.city} · ${place.kind}`} onClose={onClose}/>
-      <View style={couplesMarketStyles.detailPhotoWrap}><Image source={{uri:placePhoto(place)}} style={couplesMarketStyles.detailPhoto}/><LinearGradient colors={['transparent','rgba(12,2,5,.92)']} style={StyleSheet.absoluteFill}/><View style={couplesMarketStyles.detailPhotoCopy}><Text style={couplesMarketStyles.photoKind}>{place.kind.toUpperCase()} · {Number.isFinite(distance)?`${Math.round(distance??0)} MILES AWAY`:'NEARBY'}</Text><Text style={couplesMarketStyles.detailPhotoTitle}>{place.vibe}</Text></View></View>
+      <View style={couplesMarketStyles.detailPhotoWrap}><Image source={{uri:placePhoto(place)}} style={couplesMarketStyles.detailPhoto}/><LinearGradient colors={['rgba(12,2,5,.12)','rgba(12,2,5,.94)']} style={StyleSheet.absoluteFill}/><View style={couplesMarketStyles.detailPhotoCopy}><Text style={couplesMarketStyles.photoKind}>{place.kind.toUpperCase()} · {Number.isFinite(distance)?`${Math.round(distance??0)} MILES AWAY`:'NEARBY'}</Text><Text style={couplesMarketStyles.detailPhotoTitle}>{place.vibe}</Text></View></View>
       <View style={coachStyles.detailRows}>
         <DetailRow icon="cash-outline" label="Budget" value={place.price}/>
         <DetailRow icon="time-outline" label="Best time" value={place.bestTime}/>
@@ -2400,7 +2403,7 @@ function ExecutiveCircle({navigate,onBack,onOpenEvents,onOpenPricing,onOpenVerif
       <View style={ventureStyles.priceSeal}><Text style={ventureStyles.priceSealText}>$5,000 / year</Text><Text style={ventureStyles.priceSealSub}>application required</Text></View>
     </View>
     <View style={ventureStyles.metricGrid}>{executiveMetrics.map(item=><MetricPill key={item.label} {...item}/>)}</View>
-    <View style={ventureStyles.tabRow}>{(['overview','apply','matches','concierge'] as const).map(item=><Pressable key={item} onPress={()=>setTab(item)} style={[ventureStyles.tabButton,tab===item&&ventureStyles.tabButtonOn]}><Text style={[ventureStyles.tabText,tab===item&&{color:colors.ivory}]}>{item==='overview'?'Overview':item==='apply'?'Apply':item==='matches'?'Private matches':'Concierge'}</Text></Pressable>)}</View>
+    <View style={ventureStyles.tabRow}>{(['overview','apply','matches','concierge'] as const).map(item=><Pressable key={item} onPress={()=>setTab(item)} style={[ventureStyles.tabButton,tab===item&&ventureStyles.tabButtonOn]}><Text style={[ventureStyles.tabText,tab===item&&{color:'#FFFDFC'}]}>{item==='overview'?'Overview':item==='apply'?'Apply':item==='matches'?'Private matches':'Concierge'}</Text></Pressable>)}</View>
     {!!status.title&&<View style={ventureStyles.statusCard}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={34} iconSize={16}/><View style={{flex:1}}><Text style={ventureStyles.statusTitle}>{status.title}</Text><Text style={styles.helper}>{status.body}</Text></View><Pressable onPress={()=>setStatus({title:'',body:''})}><MiniPremiumIcon name="close" tone="dark" size={28} iconSize={13}/></Pressable></View>}
     {tab==='overview'&&<View style={ventureStyles.section}>
       <Text style={styles.sectionLabel}>WHAT MEMBERS GET</Text>
@@ -4626,7 +4629,7 @@ function Profile({experienceMode,connectionStatus,partnerName,onModeChange,onOpe
           <PremiumIcon name="settings-outline" tone="dark" size={42} iconSize={20}/>
         </Pressable>
       </View>
-      <LinearGradient colors={['rgba(229,9,47,.24)','rgba(212,175,55,.10)','rgba(255,255,255,.035)']} style={profilePremiumStyles.hero}>
+    <LinearGradient colors={['#F8DDE3','#FFF8F5','#FFFDFC']} style={profilePremiumStyles.hero}>
         <View style={profilePremiumStyles.heroGlow}/>
         <View style={profilePremiumStyles.avatarHalo}>
           <View style={profilePremiumStyles.avatarRing}>{profilePhoto?<Image source={{uri:profilePhoto}} style={profilePremiumStyles.avatarPhoto}/>:<Text style={[styles.avatarText,{fontSize:38}]}>{displayName[0]?.toUpperCase()??'D'}</Text>}</View>
@@ -5144,19 +5147,19 @@ const couplesMarketStyles=StyleSheet.create({
   placePhoto:{position:'absolute',left:0,right:0,top:0,bottom:0,width:'100%',height:'100%'},
   photoBadges:{position:'absolute',left:10,top:10,flexDirection:'row',gap:6},
   distanceBadge:{minHeight:28,paddingHorizontal:8,borderRadius:14,backgroundColor:'rgba(10,2,5,.82)',borderWidth:1,borderColor:'rgba(255,255,255,.16)',flexDirection:'row',alignItems:'center',gap:4},
-  distanceText:{fontFamily:'Poppins_700Bold',fontSize:8.5,color:colors.ivory},
+  distanceText:{fontFamily:'Poppins_700Bold',fontSize:8.5,color:'#FFFDFC'},
   priceBadge:{minHeight:28,paddingHorizontal:10,borderRadius:14,backgroundColor:'rgba(142,15,40,.88)',alignItems:'center',justifyContent:'center'},
-  priceBadgeText:{fontFamily:'Poppins_700Bold',fontSize:9,color:colors.ivory},
+  priceBadgeText:{fontFamily:'Poppins_700Bold',fontSize:9,color:'#FFFDFC'},
   photoSave:{position:'absolute',right:10,top:9},
   photoTitle:{padding:13,gap:2},
-  photoKind:{fontFamily:'Poppins_700Bold',fontSize:8,letterSpacing:1.1,color:'#F1D18A'},
-  photoName:{fontFamily:'Poppins_700Bold',fontSize:18,lineHeight:23,color:colors.ivory},
-  photoMeta:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#E6CED4'},
+  photoKind:{fontFamily:'Poppins_700Bold',fontSize:8,letterSpacing:1.1,color:'#F6D77C'},
+  photoName:{fontFamily:'Poppins_700Bold',fontSize:18,lineHeight:23,color:'#FFFDFC'},
+  photoMeta:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#FFF6F4'},
   placeContent:{padding:13,gap:9},
   detailPhotoWrap:{height:210,borderRadius:8,overflow:'hidden',position:'relative',justifyContent:'flex-end',backgroundColor:colors.surface2},
   detailPhoto:{position:'absolute',left:0,right:0,top:0,bottom:0,width:'100%',height:'100%'},
   detailPhotoCopy:{padding:15,gap:4},
-  detailPhotoTitle:{fontFamily:'Poppins_700Bold',fontSize:17,lineHeight:23,color:colors.ivory},
+  detailPhotoTitle:{fontFamily:'Poppins_700Bold',fontSize:17,lineHeight:23,color:'#FFFDFC'},
   checkoutHero:{padding:14,borderRadius:8,backgroundColor:'rgba(212,175,55,.075)',borderWidth:1,borderColor:'rgba(212,175,55,.24)',flexDirection:'row',alignItems:'center',gap:12},
   checkoutItems:{gap:8},
   checkoutItem:{minHeight:58,paddingHorizontal:12,paddingVertical:9,borderRadius:8,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.07)',flexDirection:'row',alignItems:'center',gap:9},
@@ -5330,28 +5333,28 @@ const adminOpsStyles=StyleSheet.create({
 });
 
 const profilePremiumStyles=StyleSheet.create({
-  hero:{alignItems:'center',gap:10,padding:18,borderRadius:30,borderWidth:1,borderColor:'rgba(255,255,255,.13)',overflow:'hidden',shadowColor:'#FF2448',shadowOpacity:.20,shadowRadius:24,shadowOffset:{width:0,height:12}},
+  hero:{alignItems:'center',gap:10,padding:20,borderRadius:30,borderWidth:1,borderColor:'rgba(183,138,47,.42)',overflow:'hidden',shadowColor:'#8F2946',shadowOpacity:.16,shadowRadius:24,shadowOffset:{width:0,height:12}},
   heroGlow:{position:'absolute',width:220,height:220,borderRadius:110,top:-80,right:-70,backgroundColor:'rgba(229,9,47,.20)'},
   avatarHalo:{width:118,height:118,borderRadius:59,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(212,175,55,.10)',borderWidth:1,borderColor:'rgba(212,175,55,.26)',shadowColor:colors.gold,shadowOpacity:.28,shadowRadius:20},
   avatarRing:{width:98,height:98,borderRadius:49,backgroundColor:'#6D1022',alignItems:'center',justifyContent:'center',borderWidth:2,borderColor:'rgba(255,255,255,.25)',overflow:'hidden'},
   avatarPhoto:{width:'100%',height:'100%'},
   statusGem:{position:'absolute',right:4,bottom:6},
   nameRow:{flexDirection:'row',alignItems:'center',gap:8},
-  name:{fontFamily:'Poppins_700Bold',fontSize:25,color:colors.ivory},
-  meta:{fontFamily:'Poppins_400Regular',fontSize:12.5,color:'#E4CAD0'},
-  stats:{width:'100%',flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:10,paddingHorizontal:8,borderRadius:20,backgroundColor:'rgba(0,0,0,.20)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',marginTop:2},
+  name:{fontFamily:'Poppins_700Bold',fontSize:25,color:'#24171A'},
+  meta:{fontFamily:'Poppins_400Regular',fontSize:12.5,color:'#6F5A61'},
+  stats:{width:'100%',flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:10,paddingHorizontal:8,borderRadius:20,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',marginTop:2},
   stat:{flex:1,alignItems:'center'},
-  statValue:{fontFamily:'Poppins_700Bold',fontSize:15,color:colors.ivory},
-  statLabel:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#CDB5BB',marginTop:2,textAlign:'center'},
-  statLine:{width:1,height:30,backgroundColor:'rgba(255,255,255,.12)'},
+  statValue:{fontFamily:'Poppins_700Bold',fontSize:15,color:'#24171A'},
+  statLabel:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#7B5F67',marginTop:2,textAlign:'center'},
+  statLine:{width:1,height:30,backgroundColor:'#E6D7CC'},
   readinessCard:{gap:13,padding:16,borderRadius:16,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'rgba(183,138,47,.35)',shadowColor:'#4A1826',shadowOpacity:.08,shadowRadius:14},
   readinessScore:{width:54,height:54,borderRadius:27,backgroundColor:'rgba(212,175,55,.14)',borderWidth:1,borderColor:'rgba(212,175,55,.34)',alignItems:'center',justifyContent:'center'},
   readinessScoreText:{fontFamily:'Poppins_700Bold',fontSize:14,color:colors.gold},
   readinessItem:{flexDirection:'row',alignItems:'flex-start',gap:10,padding:12,borderRadius:12,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E7D8D1'},
-  readinessTitle:{fontFamily:'Poppins_700Bold',fontSize:12.5,color:colors.ivory,marginBottom:2},
+  readinessTitle:{fontFamily:'Poppins_700Bold',fontSize:12.5,color:'#24171A',marginBottom:2},
   actionGrid:{flexDirection:'row',flexWrap:'wrap',gap:10},
   actionTile:{flexGrow:1,flexBasis:'47%',minWidth:145,minHeight:112,padding:13,borderRadius:12,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',justifyContent:'space-between',shadowColor:'#4A1826',shadowOpacity:.045,shadowRadius:8},
-  actionTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory,marginTop:10},
+  actionTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:'#24171A',marginTop:10},
   actionBody:{fontFamily:'Poppins_400Regular',fontSize:9.2,lineHeight:13.5,color:colors.muted,marginTop:2},
   shareStatus:{marginTop:-12,padding:12,borderRadius:18,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.22)',flexDirection:'row',alignItems:'center',gap:9},
   shareStatusText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.8,lineHeight:16,color:'#EFD8B0'},
@@ -5622,19 +5625,19 @@ const ventureStyles=StyleSheet.create({
   hero:{alignItems:'center',gap:10,padding:20,borderRadius:30,backgroundColor:'rgba(229,9,47,.09)',borderWidth:1,borderColor:'rgba(229,9,47,.26)',overflow:'hidden'},
   heroBadge:{width:64,height:64,borderRadius:32,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center',shadowColor:colors.pink,shadowOpacity:.36,shadowRadius:18},
   metricGrid:{flexDirection:'row',flexWrap:'wrap',gap:10},
-  metricCard:{width:'48%',minHeight:118,borderRadius:22,padding:14,backgroundColor:'#1F070C',borderWidth:1,borderColor:'rgba(255,255,255,.08)',gap:8},
+  metricCard:{width:'48%',minHeight:118,borderRadius:22,padding:14,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'rgba(183,138,47,.38)',gap:8,shadowColor:'#6F1627',shadowOpacity:.08,shadowRadius:10,shadowOffset:{width:0,height:5}},
   metricIcon:{width:38,height:38,borderRadius:19,backgroundColor:'rgba(212,175,55,.12)',alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'rgba(212,175,55,.26)'},
   metricLabel:{fontFamily:'Poppins_700Bold',fontSize:9.5,letterSpacing:1.1,color:colors.pinkSoft,textTransform:'uppercase'},
-  metricValue:{fontFamily:'Poppins_700Bold',fontSize:13.5,lineHeight:18,color:colors.ivory},
+  metricValue:{fontFamily:'Poppins_700Bold',fontSize:13.5,lineHeight:18,color:'#24171A'},
   actionGrid:{gap:10},
   section:{gap:12},
   priceSeal:{marginTop:6,paddingHorizontal:16,paddingVertical:10,borderRadius:22,backgroundColor:'rgba(212,175,55,.13)',borderWidth:1,borderColor:'rgba(212,175,55,.36)',alignItems:'center'},
   priceSealText:{fontFamily:'Poppins_700Bold',fontSize:15,color:colors.gold},
   priceSealSub:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#F1DDB0',marginTop:2},
-  tabRow:{flexDirection:'row',flexWrap:'wrap',gap:8,padding:8,borderRadius:24,backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.11)',shadowColor:'#FF2448',shadowOpacity:.10,shadowRadius:14},
-  tabButton:{height:40,paddingHorizontal:13,borderRadius:20,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.09)',shadowColor:'#000',shadowOpacity:.18,shadowRadius:8},
-  tabButtonOn:{backgroundColor:'#A40B28',borderColor:'rgba(255,255,255,.18)',shadowColor:colors.pink,shadowOpacity:.25,shadowRadius:12},
-  tabText:{fontFamily:'Poppins_700Bold',fontSize:10,color:colors.muted},
+  tabRow:{flexDirection:'row',flexWrap:'wrap',gap:8,padding:8,borderRadius:24,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E6D7CC',shadowColor:'#8F2946',shadowOpacity:.08,shadowRadius:14},
+  tabButton:{height:40,paddingHorizontal:13,borderRadius:20,alignItems:'center',justifyContent:'center',backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',shadowColor:'#6F1627',shadowOpacity:.05,shadowRadius:8},
+  tabButtonOn:{backgroundColor:'#A40B28',borderColor:'#A40B28',shadowColor:colors.pink,shadowOpacity:.25,shadowRadius:12},
+  tabText:{fontFamily:'Poppins_700Bold',fontSize:10,color:'#6F5A61'},
   statusCard:{padding:13,borderRadius:20,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.24)',flexDirection:'row',alignItems:'flex-start',gap:10},
   statusTitle:{fontFamily:'Poppins_700Bold',fontSize:12.5,color:colors.ivory,marginBottom:3},
   applicationCard:{gap:13,padding:15,borderRadius:24,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.line},
@@ -5755,13 +5758,13 @@ const coachStyles=StyleSheet.create({
   eventTypeText:{fontFamily:'Poppins_700Bold',fontSize:8,color:'#FFD9DE'},
   eventMeta:{fontFamily:'Poppins_600SemiBold',fontSize:10.5,color:colors.pinkSoft,marginTop:3,marginBottom:4},
   eventFooter:{flexDirection:'row',alignItems:'center',gap:8,marginTop:10},
-  eventTag:{flex:1,flexDirection:'row',alignItems:'center',gap:5,paddingHorizontal:9,paddingVertical:6,borderRadius:14,backgroundColor:'rgba(212,175,55,.08)'},
-  eventTagText:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#F0DCA6'},
+  eventTag:{flex:1,flexDirection:'row',alignItems:'center',gap:5,paddingHorizontal:9,paddingVertical:6,borderRadius:14,backgroundColor:'#FFF3D7',borderWidth:1,borderColor:'rgba(183,138,47,.34)'},
+  eventTagText:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#6F1627'},
   rsvpButton:{height:38,paddingHorizontal:16,borderRadius:20,backgroundColor:'#A40B28',borderWidth:1,borderColor:'rgba(255,255,255,.16)',alignItems:'center',justifyContent:'center',shadowColor:colors.pink,shadowOpacity:.28,shadowRadius:12,shadowOffset:{width:0,height:6}},
-  rsvpText:{fontFamily:'Poppins_700Bold',fontSize:10,color:colors.ivory},
+  rsvpText:{fontFamily:'Poppins_700Bold',fontSize:10,color:'#FFFDFC'},
   rsvpConfirm:{padding:14,borderRadius:22,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.24)',flexDirection:'row',alignItems:'center',gap:12},
-  detailsButton:{height:38,paddingHorizontal:14,borderRadius:20,backgroundColor:'rgba(255,255,255,.075)',borderWidth:1,borderColor:'rgba(255,255,255,.13)',alignItems:'center',justifyContent:'center',shadowColor:'#000',shadowOpacity:.20,shadowRadius:8},
-  detailsText:{fontFamily:'Poppins_700Bold',fontSize:10,color:'#F5D6DA'},
+  detailsButton:{height:38,paddingHorizontal:14,borderRadius:20,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',alignItems:'center',justifyContent:'center',shadowColor:'#6F1627',shadowOpacity:.08,shadowRadius:8},
+  detailsText:{fontFamily:'Poppins_700Bold',fontSize:10,color:'#6F1627'},
   inlineLink:{fontFamily:'Poppins_700Bold',fontSize:10,color:colors.gold},
   packageCard:{padding:14,borderRadius:22,backgroundColor:'#1D090E',borderWidth:1,borderColor:'rgba(212,175,55,.18)',flexDirection:'row',gap:12,shadowColor:'#000',shadowOpacity:.16,shadowRadius:10},
   packageTier:{height:28,paddingHorizontal:9,borderRadius:14,backgroundColor:'rgba(212,175,55,.10)',borderWidth:1,borderColor:'rgba(212,175,55,.28)',alignItems:'center',justifyContent:'center'},
@@ -5776,12 +5779,12 @@ const coachStyles=StyleSheet.create({
   tonightPlan:{height:32,paddingHorizontal:11,borderRadius:16,backgroundColor:'rgba(212,175,55,.12)',borderWidth:1,borderColor:'rgba(212,175,55,.30)',alignItems:'center',justifyContent:'center'},
   tonightPlanText:{fontFamily:'Poppins_700Bold',fontSize:9,color:colors.gold},
   placeCard:{borderRadius:8,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.line,overflow:'hidden'},
-  placeCardCompact:{backgroundColor:'#1D090E'},
+  placeCardCompact:{backgroundColor:'#FFFDFC'},
   placeIcon:{width:50,height:50,borderRadius:25,backgroundColor:'#3D0A15',alignItems:'center',justifyContent:'center'},
   placeIconText:{fontSize:26},
   placeLabelRow:{flexDirection:'row',flexWrap:'wrap',gap:6,marginTop:8},
-  placeLabel:{paddingHorizontal:8,paddingVertical:5,borderRadius:13,backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
-  placeLabelText:{fontFamily:'Poppins_700Bold',fontSize:7.6,color:'#E9CDD4'},
+  placeLabel:{paddingHorizontal:8,paddingVertical:5,borderRadius:13,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E6D7CC'},
+  placeLabelText:{fontFamily:'Poppins_700Bold',fontSize:7.6,color:'#6F1627'},
   placeDetailHero:{padding:14,borderRadius:22,backgroundColor:'#2A0911',borderWidth:1,borderColor:colors.line,flexDirection:'row',alignItems:'center',gap:13},
   placeDetailEmoji:{fontSize:48},
   detailRows:{gap:9},
