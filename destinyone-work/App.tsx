@@ -1849,6 +1849,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
   const [partnerRequest,setPartnerRequest]=useState<PartnerRequest>({venue:'',city:'New York, NY',contact:'',packageTitle:'First Date Safe Café'});
   const [livePlaces,setLivePlaces]=useState<LivePlace[]>([]);
   const [liveSearchState,setLiveSearchState]=useState<'idle'|'loading'|'ready'|'error'>('idle');
+  const [liveSearchError,setLiveSearchError]=useState('');
   const visibleExperiences=mode==='couple'?coupleExperiences:eventExperiences;
   const normalized=query.trim().toLowerCase();
   const selectedCoordinates=cityCoordinates[marketCity];
@@ -1857,14 +1858,14 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
     return selectedCoordinates&&placeCoordinates?distanceMiles(selectedCoordinates,placeCoordinates):Number.POSITIVE_INFINITY;
   };
   useEffect(()=>{
-    if (!isSupabaseConfigured || !marketCity) { setLivePlaces([]); setLiveSearchState('idle'); return; }
+    if (!isSupabaseConfigured || !marketCity) { setLivePlaces([]); setLiveSearchState('idle'); setLiveSearchError(''); return; }
     let cancelled=false;
     setLiveSearchState('loading');
     const timer=setTimeout(()=>{
       void searchLivePlaces({city:marketCity,query,category:kind}).then(result=>{
-        if(!cancelled){setLivePlaces(result);setLiveSearchState('ready');}
-      }).catch(()=>{
-        if(!cancelled){setLivePlaces([]);setLiveSearchState('error');}
+        if(!cancelled){setLivePlaces(result);setLiveSearchState('ready');setLiveSearchError('');}
+      }).catch(error=>{
+        if(!cancelled){setLivePlaces([]);setLiveSearchState('error');setLiveSearchError(error instanceof Error?error.message:'Live place search is temporarily unavailable.');}
       });
     },450);
     return ()=>{cancelled=true;clearTimeout(timer)};
@@ -1958,7 +1959,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
             <Text style={coachStyles.resultCount}>{filtered.length} found · {saved.length} saved</Text>
           </View>
           {livePlaces.length>0&&<Text style={[styles.legal,{textAlign:'center'}]}>Live place details from Google Maps</Text>}
-          {liveSearchState==='error'&&<Text style={[styles.helper,{textAlign:'center'}]}>Showing curated picks while live Places search reconnects.</Text>}
+          {liveSearchState==='error'&&<Text style={[styles.helper,{textAlign:'center'}]}>{liveSearchError||'Showing curated picks while live Places search reconnects.'}</Text>}
           {featured.map(place=><PlaceCard key={place.id} place={place} distance={getDistance(place)} saved={saved.includes(place.id)} onSave={()=>toggleSaved(place.id)} onDetail={()=>setSelected(place)} onPlan={()=>onOpenDatePlan(place)}/>)}
         </View>
         {filtered.length>8&&<View style={{gap:12}}>

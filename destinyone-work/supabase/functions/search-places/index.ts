@@ -121,8 +121,8 @@ Deno.serve(async (req) => {
     }
 
     // A member can cause at most 20 fresh searches per hour. The public web
-    // preview allows 15 city searches, enough to compare regions while still
-    // preventing an open browser preview from becoming an unbounded API proxy.
+    // preview uses a wider temporary test allowance; production will use the
+    // authenticated member limit instead of this showcase-only path.
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const previewClient = !memberId ? await previewFingerprint(req) : undefined;
     const requestTable = previewClient ? 'google_places_preview_requests' : 'google_places_search_requests';
@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
     });
     if (!requestLog.ok) return json({ error: 'Search protection is temporarily unavailable.' }, 503);
     const recentRequests = await requestLog.json() as unknown[];
-    const requestLimit = previewClient ? 15 : 20;
+    const requestLimit = previewClient ? 120 : 20;
     if (recentRequests.length >= requestLimit) return json({ error: 'You have reached the live place-search limit for this hour. Try again shortly.' }, 429);
 
     const responses = await Promise.all(searchTopics.map(topic => fetch('https://places.googleapis.com/v1/places:searchText', {

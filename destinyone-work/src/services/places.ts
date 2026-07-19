@@ -27,7 +27,7 @@ export async function searchLivePlaces(input: { city: string; query?: string; ca
   if (!sessionData.session && !allowsPreviewAuthBypass) return [] as LivePlace[];
 
   const { data, error } = await supabase.functions.invoke<PlacesResponse>('search-places', { body: input });
-  if (error) throw new Error('Live place search is temporarily unavailable.');
+  if (error) throw new Error(data?.error || error.message || 'Live place search is temporarily unavailable.');
   if (data?.error) throw new Error(data.error);
   return data?.places ?? [];
 }
