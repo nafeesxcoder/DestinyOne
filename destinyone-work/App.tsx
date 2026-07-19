@@ -921,7 +921,7 @@ function Verify({verified,selfieUri,onSelfie,setVerified,onNext}:{verified:boole
   };
   return <FormPage step={2}>
     <SectionTitle eyebrow="REAL PEOPLE. REAL INTENT." title="One selfie. More trust." body="A quick private check keeps fake profiles out and genuine people in."/>
-    <LinearGradient colors={verified?['rgba(212,175,55,.14)','rgba(55,10,19,.96)']:['rgba(229,9,47,.12)','rgba(31,7,13,.96)']} style={verificationStyles.card}>
+    <LinearGradient colors={verified?['#FFF9E8','#FFFDFC']:['#FFF0F3','#FFFDFC']} style={verificationStyles.card}>
       <View style={verificationStyles.glow}/>
       <View style={styles.selfie}>{selfieUri?<Image source={{uri:selfieUri}} style={mediaStyles.selfieImage}/>:<PremiumIcon name={verified?'shield-checkmark':'scan-outline'} tone={verified?'gold':'plum'} size={64} iconSize={29}/>} {verified&&<View style={mediaStyles.selfieCheck}><MiniPremiumIcon name="checkmark" tone="gold" size={27} iconSize={13}/></View>}</View>
       <View style={verificationStyles.statusPill}><Ionicons name={verified?'checkmark-circle':'lock-closed'} size={13} color={verified?colors.gold:colors.pinkSoft}/><Text style={verificationStyles.statusText}>{verified?'TRUST BADGE ACTIVE':'PRIVATE CHECK'}</Text></View>
@@ -4084,13 +4084,13 @@ function Chat({experienceMode,initialTool,onToolConsumed,match,messages,reflecti
   const selectMessage=(message:ChatMessage)=>setSelectedMessageId(current=>current===message.id?null:message.id);
   const reactToMessage=(messageId:string,reaction:string)=>{setMessageReactions(current=>({...current,[messageId]:reaction}));setSelectedMessageId(null)};
   const toggleStar=(messageId:string)=>{setStarredMessages(current=>current.includes(messageId)?current.filter(id=>id!==messageId):[...current,messageId]);setSelectedMessageId(null)};
-  return <LinearGradient colors={[activeTheme.bg,colors.black,activeTheme.bg]} style={{flex:1}}><SafeAreaView style={chatPremiumStyles.safeArea}>
-    <View style={[styles.chatHead,chatPremiumStyles.chatHead,{backgroundColor:'rgba(14,3,7,.96)',borderBottomColor:'rgba(255,255,255,.07)'}]}>
+  return <LinearGradient colors={['#FFFDFC','#F7F0EA','#FFFDFC']} style={{flex:1}}><SafeAreaView style={chatPremiumStyles.safeArea}>
+    <View style={[styles.chatHead,chatPremiumStyles.chatHead,{backgroundColor:'#FFFDFC',borderBottomColor:'#E6D7CC'}]}>
       <Pressable accessibilityRole="button" accessibilityLabel={isCoupleMode?'Back to our space':'Back to matches'} onPress={()=>navigate('home')}><PremiumIcon name="arrow-back" tone="dark" size={35} iconSize={17}/></Pressable>
       {match.photo?<Image source={{uri:match.photo}} style={[styles.chatAvatar,chatPremiumStyles.chatAvatar,{borderWidth:1,borderColor:activeTheme.accent}]}/>:<View style={[styles.chatAvatar,chatPremiumStyles.chatAvatar,chatStyles.initialAvatar,{borderColor:activeTheme.accent}]}><Text style={chatStyles.initialAvatarText}>{match.name[0]?.toUpperCase()}</Text></View>}
       <View style={{flex:1}}><Text numberOfLines={1} style={shared.label}>{displayName}</Text><View style={chatStyles.onlineRow}><View style={[chatStyles.onlineDot,{backgroundColor:memberDataRuntime.source==='preview'?activeTheme.accent:colors.muted}]}/><Text style={styles.onlineText}>{isCoupleMode?'Private couple space':memberDataRuntime.source==='preview'?(settings.nickname.trim()?`${match.name} · Online`:'Online'):'Private conversation'}</Text></View></View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Audio call" hitSlop={8} onPress={()=>setCallMode('audio')} style={chatStyles.headerAction}><Ionicons name="call-outline" size={20} color={colors.ivory}/></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Video call" hitSlop={8} onPress={()=>setCallMode('video')} style={chatStyles.headerAction}><Ionicons name="videocam-outline" size={21} color={colors.ivory}/></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Audio call" hitSlop={8} onPress={()=>setCallMode('audio')} style={chatStyles.headerAction}><Ionicons name="call-outline" size={20} color="#6F1627"/></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Video call" hitSlop={8} onPress={()=>setCallMode('video')} style={chatStyles.headerAction}><Ionicons name="videocam-outline" size={21} color="#6F1627"/></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Chat options" hitSlop={8} onPress={()=>setOptionsOpen(true)} style={chatStyles.headerAction}><Ionicons name="ellipsis-vertical" size={20} color={colors.muted}/></Pressable>
     </View>
     {searchOpen&&<View style={chatStyles.searchBar}><Ionicons name="search-outline" size={18} color={colors.muted}/><TextInput accessibilityLabel="Search this conversation" autoFocus value={searchQuery} onChangeText={setSearchQuery} placeholder="Search this conversation" placeholderTextColor="#806D7D" style={chatStyles.searchInput}/><Text style={chatStyles.searchCount}>{normalizedSearch?`${visibleMessages.length} found`:''}</Text><Pressable accessibilityRole="button" accessibilityLabel="Close message search" onPress={()=>{setSearchOpen(false);setSearchQuery('')}}><Ionicons name="close" size={20} color={colors.muted}/></Pressable></View>}
@@ -4098,12 +4098,12 @@ function Chat({experienceMode,initialTool,onToolConsumed,match,messages,reflecti
     {showCoach&&<View style={[coachStyles.chatCoach,chatStyles.coachPanel]}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:7}}>{chatCoachSuggestions.map(item=><Pressable key={item.label} onPress={()=>{setText(item.message(match));setShowCoach(false)}} style={[coachStyles.suggestionChip,{borderColor:'rgba(255,255,255,.10)',backgroundColor:'rgba(255,255,255,.045)'}]}><Text style={coachStyles.suggestionText}>{item.label}</Text></Pressable>)}</ScrollView><Pressable onPress={()=>navigate('coach')} style={chatStyles.coachOpen}><Text style={chatStyles.coachOpenText}>Open coach</Text></Pressable></View>}
     {!!chatError&&<Pressable onPress={()=>setChatError('')} style={chatStyles.errorBanner}><Text style={chatStyles.errorText}>{chatError}</Text><MiniPremiumIcon name="close" tone="dark" size={28} iconSize={13}/></Pressable>}
     <ScrollView ref={messagesRef} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'on-drag'} onContentSizeChange={()=>messagesRef.current?.scrollToEnd({animated:true})} contentContainerStyle={[styles.messages,chatPremiumStyles.messages]}>
-      {!isCoupleMode&&memberDataRuntime.source==='preview'&&<><View style={styles.iceReveal}><Text style={styles.kicker}>ICEBREAKER REVEALED</Text><Text style={styles.revealText}>You both chose: <Text style={{color:colors.ivory}}>Road trip 🚗</Text></Text></View><Text style={chatStyles.dayLabel}>TODAY</Text><View style={[styles.theirBubble,chatPremiumStyles.theirBubble]}><Text style={styles.bubbleText}>Okay, excellent choice. Mountains or coast? 😊</Text><Text style={styles.time}>7:42 PM</Text></View></>}
+      {!isCoupleMode&&memberDataRuntime.source==='preview'&&<><View style={styles.iceReveal}><Text style={styles.kicker}>ICEBREAKER REVEALED</Text><Text style={styles.revealText}>You both chose: <Text style={{color:'#24171A'}}>Road trip 🚗</Text></Text></View><Text style={chatStyles.dayLabel}>TODAY</Text><View style={[styles.theirBubble,chatPremiumStyles.theirBubble]}><Text style={styles.bubbleText}>Okay, excellent choice. Mountains or coast? 😊</Text><Text style={styles.time}>7:42 PM</Text></View></>}
       {visibleMessages.map(message=><View key={message.id} style={chatStyles.messageGroup}>
         <ChatBubble message={message} accent={activeTheme.accent} reaction={messageReactions[message.id]} starred={starredMessages.includes(message.id)} onPress={()=>selectMessage(message)}/>
         {selectedMessageId===message.id&&<View style={chatStyles.messageActions}>
           {['❤️','👍','😂','😮','🙏'].map(reaction=><Pressable accessibilityRole="button" accessibilityLabel={`React ${reaction}`} key={reaction} onPress={()=>reactToMessage(message.id,reaction)} style={chatStyles.reactionButton}><Text style={chatStyles.reactionText}>{reaction}</Text></Pressable>)}
-          <Pressable accessibilityRole="button" accessibilityLabel="Reply to message" onPress={()=>{setReplyTarget(message);setSelectedMessageId(null)}} style={chatStyles.messageActionIcon}><Ionicons name="arrow-undo-outline" size={17} color={colors.ivory}/></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Reply to message" onPress={()=>{setReplyTarget(message);setSelectedMessageId(null)}} style={chatStyles.messageActionIcon}><Ionicons name="arrow-undo-outline" size={17} color="#6F1627"/></Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={starredMessages.includes(message.id)?'Unstar message':'Star message'} onPress={()=>toggleStar(message.id)} style={chatStyles.messageActionIcon}><Ionicons name={starredMessages.includes(message.id)?'star':'star-outline'} size={17} color={colors.gold}/></Pressable>
         </View>}
       </View>)}
@@ -4119,7 +4119,7 @@ function Chat({experienceMode,initialTool,onToolConsumed,match,messages,reflecti
       </View>}
       {showEmoji&&<View style={chatStyles.emojiPanel}><View style={chatStyles.emojiHeader}><Text style={chatStyles.emojiTitle}>Emojis</Text><Text style={chatStyles.emojiCount}>{quickEmojis.length} daily-use</Text></View><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={chatStyles.emojiTray}>{quickEmojis.map((emoji,index)=><Pressable key={`${emoji}-${index}`} style={chatStyles.emojiButton} onPress={()=>setText(value=>value+emoji)}><Text style={chatStyles.emoji}>{emoji}</Text></Pressable>)}</ScrollView></View>}
       {replyTarget&&<View style={chatStyles.replyPreview}><View style={chatStyles.replyAccent}/><View style={{flex:1}}><Text style={chatStyles.replyTitle}>Replying to your message</Text><Text numberOfLines={1} style={chatStyles.replyText}>{messageSummary(replyTarget)}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Cancel reply" onPress={()=>setReplyTarget(null)}><Ionicons name="close" size={20} color={colors.muted}/></Pressable></View>}
-      <View style={[styles.composer,chatPremiumStyles.composer]}><Pressable accessibilityRole="button" accessibilityLabel={showAttachments?'Close attachments':'Add attachment'} onPress={()=>{setShowAttachments(value=>{if(!value)setAttachmentPage('main');return !value});setShowEmoji(false)}}><PremiumIcon name={showAttachments?'close':'add-circle-outline'} tone={showAttachments?'ruby':'dark'} size={36} iconSize={17}/></Pressable><View style={[chatStyles.inputWrap,{backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:recorderState.isRecording?colors.gold:'rgba(255,255,255,.10)'}]}><TextInput value={text} onChangeText={setText} onSubmitEditing={() => void sendText()} returnKeyType="send" placeholder={sending?'Sending…':recorderState.isRecording?'Recording voice note…':'Message…'} placeholderTextColor="#8C7888" editable={!recorderState.isRecording&&!sending} style={[styles.chatInput,chatPremiumStyles.chatInput]}/><Pressable accessibilityRole="button" accessibilityLabel={showEmoji?'Close emoji picker':'Open emoji picker'} onPress={()=>{setShowEmoji(value=>!value);setShowAttachments(false)}}><Ionicons name={showEmoji?'close':'happy-outline'} size={21} color={showEmoji?colors.gold:'#B59DA4'}/></Pressable></View><Pressable disabled={sending} accessibilityRole="button" accessibilityLabel={sending?'Sending message':text.trim()?'Send message':recorderState.isRecording?'Stop recording':'Record voice note'} onPress={sendOrRecord} style={chatStyles.sendButton}><Ionicons name={sending?'time-outline':text.trim()?'send':recorderState.isRecording?'stop':'mic'} size={20} color={colors.ivory}/></Pressable></View>
+      <View style={[styles.composer,chatPremiumStyles.composer]}><Pressable accessibilityRole="button" accessibilityLabel={showAttachments?'Close attachments':'Add attachment'} onPress={()=>{setShowAttachments(value=>{if(!value)setAttachmentPage('main');return !value});setShowEmoji(false)}}><PremiumIcon name={showAttachments?'close':'add-circle-outline'} tone={showAttachments?'ruby':'dark'} size={36} iconSize={17}/></Pressable><View style={[chatStyles.inputWrap,{backgroundColor:'#FFFDFC',borderWidth:1,borderColor:recorderState.isRecording?colors.gold:'#E6D7CC'}]}><TextInput value={text} onChangeText={setText} onSubmitEditing={() => void sendText()} returnKeyType="send" placeholder={sending?'Sending…':recorderState.isRecording?'Recording voice note…':'Message…'} placeholderTextColor="#8C7888" editable={!recorderState.isRecording&&!sending} style={[styles.chatInput,chatPremiumStyles.chatInput]}/><Pressable accessibilityRole="button" accessibilityLabel={showEmoji?'Close emoji picker':'Open emoji picker'} onPress={()=>{setShowEmoji(value=>!value);setShowAttachments(false)}}><Ionicons name={showEmoji?'close':'happy-outline'} size={21} color={showEmoji?colors.gold:'#7B5F67'}/></Pressable></View><Pressable disabled={sending} accessibilityRole="button" accessibilityLabel={sending?'Sending message':text.trim()?'Send message':recorderState.isRecording?'Stop recording':'Record voice note'} onPress={sendOrRecord} style={chatStyles.sendButton}><Ionicons name={sending?'time-outline':text.trim()?'send':recorderState.isRecording?'stop':'mic'} size={20} color={colors.ivory}/></Pressable></View>
     </KeyboardAvoidingView>
     <BottomNav active="chat" mode={experienceMode} onOpenTool={(tool)=>tool==='gift'?setGiftOpen(true):setGamesOpen(true)} navigate={navigate}/>
     <GifPicker visible={gifOpen} onClose={()=>setGifOpen(false)} onSelect={sendGif}/>
@@ -4187,7 +4187,7 @@ function giftStatusLabel(status?: NonNullable<ChatMessage['gift']>['deliveryStat
   return labels[status??'recipient_pending']??'GIFT ORDER UPDATED';
 }
 
-function ChatBubble({message,accent,reaction,starred,onPress}:{message:ChatMessage;accent?:string;reaction?:string;starred?:boolean;onPress?:()=>void}){return <Pressable accessibilityRole="button" accessibilityLabel={`Message: ${message.text?.slice(0,50)||message.date?.venue||message.gift?.name||message.type}`} onPress={onPress} style={[styles.myBubble,message.type==='text'&&accent?{backgroundColor:'rgba(145,12,35,.94)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',maxWidth:'74%',padding:12}:null,(message.type==='image'||message.type==='gif'||message.type==='snap')&&chatStyles.mediaBubble,message.type==='gift'&&chatStyles.giftBubble,message.type==='sticker'&&chatStyles.stickerBubble,message.type==='date'&&dateStyles.dateBubble,message.type==='voice'&&chatStyles.voiceBubble,message.type==='location'&&chatStyles.locationBubble]}>
+function ChatBubble({message,accent,reaction,starred,onPress}:{message:ChatMessage;accent?:string;reaction?:string;starred?:boolean;onPress?:()=>void}){return <Pressable accessibilityRole="button" accessibilityLabel={`Message: ${message.text?.slice(0,50)||message.date?.venue||message.gift?.name||message.type}`} onPress={onPress} style={[styles.myBubble,message.type==='text'&&accent?{backgroundColor:'#F3D8E0',borderWidth:1,borderColor:'#D99AAC',maxWidth:'74%',padding:12}:null,(message.type==='image'||message.type==='gif'||message.type==='snap')&&chatStyles.mediaBubble,message.type==='gift'&&chatStyles.giftBubble,message.type==='sticker'&&chatStyles.stickerBubble,message.type==='date'&&dateStyles.dateBubble,message.type==='voice'&&chatStyles.voiceBubble,message.type==='location'&&chatStyles.locationBubble]}>
   {message.type==='text'&&<Text style={styles.bubbleText}>{message.text}</Text>}
   {(message.type==='image'||message.type==='gif'||message.type==='snap')&&message.uri&&<Image source={{uri:message.uri}} style={chatStyles.messageMedia}/>} 
   {message.type==='gif'&&<View style={chatStyles.gifBadge}><Text style={chatStyles.gifBadgeText}>GIF</Text></View>}
@@ -5064,13 +5064,13 @@ const coupleModeStyles=StyleSheet.create({
 });
 
 const verificationStyles=StyleSheet.create({
-  card:{position:'relative',alignItems:'center',gap:12,padding:20,borderRadius:8,borderWidth:1,borderColor:'rgba(212,175,55,.26)',overflow:'hidden'},
+  card:{position:'relative',alignItems:'center',gap:12,padding:20,borderRadius:8,borderWidth:1,borderColor:'rgba(183,138,47,.48)',overflow:'hidden'},
   glow:{position:'absolute',top:-90,width:210,height:210,borderRadius:105,backgroundColor:'rgba(229,9,47,.08)'},
-  statusPill:{minHeight:28,paddingHorizontal:10,borderRadius:14,backgroundColor:'rgba(8,2,4,.46)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',flexDirection:'row',alignItems:'center',gap:5},
-  statusText:{fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:0,color:'#F1DDA3'},
-  title:{fontFamily:'Poppins_700Bold',fontSize:19,lineHeight:25,letterSpacing:0,color:colors.ivory,textAlign:'center'},
-  body:{maxWidth:420,fontFamily:'Poppins_400Regular',fontSize:13,lineHeight:19,letterSpacing:0,color:'#D9BEC5',textAlign:'center'},
-  idCard:{paddingVertical:14,backgroundColor:'rgba(255,255,255,.035)'},
+  statusPill:{minHeight:28,paddingHorizontal:10,borderRadius:14,backgroundColor:'#FFF3D7',borderWidth:1,borderColor:'rgba(183,138,47,.38)',flexDirection:'row',alignItems:'center',gap:5},
+  statusText:{fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:0,color:'#6F1627'},
+  title:{fontFamily:'Poppins_700Bold',fontSize:19,lineHeight:25,letterSpacing:0,color:'#24171A',textAlign:'center'},
+  body:{maxWidth:420,fontFamily:'Poppins_400Regular',fontSize:13,lineHeight:19,letterSpacing:0,color:'#6F5A61',textAlign:'center'},
+  idCard:{paddingVertical:14,backgroundColor:'#FFFDFC'},
 });
 
 const coupleHomeStyles=StyleSheet.create({
@@ -5851,13 +5851,13 @@ const styles=StyleSheet.create({
 });
 
 const chatPremiumStyles=StyleSheet.create({
-  safeArea:{flex:1,width:'100%',maxWidth:Platform.OS==='web'?820:undefined,alignSelf:'center',borderLeftWidth:Platform.OS==='web'?1:0,borderRightWidth:Platform.OS==='web'?1:0,borderColor:'rgba(255,255,255,.06)'},
+  safeArea:{flex:1,width:'100%',maxWidth:Platform.OS==='web'?820:undefined,alignSelf:'center',borderLeftWidth:Platform.OS==='web'?1:0,borderRightWidth:Platform.OS==='web'?1:0,borderColor:'#E6D7CC'},
   chatHead:{height:58,paddingHorizontal:13,gap:9},
   chatAvatar:{width:39,height:39,borderRadius:20},
-  safety:{padding:6,gap:6,backgroundColor:'rgba(212,175,55,.055)',borderBottomWidth:1,borderBottomColor:'rgba(255,255,255,.06)'},
+  safety:{padding:6,gap:6,backgroundColor:'#FFF8E8',borderBottomWidth:1,borderBottomColor:'#E6D7CC'},
   messages:{padding:14,gap:10},
-  theirBubble:{maxWidth:'74%',padding:12,borderRadius:18,borderBottomLeftRadius:6,backgroundColor:'rgba(255,255,255,.065)',borderWidth:1,borderColor:'rgba(255,255,255,.06)'},
-  composer:{paddingHorizontal:12,paddingVertical:8,gap:8,borderTopColor:'rgba(255,255,255,.07)',backgroundColor:'rgba(12,2,5,.96)'},
+  theirBubble:{maxWidth:'74%',padding:12,borderRadius:18,borderBottomLeftRadius:6,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC'},
+  composer:{paddingHorizontal:12,paddingVertical:8,gap:8,borderTopColor:'#E6D7CC',backgroundColor:'#FFFDFC'},
   chatInput:{height:43,backgroundColor:'transparent',paddingHorizontal:14},
 });
 
@@ -6149,7 +6149,7 @@ const aiStyles=StyleSheet.create({
 });
 
 const launchStyles=StyleSheet.create({
-  script:{fontFamily:'Satisfy_400Regular',fontStyle:'normal',fontSize:24,color:'#F5D3EA'},
+  script:{fontFamily:'Satisfy_400Regular',fontStyle:'normal',fontSize:24,color:'#8B2043'},
   petal:{position:'absolute',fontSize:24,color:'#FF7D91',opacity:.72,textShadowColor:'rgba(229,9,47,.65)',textShadowRadius:12},
   velvetGlowTop:{position:'absolute',top:-170,width:420,height:420,borderRadius:210,backgroundColor:'rgba(229,9,47,.10)'},
   velvetGlowBottom:{position:'absolute',bottom:-210,width:430,height:430,borderRadius:215,backgroundColor:'rgba(120,0,24,.16)'},
@@ -6159,20 +6159,20 @@ const launchStyles=StyleSheet.create({
   preloadLogo:{width:'100%',height:'100%'},
   orbitHeart:{position:'absolute',left:0,top:30,width:34,height:34,borderRadius:17,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center',borderWidth:2,borderColor:'#FF7788',shadowColor:colors.pink,shadowOpacity:.8,shadowRadius:12},
   orbitSpark:{position:'absolute',right:2,bottom:24,width:37,height:37,borderRadius:19,backgroundColor:'#321F06',alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'#7A5D18'},
-  preloadBrand:{fontFamily:'Poppins_700Bold',fontSize:30,letterSpacing:.4,color:colors.ivory,marginTop:22,textShadowColor:'rgba(229,9,47,.32)',textShadowRadius:12},
+  preloadBrand:{fontFamily:'Poppins_700Bold',fontSize:30,letterSpacing:.4,color:'#24171A',marginTop:22,textShadowColor:'rgba(229,9,47,.18)',textShadowRadius:12},
   preloadBrandOne:{color:colors.gold},
-  preloadLine:{fontFamily:'Poppins_700Bold',fontSize:13.5,lineHeight:19,color:'#FFE2E7',marginTop:9,textAlign:'center',letterSpacing:.2},
-  preloadMood:{fontFamily:'Poppins_400Regular',fontSize:12.5,color:'#CDAFB6',marginTop:7},
-  preloadPromise:{flexDirection:'row',alignItems:'center',gap:8,marginTop:22,paddingHorizontal:13,paddingVertical:8,borderRadius:20,backgroundColor:'rgba(255,255,255,.035)',borderWidth:1,borderColor:'rgba(255,255,255,.07)'},
+  preloadLine:{fontFamily:'Poppins_700Bold',fontSize:13.5,lineHeight:19,color:'#5B2634',marginTop:9,textAlign:'center',letterSpacing:.2},
+  preloadMood:{fontFamily:'Poppins_400Regular',fontSize:12.5,color:'#6F5A61',marginTop:7},
+  preloadPromise:{flexDirection:'row',alignItems:'center',gap:8,marginTop:22,paddingHorizontal:13,paddingVertical:8,borderRadius:20,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E6D7CC'},
   promiseDot:{width:4,height:4,borderRadius:2,backgroundColor:colors.gold},
-  preloadPromiseText:{fontFamily:'Poppins_600SemiBold',fontSize:8,letterSpacing:1.25,color:'#DCC4C7'},
+  preloadPromiseText:{fontFamily:'Poppins_600SemiBold',fontSize:8,letterSpacing:1.25,color:'#6F1627'},
   preloadHalo:{position:'absolute',width:280,height:280,borderRadius:140,backgroundColor:'rgba(229,9,47,.14)',shadowColor:colors.pink,shadowOpacity:.85,shadowRadius:54},
   cleanHalo:{position:'absolute',width:250,height:250,borderRadius:125,backgroundColor:'rgba(229,9,47,.10)',shadowColor:colors.pink,shadowOpacity:.48,shadowRadius:44},
-  preloadTrack:{position:'absolute',bottom:105,width:172,height:3,borderRadius:2,overflow:'hidden',backgroundColor:'rgba(255,255,255,.09)'},
+  preloadTrack:{position:'absolute',bottom:105,width:172,height:3,borderRadius:2,overflow:'hidden',backgroundColor:'#E6D7CC'},
   preloadFill:{width:'100%',height:'100%',borderRadius:2,backgroundColor:colors.gold,transformOrigin:'left'},
   trustRibbon:{flexDirection:'row',gap:7},
-  trustPoint:{flex:1,minHeight:35,borderRadius:18,backgroundColor:'rgba(255,255,255,.05)',borderWidth:1,borderColor:colors.line,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5},
-  trustLabel:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:'#EBD9E7'},
+  trustPoint:{flex:1,minHeight:35,borderRadius:18,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:colors.line,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5},
+  trustLabel:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:'#6F1627'},
   checkoutCard:{gap:13,padding:17,borderRadius:23,backgroundColor:'#19141B',borderWidth:1,borderColor:'#705A22'},
   checkoutIcon:{width:43,height:43,borderRadius:22,backgroundColor:'#5A4310',alignItems:'center',justifyContent:'center',marginRight:11},
   applePayButton:{width:'100%',height:52},
@@ -6194,10 +6194,10 @@ const mediaStyles=StyleSheet.create({
   addPhotoText:{fontFamily:'Poppins_600SemiBold',fontSize:10,color:colors.muted,marginTop:4},
   photoChoiceHero:{padding:14,borderRadius:20,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.24)',flexDirection:'row',alignItems:'center',gap:12},
   photoChoiceGrid:{flexDirection:'row',gap:10},
-  photoChoice:{flex:1,minHeight:138,borderRadius:22,padding:13,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.09)',alignItems:'center',justifyContent:'center',gap:7},
-  photoChoiceTitle:{fontFamily:'Poppins_700Bold',fontSize:13,color:colors.ivory},
+  photoChoice:{flex:1,minHeight:138,borderRadius:22,padding:13,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',alignItems:'center',justifyContent:'center',gap:7},
+  photoChoiceTitle:{fontFamily:'Poppins_700Bold',fontSize:13,color:'#24171A'},
   photoChoiceBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,color:colors.muted,textAlign:'center'},
-  voiceRecorder:{gap:14,padding:15,borderRadius:8,backgroundColor:'rgba(35,8,14,.92)',borderWidth:1,borderColor:'rgba(212,175,55,.18)'},
+  voiceRecorder:{gap:14,padding:15,borderRadius:8,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E6D7CC'},
   voiceRecordIcon:{width:43,height:43,borderRadius:22,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center',marginRight:12},
   voiceActions:{flexDirection:'row',gap:10},
   mediaAction:{flex:1,height:44,borderRadius:22,backgroundColor:'#5F1556',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7},
@@ -6239,64 +6239,64 @@ const chatStyles=StyleSheet.create({
   onlineDot:{width:6,height:6,borderRadius:3,backgroundColor:'#58C980'},
   initialAvatar:{backgroundColor:'#5D1022',borderWidth:1,alignItems:'center',justifyContent:'center',overflow:'hidden'},
   initialAvatarText:{fontFamily:'Poppins_700Bold',fontSize:18,color:colors.ivory},
-  headerAction:{width:33,height:33,borderRadius:17,backgroundColor:'rgba(255,255,255,.035)',alignItems:'center',justifyContent:'center'},
-  searchBar:{minHeight:48,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'rgba(18,4,8,.98)',borderBottomWidth:1,borderBottomColor:'rgba(255,255,255,.07)'},
-  searchInput:{flex:1,height:40,color:colors.ivory,fontFamily:'Poppins_400Regular',fontSize:12},
+  headerAction:{width:33,height:33,borderRadius:17,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E6D7CC',alignItems:'center',justifyContent:'center'},
+  searchBar:{minHeight:48,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'#FFFDFC',borderBottomWidth:1,borderBottomColor:'#E6D7CC'},
+  searchInput:{flex:1,height:40,color:'#24171A',fontFamily:'Poppins_400Regular',fontSize:12},
   searchCount:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:colors.gold},
-  contextBar:{minHeight:38,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:8,backgroundColor:'rgba(12,2,5,.94)',borderBottomWidth:1,borderBottomColor:'rgba(255,255,255,.06)'},
+  contextBar:{minHeight:38,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:8,backgroundColor:'#FFF8F5',borderBottomWidth:1,borderBottomColor:'#E6D7CC'},
   privateContext:{flexDirection:'row',alignItems:'center',gap:5},
-  privateContextText:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#CDB5BB'},
-  contextAction:{height:28,paddingHorizontal:9,borderRadius:14,flexDirection:'row',alignItems:'center',gap:5,borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
-  contextActionOn:{backgroundColor:'rgba(212,175,55,.08)',borderColor:'rgba(212,175,55,.22)'},
-  contextActionText:{fontFamily:'Poppins_700Bold',fontSize:9,color:'#D8C1C6'},
-  contextIcon:{width:28,height:28,borderRadius:14,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
-  coachPanel:{paddingHorizontal:12,paddingVertical:8,flexDirection:'row',alignItems:'center',gap:8,backgroundColor:'rgba(15,3,7,.96)',borderBottomColor:'rgba(255,255,255,.06)'},
+  privateContextText:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#5B2634'},
+  contextAction:{height:28,paddingHorizontal:9,borderRadius:14,flexDirection:'row',alignItems:'center',gap:5,borderWidth:1,borderColor:'#E6D7CC',backgroundColor:'#FFFDFC'},
+  contextActionOn:{backgroundColor:'#FFF3D7',borderColor:'rgba(183,138,47,.42)'},
+  contextActionText:{fontFamily:'Poppins_700Bold',fontSize:9,color:'#6F1627'},
+  contextIcon:{width:28,height:28,borderRadius:14,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'#E6D7CC',backgroundColor:'#FFFDFC'},
+  coachPanel:{paddingHorizontal:12,paddingVertical:8,flexDirection:'row',alignItems:'center',gap:8,backgroundColor:'#FFFDFC',borderBottomWidth:1,borderBottomColor:'#E6D7CC'},
   errorBanner:{marginHorizontal:12,marginTop:8,paddingHorizontal:12,paddingVertical:9,borderRadius:12,backgroundColor:'#78162A',flexDirection:'row',alignItems:'center',gap:8},
   errorText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:11,color:colors.ivory},
-  dayLabel:{alignSelf:'center',fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:1.2,color:'#BDA5AB',backgroundColor:'rgba(255,255,255,.045)',paddingHorizontal:10,paddingVertical:5,borderRadius:10},
-  typingBubble:{alignSelf:'flex-start',flexDirection:'row',gap:4,paddingHorizontal:13,paddingVertical:10,borderRadius:18,borderBottomLeftRadius:6,backgroundColor:'rgba(255,255,255,.055)'},
+  dayLabel:{alignSelf:'center',fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:1.2,color:'#7B5F67',backgroundColor:'#F4E6E7',paddingHorizontal:10,paddingVertical:5,borderRadius:10},
+  typingBubble:{alignSelf:'flex-start',flexDirection:'row',gap:4,paddingHorizontal:13,paddingVertical:10,borderRadius:18,borderBottomLeftRadius:6,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC'},
   typingDot:{width:6,height:6,borderRadius:3,backgroundColor:colors.muted},
   messageGroup:{width:'100%',alignItems:'flex-end'},
-  messageActions:{alignSelf:'flex-end',minHeight:40,marginTop:4,paddingHorizontal:6,flexDirection:'row',alignItems:'center',gap:3,backgroundColor:'rgba(28,8,13,.98)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',borderRadius:8},
+  messageActions:{alignSelf:'flex-end',minHeight:40,marginTop:4,paddingHorizontal:6,flexDirection:'row',alignItems:'center',gap:3,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',borderRadius:8},
   reactionButton:{width:33,height:33,alignItems:'center',justifyContent:'center'},
   reactionText:{fontSize:18},
   reactionPill:{position:'absolute',left:-7,bottom:-12,minWidth:30,height:25,paddingHorizontal:5,borderRadius:13,backgroundColor:'#251217',borderWidth:1,borderColor:'rgba(255,255,255,.13)',alignItems:'center',justifyContent:'center'},
-  messageActionIcon:{width:33,height:33,borderRadius:17,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,.05)'},
+  messageActionIcon:{width:33,height:33,borderRadius:17,alignItems:'center',justifyContent:'center',backgroundColor:'#FFF8F5'},
   emptySearch:{alignSelf:'center',alignItems:'center',gap:8,padding:18},
   emptySearchText:{fontFamily:'Poppins_400Regular',fontSize:11,color:colors.muted,textAlign:'center'},
-  keyboardWrap:{marginBottom:78,backgroundColor:'rgba(9,0,3,.98)',position:'relative',zIndex:12},
-  inputWrap:{flex:1,height:43,borderRadius:22,backgroundColor:colors.surface,flexDirection:'row',alignItems:'center',paddingRight:10},
+  keyboardWrap:{marginBottom:78,backgroundColor:'#FFFDFC',position:'relative',zIndex:12},
+  inputWrap:{flex:1,height:43,borderRadius:22,backgroundColor:'#FFFDFC',flexDirection:'row',alignItems:'center',paddingRight:10},
   safetyNudge:{marginHorizontal:10,marginBottom:8,padding:11,borderRadius:18,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.22)',flexDirection:'row',alignItems:'flex-start',gap:9},
-  safetyNudgeTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
-  safetyNudgeBody:{fontFamily:'Poppins_400Regular',fontSize:9.3,lineHeight:13.5,color:'#E7CED3',marginTop:2},
+  safetyNudgeTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:'#24171A'},
+  safetyNudgeBody:{fontFamily:'Poppins_400Regular',fontSize:9.3,lineHeight:13.5,color:'#6F5A61',marginTop:2},
   safetySignalRow:{flexDirection:'row',flexWrap:'wrap',gap:5,marginTop:6},
   safetySignalPill:{paddingHorizontal:7,paddingVertical:4,borderRadius:12,backgroundColor:'rgba(255,255,255,.07)',borderWidth:1,borderColor:'rgba(255,255,255,.10)'},
   safetySignalText:{fontFamily:'Poppins_700Bold',fontSize:7.8,color:'#F5DDE2'},
   safetyNudgeButton:{alignSelf:'center',paddingHorizontal:10,paddingVertical:7,borderRadius:16,backgroundColor:'rgba(229,9,47,.16)',borderWidth:1,borderColor:'rgba(229,9,47,.35)'},
   safetyNudgeButtonText:{fontFamily:'Poppins_700Bold',fontSize:9,color:colors.pinkSoft},
-  attachmentTray:{position:'absolute',left:12,right:12,bottom:62,zIndex:20,flexDirection:'row',flexWrap:'wrap',gap:8,padding:12,borderRadius:22,backgroundColor:'rgba(27,8,13,.99)',borderWidth:1,borderColor:'rgba(255,255,255,.12)',shadowColor:'#000',shadowOpacity:.5,shadowRadius:24,shadowOffset:{width:0,height:12},elevation:18},
+  attachmentTray:{position:'absolute',left:12,right:12,bottom:62,zIndex:20,flexDirection:'row',flexWrap:'wrap',gap:8,padding:12,borderRadius:22,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',shadowColor:'#6F1627',shadowOpacity:.16,shadowRadius:24,shadowOffset:{width:0,height:12},elevation:18},
   attachmentTrayWide:{right:undefined,width:388},
   attachment:{width:'31%',minWidth:72,alignItems:'center',gap:4},
   attachmentIcon:{width:42,height:42,borderRadius:21,alignItems:'center',justifyContent:'center'},
   attachmentLabel:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:colors.muted},
-  replyPreview:{minHeight:52,marginHorizontal:10,marginTop:7,padding:8,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'rgba(255,255,255,.05)',borderRadius:8,borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
+  replyPreview:{minHeight:52,marginHorizontal:10,marginTop:7,padding:8,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'#FFF8F5',borderRadius:8,borderWidth:1,borderColor:'#E6D7CC'},
   replyAccent:{width:3,alignSelf:'stretch',borderRadius:2,backgroundColor:colors.gold},
   replyTitle:{fontFamily:'Poppins_700Bold',fontSize:9.5,color:colors.gold},
-  replyText:{fontFamily:'Poppins_400Regular',fontSize:10,color:'#D7C4C9',marginTop:2},
+  replyText:{fontFamily:'Poppins_400Regular',fontSize:10,color:'#6F5A61',marginTop:2},
   optionList:{gap:7},
   optionRow:{minHeight:64,padding:10,flexDirection:'row',alignItems:'center',gap:10,borderRadius:8,backgroundColor:'rgba(255,255,255,.04)',borderWidth:1,borderColor:'rgba(255,255,255,.07)'},
   optionTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
   optionBody:{fontFamily:'Poppins_400Regular',fontSize:9,lineHeight:13,color:colors.muted,marginTop:2},
   sendButton:{width:42,height:42,borderRadius:21,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center',shadowColor:colors.pink,shadowOpacity:.3,shadowRadius:10},
-  emojiPanel:{maxHeight:250,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.07)',backgroundColor:'rgba(13,3,7,.98)',paddingTop:10},
+  emojiPanel:{maxHeight:250,borderTopWidth:1,borderTopColor:'#E6D7CC',backgroundColor:'#FFFDFC',paddingTop:10},
   emojiHeader:{paddingHorizontal:18,marginBottom:8,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
-  emojiTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
+  emojiTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:'#24171A'},
   emojiCount:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:colors.muted},
   emojiTray:{flexDirection:'row',flexWrap:'wrap',gap:8,paddingHorizontal:16,paddingBottom:14},
-  emojiButton:{width:38,height:38,borderRadius:19,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.06)'},
+  emojiButton:{width:38,height:38,borderRadius:19,alignItems:'center',justifyContent:'center',backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E6D7CC'},
   emoji:{fontSize:23},
-  coachOpen:{height:30,paddingHorizontal:13,borderRadius:15,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.10)'},
-  coachOpenText:{fontFamily:'Poppins_700Bold',fontSize:10,color:'#FFC4CD'},
+  coachOpen:{height:30,paddingHorizontal:13,borderRadius:15,alignItems:'center',justifyContent:'center',backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E6D7CC'},
+  coachOpenText:{fontFamily:'Poppins_700Bold',fontSize:10,color:'#8B2043'},
   mediaBubble:{padding:4,overflow:'hidden',backgroundColor:'#5B0C1C'},
   messageMedia:{width:210,height:235,borderRadius:15,backgroundColor:colors.surface},
   gifBadge:{position:'absolute',left:10,top:10,paddingHorizontal:6,paddingVertical:3,borderRadius:6,backgroundColor:'rgba(13,3,12,.7)'},
@@ -6474,42 +6474,42 @@ const dateStyles=StyleSheet.create({
   content:{gap:20,paddingBottom:35},
   hero:{alignItems:'center',gap:11,paddingTop:4},
   heroIcon:{width:62,height:62,borderRadius:31,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center',shadowColor:colors.pink,shadowOpacity:.35,shadowRadius:16},
-  planStatusCard:{padding:15,borderRadius:24,backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.11)',gap:12,shadowColor:'#FF2448',shadowOpacity:.10,shadowRadius:14},
-  planStatusTitle:{fontFamily:'Poppins_700Bold',fontSize:18,color:colors.ivory,marginTop:3},
+  planStatusCard:{padding:15,borderRadius:24,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',gap:12,shadowColor:'#6F1627',shadowOpacity:.10,shadowRadius:14},
+  planStatusTitle:{fontFamily:'Poppins_700Bold',fontSize:18,color:'#24171A',marginTop:3},
   planStatusPercent:{fontFamily:'Poppins_700Bold',fontSize:24,color:colors.gold},
-  planTrack:{height:6,borderRadius:4,backgroundColor:'rgba(255,255,255,.10)',overflow:'hidden'},
+  planTrack:{height:6,borderRadius:4,backgroundColor:'#EDE1D9',overflow:'hidden'},
   planFill:{height:'100%',borderRadius:4,backgroundColor:colors.gold},
   planStepRow:{flexDirection:'row',gap:8},
-  planStep:{flex:1,minHeight:39,borderRadius:17,backgroundColor:'rgba(12,2,6,.36)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5},
+  planStep:{flex:1,minHeight:39,borderRadius:17,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E6D7CC',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5},
   planStepText:{fontFamily:'Poppins_600SemiBold',fontSize:9.3,color:colors.muted},
-  areaButton:{padding:15,borderRadius:22,backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',flexDirection:'row',alignItems:'center',gap:12,shadowColor:'#FF2448',shadowOpacity:.10,shadowRadius:12},
-  areaButtonOn:{backgroundColor:'#7D1027',borderColor:'rgba(255,255,255,.18)',shadowColor:colors.pink,shadowOpacity:.24,shadowRadius:14},
-  category:{height:44,borderRadius:22,paddingHorizontal:14,backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',flexDirection:'row',alignItems:'center',gap:7,shadowColor:'#000',shadowOpacity:.15,shadowRadius:8},
+  areaButton:{padding:15,borderRadius:22,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',flexDirection:'row',alignItems:'center',gap:12,shadowColor:'#6F1627',shadowOpacity:.10,shadowRadius:12},
+  areaButtonOn:{backgroundColor:'#F4E0E4',borderColor:'#B78A2F',shadowColor:colors.pink,shadowOpacity:.18,shadowRadius:14},
+  category:{height:44,borderRadius:22,paddingHorizontal:14,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',flexDirection:'row',alignItems:'center',gap:7,shadowColor:'#6F1627',shadowOpacity:.10,shadowRadius:8},
   categoryOn:{backgroundColor:'#A40B28',borderColor:'rgba(255,255,255,.18)',shadowColor:colors.pink,shadowOpacity:.24,shadowRadius:12},
   categoryText:{fontFamily:'Poppins_600SemiBold',fontSize:11.5,color:colors.muted},
-  packageSelect:{width:210,minHeight:94,borderRadius:22,padding:12,backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',gap:6,shadowColor:'#000',shadowOpacity:.15,shadowRadius:8},
-  packageSelectOn:{backgroundColor:'#8D1028',borderColor:'rgba(212,175,55,.38)',shadowColor:colors.gold,shadowOpacity:.18,shadowRadius:12},
-  packageSelectTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,lineHeight:16,color:colors.muted},
+  packageSelect:{width:210,minHeight:94,borderRadius:22,padding:12,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',gap:6,shadowColor:'#6F1627',shadowOpacity:.10,shadowRadius:8},
+  packageSelectOn:{backgroundColor:'#F4E0E4',borderColor:'rgba(183,138,47,.56)',shadowColor:colors.gold,shadowOpacity:.18,shadowRadius:12},
+  packageSelectTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,lineHeight:16,color:'#24171A'},
   packageSelectMeta:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:colors.gold},
   sampleLabel:{fontFamily:'Poppins_700Bold',fontSize:8,letterSpacing:1,color:colors.gold},
-  venueCard:{padding:15,borderRadius:23,backgroundColor:'rgba(32,8,13,.92)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',flexDirection:'row',alignItems:'center',gap:12,shadowColor:'#000',shadowOpacity:.20,shadowRadius:10},
-  venueCardOn:{borderColor:colors.gold,backgroundColor:'#3D0B16',shadowColor:colors.gold,shadowOpacity:.20,shadowRadius:14},
+  venueCard:{padding:15,borderRadius:23,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',flexDirection:'row',alignItems:'center',gap:12,shadowColor:'#6F1627',shadowOpacity:.12,shadowRadius:10},
+  venueCardOn:{borderColor:colors.gold,backgroundColor:'#FFF3F5',shadowColor:colors.gold,shadowOpacity:.20,shadowRadius:14},
   venueEmoji:{fontSize:32},
   venueVibe:{fontFamily:'Poppins_600SemiBold',fontSize:10.5,color:colors.pinkSoft,marginTop:3,marginBottom:2},
   timeGrid:{flexDirection:'row',flexWrap:'wrap',gap:9},
-  timeChip:{width:'48%',minHeight:46,borderRadius:18,backgroundColor:'rgba(255,255,255,.052)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',alignItems:'center',justifyContent:'center',padding:8,shadowColor:'#000',shadowOpacity:.16,shadowRadius:8},
-  timeChipOn:{backgroundColor:'#8D1028',borderColor:'rgba(255,255,255,.18)',shadowColor:colors.pink,shadowOpacity:.24,shadowRadius:12},
+  timeChip:{width:'48%',minHeight:46,borderRadius:18,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',alignItems:'center',justifyContent:'center',padding:8,shadowColor:'#6F1627',shadowOpacity:.10,shadowRadius:8},
+  timeChipOn:{backgroundColor:'#F4E0E4',borderColor:'#B78A2F',shadowColor:colors.pink,shadowOpacity:.18,shadowRadius:12},
   timeText:{fontFamily:'Poppins_600SemiBold',fontSize:10.5,color:colors.muted,textAlign:'center'},
-  safetyCard:{padding:16,borderRadius:22,backgroundColor:'#21101F',borderWidth:1,borderColor:colors.line,gap:14},
+  safetyCard:{padding:16,borderRadius:22,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:colors.line,gap:14},
   toggle:{flexDirection:'row',alignItems:'center',gap:10,paddingTop:12,borderTopWidth:1,borderTopColor:colors.line},
-  toggleTitle:{fontFamily:'Poppins_600SemiBold',fontSize:12,color:colors.ivory},
+  toggleTitle:{fontFamily:'Poppins_600SemiBold',fontSize:12,color:'#24171A'},
   previewCard:{padding:15,borderRadius:22,backgroundColor:'rgba(212,175,55,.06)',borderWidth:1,borderColor:'rgba(212,175,55,.20)',gap:11},
-  previewLine:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:14,paddingTop:9,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.08)'},
+  previewLine:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:14,paddingTop:9,borderTopWidth:1,borderTopColor:'#E6D7CC'},
   previewLabel:{fontFamily:'Poppins_700Bold',fontSize:9,letterSpacing:1.1,color:colors.pinkSoft,textTransform:'uppercase'},
-  previewValue:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:12,color:colors.ivory,textAlign:'right'},
+  previewValue:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:12,color:'#24171A',textAlign:'right'},
   previewFlags:{flexDirection:'row',flexWrap:'wrap',gap:8},
   previewFlag:{flexDirection:'row',alignItems:'center',gap:5,paddingHorizontal:9,paddingVertical:6,borderRadius:15,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'rgba(255,255,255,.10)'},
-  previewFlagText:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#F0D6DC'},
+  previewFlagText:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#6F1627'},
   sampleNotice:{padding:13,borderRadius:16,backgroundColor:'#2D230D',borderWidth:1,borderColor:'#5D4B19',flexDirection:'row',gap:9},
   reservationSteps:{flexDirection:'row',gap:7,padding:10,borderRadius:18,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
   reservationStep:{flex:1,alignItems:'center',gap:4},
