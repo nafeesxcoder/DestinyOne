@@ -1156,7 +1156,7 @@ function ProfileSetup({
       <View style={{gap:8}}>
         <Text style={shared.label}>Faith · optional</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>
-          {religions.map(option=><Pressable key={option} onPress={()=>updateProfile('religion',profile.religion===option?'':option)} style={[selectorStyles.religionChip,profile.religion===option&&selectorStyles.religionChipOn]}><Text style={[selectorStyles.religionText,profile.religion===option&&{color:colors.ivory}]}>{option}</Text>{profile.religion===option&&<MiniPremiumIcon name="checkmark" tone="gold" size={22} iconSize={10}/>}</Pressable>)}
+          {religions.map(option=><Pressable key={option} onPress={()=>updateProfile('religion',profile.religion===option?'':option)} style={[selectorStyles.religionChip,profile.religion===option&&selectorStyles.religionChipOn]}><Text style={[selectorStyles.religionText,profile.religion===option&&{color:'#FFFDFC'}]}>{option}</Text>{profile.religion===option&&<MiniPremiumIcon name="checkmark" tone="gold" size={22} iconSize={10}/>}</Pressable>)}
         </ScrollView>
       </View>
       <ProfileSelectField label="Culture / community" value={profile.community} placeholder="Choose or add your culture" icon="people-outline" optional onPress={()=>setProfilePicker('community')}/>
@@ -1423,7 +1423,7 @@ function ExploreHub({navigate}:{navigate:(screen:Screen)=>void}){
       </View>
       <View style={homeCleanStyles.sectionRow}><Text style={styles.sectionLabel}>SERIOUS DATING TOOLS</Text><Text style={homeCleanStyles.sectionHint}>Private by default</Text></View>
       <View style={[focusStyles.toolGrid,wide&&focusStyles.toolGridWide]}>{tools.map(tool=><ExploreTool key={tool.title} {...tool} wide={wide} onPress={()=>navigate(tool.target)}/>)}</View>
-      <View style={focusStyles.boundary}><MiniPremiumIcon name="chatbubbles-outline" tone="gold" size={34} iconSize={16}/><View style={{flex:1}}><Text style={focusStyles.boundaryTitle}>Conversation first</Text><Text style={focusStyles.featureBody}>Gifts, GIFs, games and playful extras stay inside Chat, after a mutual connection.</Text></View></View>
+      <View style={focusStyles.boundary}><MiniPremiumIcon name="chatbubbles-outline" tone="gold" size={34} iconSize={16}/><View style={{flex:1}}><Text style={focusStyles.boundaryTitle}>Conversation first</Text><Text style={[focusStyles.featureBody,focusStyles.boundaryBody]}>Gifts, GIFs, games and playful extras stay inside Chat, after a mutual connection.</Text></View></View>
     </ScrollView>
     <BottomNav active="explore" navigate={navigate}/>
   </SafeAreaView></LinearGradient>
@@ -1618,7 +1618,7 @@ function CityCoverageCard({selectedCities,launchMarkets}:{selectedCities:string[
 
 function DiscoveryToggle({icon,title,body,value,onPress}:{icon:keyof typeof Ionicons.glyphMap;title:string;body:string;value:boolean;onPress:()=>void}){return <Pressable onPress={onPress} style={discoveryStyles.toggleCard}><PremiumIcon name={icon} tone={value?'gold':'ruby'} size={52} iconSize={23}/><View style={{flex:1}}><Text style={styles.cardTitle}>{title}</Text><Text style={styles.helper}>{body}</Text></View><View style={[discoveryStyles.switch,value&&discoveryStyles.switchOn]}><View style={[discoveryStyles.switchThumb,value&&discoveryStyles.switchThumbOn]}/></View></Pressable>}
 function FilterSection({title,children}:{title:string;children:React.ReactNode}){return <View style={aiStyles.filterSection}><Text style={styles.sectionLabel}>{title.toUpperCase()}</Text><View style={aiStyles.filterWrap}>{children}</View></View>}
-function FilterChip({label,active,onPress}:{label:string;active:boolean;onPress:()=>void}){return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected:active}} onPress={onPress} style={[aiStyles.filterChip,active&&aiStyles.filterChipOn]}><Text style={[aiStyles.filterChipText,active&&{color:colors.ivory}]}>{label}</Text>{active&&<MiniPremiumIcon name="checkmark-circle" tone="gold" size={24} iconSize={11}/>}</Pressable>}
+function FilterChip({label,active,onPress}:{label:string;active:boolean;onPress:()=>void}){return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected:active}} onPress={onPress} style={[aiStyles.filterChip,active&&aiStyles.filterChipOn]}><Text style={[aiStyles.filterChipText,active&&{color:'#FFFDFC'}]}>{label}</Text>{active&&<MiniPremiumIcon name="checkmark-circle" tone="gold" size={24} iconSize={11}/>}</Pressable>}
 function DiscoveryStat({value,label}:{value:number;label:string}){return <View style={discoveryStyles.stat}><Text style={discoveryStyles.statValue}>{value}</Text><Text style={discoveryStyles.statLabel}>{label}</Text></View>}
 function PrivacyPoint({icon,title,body}:{icon:keyof typeof Ionicons.glyphMap;title:string;body:string}){return <View style={discoveryStyles.privacyPoint}><PremiumIcon name={icon} tone="ruby" size={38} iconSize={17}/><Text style={discoveryStyles.privacyTitle}>{title}</Text><Text style={discoveryStyles.privacyBody}>{body}</Text></View>}
 
@@ -1973,7 +1973,7 @@ function EventsHub({mode,defaultCity,onBack,onOpenDatePlan,onOpenTool,navigate}:
           </View>
           <Pressable accessibilityRole="button" onPress={()=>setCityPickerVisible(true)} style={marketplaceBrandStyles.cityChooser}><MiniPremiumIcon name="location-outline" tone="gold" size={28} iconSize={13}/><Text style={marketplaceBrandStyles.cityChooserText}>{marketCity?'Change city':'Search all USA and Canada cities'}</Text><Ionicons name="chevron-forward" size={16} color={colors.gold}/></Pressable>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>
-            {placeKinds.map(option=><Pressable key={option} onPress={()=>setKind(option)} style={[coachStyles.filterPill,kind===option&&coachStyles.filterPillOn]}><Text style={[coachStyles.filterText,kind===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}
+            {placeKinds.map(option=><Pressable key={option} onPress={()=>setKind(option)} style={[coachStyles.filterPill,kind===option&&coachStyles.filterPillOn]}><Text style={[coachStyles.filterText,kind===option&&{color:'#FFFDFC'}]}>{option}</Text></Pressable>)}
           </ScrollView>
         </View>
         <TonightSafePicks places={tonightPicks} getDistance={getDistance} onDetail={setSelected} onPlan={onOpenDatePlan}/>
@@ -2078,8 +2078,8 @@ function CouplesPlanBuilder({city,radius,onCityChange,onRadiusChange,onExplore,o
   return <View style={couplesMarketStyles.builder}>
     <View style={shared.row}><PremiumIcon name="sparkles" tone="gold" size={52} iconSize={24}/><View style={{flex:1,marginLeft:10}}><Text style={styles.kicker}>DESTINYONE COMPLETE PLAN</Text><Text style={styles.cardTitle}>One booking. Your whole date.</Text><Text style={styles.helper}>Stay, dining, experiences, surprises and arrival details in one itinerary.</Text></View></View>
     <View style={{gap:8}}><View style={selectorStyles.searchBox}><MiniPremiumIcon name="location" tone="rose" size={32} iconSize={15}/><TextInput value={city} onFocus={()=>setShowCitySuggestions(true)} onChangeText={(value)=>{onCityChange(value);setShowCitySuggestions(true);setReady(false)}} placeholder="Any USA or Canada city / postal code" placeholderTextColor="#71626A" style={selectorStyles.searchInput}/>{!!city&&<Pressable accessibilityRole="button" accessibilityLabel="Clear marketplace city" onPress={()=>{onCityChange('');setShowCitySuggestions(true);setReady(false)}}><MiniPremiumIcon name="close-circle" tone="dark" size={30} iconSize={14}/></Pressable>}</View>{showCitySuggestions&&<View style={selectorStyles.suggestionPanel}>{cityMatches.length?cityMatches.map(option=><Pressable accessibilityRole="button" accessibilityLabel={`Use ${option}`} key={option} onPress={()=>{onCityChange(option);setShowCitySuggestions(false);setReady(false)}} style={selectorStyles.suggestionRow}><MiniPremiumIcon name="location-outline" tone={option===city?'gold':'rose'} size={26} iconSize={12}/><Text style={selectorStyles.suggestionText}>{option}</Text>{option===city&&<MiniPremiumIcon name="checkmark-circle" tone="gold" size={24} iconSize={11}/>}</Pressable>):<View style={selectorStyles.suggestionRow}><Text style={selectorStyles.suggestionText}>Choose a suggested USA or Canada city for accurate radius results.</Text></View>}</View>}</View>
-    <View style={{gap:8}}><View style={shared.row}><Text style={styles.sectionLabel}>NEARBY RANGE</Text><View style={shared.spacer}/><Text style={coachStyles.resultCount}>from {city||'your city'}</Text></View><View style={couplesMarketStyles.choiceRow}>{[25,50,100].map(option=><Pressable accessibilityRole="button" accessibilityLabel={`${option} mile radius`} key={option} onPress={()=>{onRadiusChange(option);setReady(false)}} style={[couplesMarketStyles.choice,radius===option&&couplesMarketStyles.choiceOn]}><Text style={[couplesMarketStyles.choiceText,radius===option&&{color:colors.ivory}]}>{option} miles</Text></Pressable>)}</View></View>
-    <View style={{gap:8}}><Text style={styles.sectionLabel}>MOOD</Text><View style={couplesMarketStyles.choiceRow}>{moods.map(option=><Pressable key={option} onPress={()=>{setMood(option);setReady(false)}} style={[couplesMarketStyles.choice,mood===option&&couplesMarketStyles.choiceOn]}><Text style={[couplesMarketStyles.choiceText,mood===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}</View></View>
+    <View style={{gap:8}}><View style={shared.row}><Text style={styles.sectionLabel}>NEARBY RANGE</Text><View style={shared.spacer}/><Text style={coachStyles.resultCount}>from {city||'your city'}</Text></View><View style={couplesMarketStyles.choiceRow}>{[25,50,100].map(option=><Pressable accessibilityRole="button" accessibilityLabel={`${option} mile radius`} key={option} onPress={()=>{onRadiusChange(option);setReady(false)}} style={[couplesMarketStyles.choice,radius===option&&couplesMarketStyles.choiceOn]}><Text style={[couplesMarketStyles.choiceText,radius===option&&{color:'#FFFDFC'}]}>{option} miles</Text></Pressable>)}</View></View>
+    <View style={{gap:8}}><Text style={styles.sectionLabel}>MOOD</Text><View style={couplesMarketStyles.choiceRow}>{moods.map(option=><Pressable key={option} onPress={()=>{setMood(option);setReady(false)}} style={[couplesMarketStyles.choice,mood===option&&couplesMarketStyles.choiceOn]}><Text style={[couplesMarketStyles.choiceText,mood===option&&{color:'#FFFDFC'}]}>{option}</Text></Pressable>)}</View></View>
     <View style={{gap:8}}><Text style={styles.sectionLabel}>TOTAL BUDGET</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>{budgets.map(option=><Pressable key={option} onPress={()=>{setBudget(option);setReady(false)}} style={[couplesMarketStyles.budget,budget===option&&couplesMarketStyles.budgetOn]}><Text style={[couplesMarketStyles.choiceText,budget===option&&{color:colors.ivory}]}>{option}</Text></Pressable>)}</ScrollView></View>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:9}}>{marketplaceBookingTypes.map(item=><View key={item.title} style={couplesMarketStyles.bookingType}><MiniPremiumIcon name={item.icon} tone={item.tone} size={32} iconSize={15}/><Text style={couplesMarketStyles.bookingTypeTitle}>{item.title}</Text><Text style={couplesMarketStyles.bookingTypeBody}>{item.body}</Text></View>)}</ScrollView>
     {!ready?<View style={{gap:9}}><Button label={`Show best within ${radius} miles`} icon="location" variant="secondary" onPress={()=>{setShowCitySuggestions(false);onExplore()}}/><Button label="Build complete itinerary" icon="sparkles" onPress={()=>{setShowCitySuggestions(false);setReady(true)}}/></View>:<View style={couplesMarketStyles.generated}>
@@ -2197,7 +2197,7 @@ function CityLaunchRoadmap(){
 function MarketToggle({icon,label,active,onPress}:{icon:keyof typeof Ionicons.glyphMap;label:string;active:boolean;onPress:()=>void}){
   return <Pressable onPress={onPress} style={[coachStyles.marketToggle,active&&coachStyles.marketToggleOn]}>
     <MiniPremiumIcon name={icon} tone={active?'gold':'rose'} size={30} iconSize={14}/>
-    <Text style={[coachStyles.marketToggleText,active&&{color:colors.ivory}]}>{label}</Text>
+    <Text style={[coachStyles.marketToggleText,active&&{color:'#FFFDFC'}]}>{label}</Text>
   </Pressable>
 }
 
@@ -2282,7 +2282,7 @@ function PartnerInterestSheet({visible,request,onChange,onClose,onSubmit}:{visib
       <View style={{gap:8}}>
         <Text style={styles.sectionLabel}>PACKAGE FIT</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>
-          {datePackages.map(item=><Pressable key={item.id} onPress={()=>onChange('packageTitle',item.title)} style={[coachStyles.partnerPackageChip,request.packageTitle===item.title&&coachStyles.partnerPackageChipOn]}><Text style={[coachStyles.partnerPackageText,request.packageTitle===item.title&&{color:colors.ivory}]}>{item.title}</Text></Pressable>)}
+          {datePackages.map(item=><Pressable key={item.id} onPress={()=>onChange('packageTitle',item.title)} style={[coachStyles.partnerPackageChip,request.packageTitle===item.title&&coachStyles.partnerPackageChipOn]}><Text style={[coachStyles.partnerPackageText,request.packageTitle===item.title&&{color:'#FFFDFC'}]}>{item.title}</Text></Pressable>)}
         </ScrollView>
       </View>
       <Button label="Queue partner review" icon="checkmark-circle" onPress={onSubmit}/>
@@ -2876,7 +2876,7 @@ function AdminModerationPanel({reports,blockedCount,onBack}:{reports:LocalReport
     <View style={adminOpsStyles.statGrid}><AdminOpsStat value={`${summary.total}`} label="open cases"/><AdminOpsStat value={`${summary.highOrCritical}`} label="high risk"/><AdminOpsStat value={`${summary.humanReview}`} label="human review"/><AdminOpsStat value={`${summary.fastestSlaHours}h`} label="fastest SLA"/></View>
     <TrustOpsSlaCard snapshot={trustOpsSnapshot}/>
     <View style={adminOpsStyles.statusCard}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={30} iconSize={14}/><Text style={adminOpsStyles.statusText}>{opsNote}</Text></View>
-    <View style={adminOpsStyles.tabRow}>{(['queue','reports','playbooks','audit'] as const).map(item=><Pressable key={item} onPress={()=>setTab(item)} style={[adminOpsStyles.tab,tab===item&&adminOpsStyles.tabOn]}><Text style={[adminOpsStyles.tabText,tab===item&&{color:colors.ivory}]}>{item==='queue'?'Queue':item==='reports'?'Reports':item==='playbooks'?'Playbooks':'Audit'}</Text></Pressable>)}</View>
+    <View style={adminOpsStyles.tabRow}>{(['queue','reports','playbooks','audit'] as const).map(item=><Pressable key={item} onPress={()=>setTab(item)} style={[adminOpsStyles.tab,tab===item&&adminOpsStyles.tabOn]}><Text style={[adminOpsStyles.tabText,tab===item&&{color:'#FFFDFC'}]}>{item==='queue'?'Queue':item==='reports'?'Reports':item==='playbooks'?'Playbooks':'Audit'}</Text></Pressable>)}</View>
     {tab==='queue'&&<View style={ventureStyles.section}><Text style={styles.sectionLabel}>LIVE REVIEW QUEUE</Text>{visibleQueue.map(item=><ModerationCaseCard key={item.id} item={item} onFreeze={()=>updateCase(item,'frozen','chat/payment abilities frozen pending review')} onEscalate={()=>updateCase(item,'escalated','escalated to senior Trust Ops')} onResolve={()=>updateCase(item,'resolved','case resolved with reviewer note')} onEvidence={()=>setOpsNote(`${item.member}: evidence packet includes ${item.evidence.join(', ')}`)}/>)}</View>}
     {tab==='reports'&&<View style={ventureStyles.section}><Text style={styles.sectionLabel}>SESSION REPORTS</Text>{reports.length?reports.slice().reverse().map(report=><View key={report.id} style={adminOpsStyles.reportCard}><View style={shared.row}><MiniPremiumIcon name="flag-outline" tone="ruby" size={30} iconSize={14}/><Text style={[styles.cardTitle,{flex:1}]}>Report on {report.matchId}</Text><Text style={adminOpsStyles.timeText}>{new Date(report.createdAt).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}</Text></View><Text style={styles.helper}>{report.reason}</Text>{!!report.details&&<Text style={adminOpsStyles.reportDetails}>{report.details}</Text>}<View style={adminOpsStyles.reportFooter}><Text style={adminOpsStyles.footerText}>Preview session copy · production reports create a private Trust Ops case automatically</Text></View></View>):<View style={adminOpsStyles.emptyCard}><PremiumIcon name="shield-checkmark" tone="gold" size={46} iconSize={21}/><Text style={styles.cardTitle}>No local reports yet</Text><Text style={styles.helper}>Use any profile/chat safety menu → Report to create a live moderation item.</Text></View>}</View>}
     {tab==='playbooks'&&<View style={ventureStyles.section}><Text style={styles.sectionLabel}>AUTOMATION GUARDS</Text>{automationGuards.map(([title,body],index)=><ChecklistRow key={title} title={title} body={body} done={index<3}/>)}
@@ -4901,7 +4901,7 @@ function Pricing({back,onInvite,onBuyRoses}:{back:()=>void;onInvite:()=>void;onB
   };
   return <LinearGradient colors={['#FFFDFC','#F8F0EB',colors.black]} style={{flex:1}}><SafeAreaView style={shared.safe}><Pressable accessibilityRole="button" accessibilityLabel="Close pricing" onPress={back} style={{paddingVertical:10}}><PremiumIcon name="close" tone="dark" size={42} iconSize={20}/></Pressable><ScrollView contentContainerStyle={{gap:20,paddingBottom:30}} showsVerticalScrollIndicator={false}>
     <View style={pricingStyles.hero}><PremiumIcon name="diamond" tone="gold" size={62} iconSize={29}/><Text style={launchStyles.scriptHero}>Memberships</Text><Text style={[shared.h1,{textAlign:'center'}]}>Pay for quality,{`\n`}not for noise.</Text><Text style={[shared.body,{textAlign:'center'}]}>Clear plans for serious dating with privacy, safety and real curation built in.</Text></View>
-    <View style={pricingStyles.billingToggle}><Pressable onPress={()=>setBilling('monthly')} style={[pricingStyles.billingOption,billing==='monthly'&&pricingStyles.billingOptionOn]}><Text style={[pricingStyles.billingText,billing==='monthly'&&{color:colors.ivory}]}>Monthly</Text></Pressable><Pressable onPress={()=>setBilling('annual')} style={[pricingStyles.billingOption,billing==='annual'&&pricingStyles.billingOptionOn]}><Text style={[pricingStyles.billingText,billing==='annual'&&{color:colors.ivory}]}>Annual</Text><View style={pricingStyles.saveBadge}><Text style={pricingStyles.saveText}>Save</Text></View></Pressable></View>
+    <View style={pricingStyles.billingToggle}><Pressable onPress={()=>setBilling('monthly')} style={[pricingStyles.billingOption,billing==='monthly'&&pricingStyles.billingOptionOn]}><Text style={[pricingStyles.billingText,billing==='monthly'&&{color:'#FFFDFC'}]}>Monthly</Text></Pressable><Pressable onPress={()=>setBilling('annual')} style={[pricingStyles.billingOption,billing==='annual'&&pricingStyles.billingOptionOn]}><Text style={[pricingStyles.billingText,billing==='annual'&&{color:'#FFFDFC'}]}>Annual</Text><View style={pricingStyles.saveBadge}><Text style={pricingStyles.saveText}>Save</Text></View></Pressable></View>
     <View style={pricingStyles.promiseGrid}><PricingPromise icon="shield-checkmark" title="Verified-first" body="Profiles, reports and blocks stay safety-led."/><PricingPromise icon="card" title="Store billing" body="Restore purchase and cancel through app stores."/><PricingPromise icon="heart" title="No fake scores" body="Matches use labels and explanations only."/></View>
     <Pressable accessibilityRole="button" accessibilityLabel="Open Destiny Pass referral offer" onPress={onInvite} style={referralStyles.pricingBanner}><PremiumIcon name="gift" tone="gold" size={48} iconSize={22}/><View style={{flex:1}}><Text style={styles.kicker}>DESTINY PASS</Text><Text style={styles.cardTitle}>Invite a verified friend. Get Base free for 7 days.</Text><Text style={styles.helper}>Tap to share your private link. The pass begins after profile verification and referral checks.</Text></View><MiniPremiumIcon name="chevron-forward" tone="dark" size={30} iconSize={14}/></Pressable>
     {membershipPlans.map(plan=>{const price=membershipPriceLabel(plan,billing);const period=billingPeriodLabel(billing);const accent=planAccent[plan.name];return <View key={plan.id} style={[pricingStyles.planCard,{borderColor:accent,backgroundColor:plan.recommended?'#19160F':'#20070D'}]}><View style={shared.row}><PremiumIcon name={plan.name==='Base'?'heart':plan.name==='Plus'?'sparkles':'diamond'} tone={plan.recommended?'gold':'ruby'} size={46} iconSize={22}/><View style={{flex:1,marginLeft:11}}><Text style={styles.kicker}>DESTINYONE {plan.name.toUpperCase()}</Text><Text style={pricingStyles.planFor}>{plan.forLabel}</Text></View><View style={[styles.popular,{backgroundColor:accent}]}><Text style={[styles.popularText,plan.recommended&&{color:'#2A1205'}]}>{plan.tag.toUpperCase()}</Text></View></View><View style={pricingStyles.priceRow}><Text style={styles.price}>{price}</Text><Text style={styles.per}>{period}</Text>{billing==='annual'&&<Text style={pricingStyles.annualNote}>{annualSavingsLabel(plan)}</Text>}</View>{plan.features.slice(0,4).map(x=><View key={x} style={pricingStyles.featureRow}><MiniPremiumIcon name="checkmark-circle" tone="gold" size={30} iconSize={14}/><Text style={[shared.body,{color:colors.ivory,marginLeft:10,flex:1}]}>{x}</Text></View>)}<Button label={plan.cta} variant={plan.recommended?'gold':'secondary'} icon={Platform.OS==='ios'?'logo-apple':'card-outline'} onPress={()=>setCheckout({name:`DestinyOne ${plan.name}`,price,period,tag:plan.tag,features:plan.features,kind:'membership'})}/><View style={launchStyles.secureRow}><MiniPremiumIcon name="lock-closed" tone="gold" size={24} iconSize={11}/><Text style={launchStyles.secureText}>Restore anytime · Cancel in store settings</Text></View></View>})}
@@ -5456,12 +5456,13 @@ const focusStyles=StyleSheet.create({
   likesBody:{color:'#75616A'},
   toolGrid:{gap:8},
   toolGridWide:{flexDirection:'row',flexWrap:'wrap'},
-  tool:{minHeight:76,padding:12,borderRadius:8,backgroundColor:'rgba(255,255,255,.035)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',flexDirection:'row',alignItems:'center',gap:10},
+  tool:{minHeight:76,padding:12,borderRadius:14,backgroundColor:'#FFF9F6',borderWidth:1,borderColor:'#E9D8D0',flexDirection:'row',alignItems:'center',gap:10,shadowColor:'#4A1826',shadowOpacity:.045,shadowRadius:8},
   toolWide:{width:'49%'},
   toolTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
-  toolBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:colors.muted,marginTop:2},
-  boundary:{minHeight:72,padding:12,borderRadius:8,backgroundColor:'rgba(212,175,55,.06)',borderWidth:1,borderColor:'rgba(212,175,55,.18)',flexDirection:'row',alignItems:'center',gap:10},
-  boundaryTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
+  toolBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:'#75616A',marginTop:2},
+  boundary:{minHeight:72,padding:12,borderRadius:14,backgroundColor:'#FFF7E5',borderWidth:1,borderColor:'rgba(183,138,47,.30)',flexDirection:'row',alignItems:'center',gap:10},
+  boundaryTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:'#2A1820'},
+  boundaryBody:{color:'#75616A'},
 });
 
 const homeCleanStyles=StyleSheet.create({
@@ -6066,13 +6067,13 @@ const pricingStyles=StyleSheet.create({
   billingToggle:{height:52,borderRadius:26,padding:5,backgroundColor:'rgba(255,255,255,.05)',borderWidth:1,borderColor:'rgba(255,255,255,.09)',flexDirection:'row'},
   billingOption:{flex:1,borderRadius:22,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:6},
   billingOptionOn:{backgroundColor:'#8F1028'},
-  billingText:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.muted},
+  billingText:{fontFamily:'Poppins_700Bold',fontSize:12,color:'#DCC7CD'},
   saveBadge:{paddingHorizontal:7,paddingVertical:3,borderRadius:9,backgroundColor:'rgba(212,175,55,.18)',borderWidth:1,borderColor:'rgba(212,175,55,.32)'},
   saveText:{fontFamily:'Poppins_700Bold',fontSize:8,color:colors.gold},
   promiseGrid:{flexDirection:'row',gap:8},
   promiseCard:{flex:1,minHeight:98,borderRadius:18,padding:10,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',gap:5},
-  promiseTitle:{fontFamily:'Poppins_700Bold',fontSize:10.5,color:colors.ivory},
-  promiseBody:{fontFamily:'Poppins_400Regular',fontSize:8.5,lineHeight:12.5,color:colors.muted},
+  promiseTitle:{fontFamily:'Poppins_700Bold',fontSize:10.5,color:'#FFF8F5'},
+  promiseBody:{fontFamily:'Poppins_400Regular',fontSize:8.5,lineHeight:12.5,color:'#D9C2C8'},
   entitlementPanel:{padding:14,borderRadius:22,backgroundColor:'rgba(212,175,55,.075)',borderWidth:1,borderColor:'rgba(212,175,55,.24)'},
   billingRailCard:{gap:12,padding:15,borderRadius:22,backgroundColor:'#18090E',borderWidth:1,borderColor:'rgba(255,255,255,.09)'},
   billingRailRow:{flexDirection:'row',alignItems:'flex-start',gap:10,paddingTop:10,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.06)'},
@@ -6087,12 +6088,12 @@ const pricingStyles=StyleSheet.create({
   featureRow:{flexDirection:'row',alignItems:'center'},
   executiveCard:{gap:16,padding:18,borderRadius:30,borderWidth:1,borderColor:'rgba(245,212,106,.45)',backgroundColor:'#23190A',overflow:'hidden',shadowColor:colors.gold,shadowOpacity:.18,shadowRadius:22},
   executiveIcon:{width:54,height:54,borderRadius:27,backgroundColor:'rgba(212,175,55,.12)',borderWidth:1,borderColor:'rgba(212,175,55,.38)',alignItems:'center',justifyContent:'center'},
-  executiveTitle:{fontFamily:'Poppins_700Bold',fontSize:22,color:colors.ivory},
+  executiveTitle:{fontFamily:'Poppins_700Bold',fontSize:22,color:'#FFF8F5'},
   sparkToggle:{minHeight:68,paddingHorizontal:14,paddingVertical:11,borderRadius:8,backgroundColor:'rgba(212,175,55,.07)',borderWidth:1,borderColor:'rgba(212,175,55,.24)',flexDirection:'row',alignItems:'center',gap:11},
   sparkGrid:{flexDirection:'row',flexWrap:'wrap',gap:8},
   sparkCard:{flexGrow:1,flexBasis:'31%',minWidth:92,minHeight:96,borderRadius:18,padding:11,backgroundColor:'rgba(255,255,255,.05)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',alignItems:'center',justifyContent:'center',gap:2},
   sparkCardBest:{borderColor:'rgba(212,175,55,.42)',backgroundColor:'rgba(212,175,55,.10)'},
-  sparkCount:{fontFamily:'Poppins_700Bold',fontSize:22,color:colors.ivory},
+  sparkCount:{fontFamily:'Poppins_700Bold',fontSize:22,color:'#FFF8F5'},
   sparkLabel:{fontFamily:'Poppins_600SemiBold',fontSize:8.8,color:'#D7C0C7'},
   sparkPrice:{fontFamily:'Poppins_700Bold',fontSize:11,color:colors.gold,marginTop:2},
   sparkBest:{fontFamily:'Poppins_700Bold',fontSize:7.8,color:'#2A1205',backgroundColor:colors.gold,paddingHorizontal:7,paddingVertical:2,borderRadius:8,overflow:'hidden',marginTop:3},
@@ -6102,13 +6103,13 @@ const pricingStyles=StyleSheet.create({
   manageCard:{gap:13,padding:15,borderRadius:22,backgroundColor:'#1B080E',borderWidth:1,borderColor:'rgba(229,9,47,.22)'},
   billingHelpBox:{gap:10,padding:12,borderRadius:17,backgroundColor:'rgba(255,255,255,.04)',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
   checkoutHero:{minHeight:96,borderRadius:24,padding:14,flexDirection:'row',alignItems:'center',gap:12,borderWidth:1,borderColor:'rgba(255,255,255,.12)',overflow:'hidden'},
-  checkoutTitle:{fontFamily:'Poppins_700Bold',fontSize:18,color:colors.ivory},
+  checkoutTitle:{fontFamily:'Poppins_700Bold',fontSize:18,color:'#FFF8F5'},
   checkoutSteps:{flexDirection:'row',gap:7},
   checkoutStep:{flex:1,alignItems:'center',gap:6},
   checkoutStepDot:{width:30,height:30,borderRadius:15,backgroundColor:'rgba(255,255,255,.07)',borderWidth:1,borderColor:'rgba(255,255,255,.12)',alignItems:'center',justifyContent:'center'},
   checkoutStepDotOn:{backgroundColor:'#5A4310',borderColor:'rgba(212,175,55,.45)'},
-  checkoutStepNumber:{fontFamily:'Poppins_700Bold',fontSize:10,color:colors.ivory},
-  checkoutStepText:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:colors.muted,textAlign:'center'},
+  checkoutStepNumber:{fontFamily:'Poppins_700Bold',fontSize:10,color:'#FFF8F5'},
+  checkoutStepText:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#D9C2C8',textAlign:'center'},
   checkoutStepTextOn:{color:'#EED8AC'},
   checkoutFeatureBox:{gap:9,padding:13,borderRadius:18,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
   checkoutReady:{padding:13,borderRadius:18,backgroundColor:'rgba(88,201,128,.10)',borderWidth:1,borderColor:'rgba(88,201,128,.28)',flexDirection:'row',alignItems:'center',gap:9},
@@ -6319,9 +6320,9 @@ const chatStyles=StyleSheet.create({
   replyTitle:{fontFamily:'Poppins_700Bold',fontSize:9.5,color:colors.gold},
   replyText:{fontFamily:'Poppins_400Regular',fontSize:10,color:'#6F5A61',marginTop:2},
   optionList:{gap:7},
-  optionRow:{minHeight:64,padding:10,flexDirection:'row',alignItems:'center',gap:10,borderRadius:8,backgroundColor:'rgba(255,255,255,.04)',borderWidth:1,borderColor:'rgba(255,255,255,.07)'},
-  optionTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
-  optionBody:{fontFamily:'Poppins_400Regular',fontSize:9,lineHeight:13,color:colors.muted,marginTop:2},
+  optionRow:{minHeight:64,padding:10,flexDirection:'row',alignItems:'center',gap:10,borderRadius:8,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E6D7CC'},
+  optionTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:'#24171A'},
+  optionBody:{fontFamily:'Poppins_400Regular',fontSize:9,lineHeight:13,color:'#75616A',marginTop:2},
   sendButton:{width:42,height:42,borderRadius:21,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center',shadowColor:colors.pink,shadowOpacity:.3,shadowRadius:10},
   emojiPanel:{maxHeight:250,borderTopWidth:1,borderTopColor:'#E6D7CC',backgroundColor:'#FFFDFC',paddingTop:10},
   emojiHeader:{paddingHorizontal:18,marginBottom:8,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
@@ -6499,9 +6500,9 @@ const discoveryStyles=StyleSheet.create({
   clearButton:{height:43,borderRadius:15,borderWidth:1,borderColor:'rgba(228,107,114,.3)',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7},
   clearText:{fontFamily:'Poppins_600SemiBold',fontSize:11,color:colors.danger},
   privacyGrid:{flexDirection:'row',flexWrap:'wrap',gap:10},
-  privacyPoint:{width:'48%',minHeight:145,borderRadius:20,backgroundColor:'#200C11',borderWidth:1,borderColor:colors.line,padding:14,gap:7},
-  privacyTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
-  privacyBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:colors.muted},
+  privacyPoint:{width:'48%',minHeight:145,borderRadius:20,backgroundColor:'#2A1018',borderWidth:1,borderColor:'#6E3342',padding:14,gap:7},
+  privacyTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:'#FFF8F5'},
+  privacyBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:'#D9C2C8'},
 });
 
 const dateStyles=StyleSheet.create({
@@ -6520,7 +6521,7 @@ const dateStyles=StyleSheet.create({
   areaButton:{padding:15,borderRadius:22,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',flexDirection:'row',alignItems:'center',gap:12,shadowColor:'#6F1627',shadowOpacity:.10,shadowRadius:12},
   areaButtonOn:{backgroundColor:'#F4E0E4',borderColor:'#B78A2F',shadowColor:colors.pink,shadowOpacity:.18,shadowRadius:14},
   category:{height:44,borderRadius:22,paddingHorizontal:14,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',flexDirection:'row',alignItems:'center',gap:7,shadowColor:'#6F1627',shadowOpacity:.10,shadowRadius:8},
-  categoryOn:{backgroundColor:'#A40B28',borderColor:'rgba(255,255,255,.18)',shadowColor:colors.pink,shadowOpacity:.24,shadowRadius:12},
+  categoryOn:{backgroundColor:'#F4E0E4',borderColor:'#B78A2F',shadowColor:colors.pink,shadowOpacity:.18,shadowRadius:12},
   categoryText:{fontFamily:'Poppins_600SemiBold',fontSize:11.5,color:colors.muted},
   packageSelect:{width:210,minHeight:94,borderRadius:22,padding:12,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',gap:6,shadowColor:'#6F1627',shadowOpacity:.10,shadowRadius:8},
   packageSelectOn:{backgroundColor:'#F4E0E4',borderColor:'rgba(183,138,47,.56)',shadowColor:colors.gold,shadowOpacity:.18,shadowRadius:12},
@@ -6545,7 +6546,8 @@ const dateStyles=StyleSheet.create({
   previewFlags:{flexDirection:'row',flexWrap:'wrap',gap:8},
   previewFlag:{flexDirection:'row',alignItems:'center',gap:5,paddingHorizontal:9,paddingVertical:6,borderRadius:15,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'rgba(255,255,255,.10)'},
   previewFlagText:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#6F1627'},
-  sampleNotice:{padding:13,borderRadius:16,backgroundColor:'#2D230D',borderWidth:1,borderColor:'#5D4B19',flexDirection:'row',gap:9},
+  sampleNotice:{padding:13,borderRadius:16,backgroundColor:'#FFF7E5',borderWidth:1,borderColor:'rgba(183,138,47,.38)',flexDirection:'row',gap:9},
+  sampleNoticeText:{color:'#F3DFA8'},
   reservationSteps:{flexDirection:'row',gap:7,padding:10,borderRadius:18,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
   reservationStep:{flex:1,alignItems:'center',gap:4},
   reservationDot:{width:10,height:10,borderRadius:5,backgroundColor:'rgba(255,255,255,.20)'},
