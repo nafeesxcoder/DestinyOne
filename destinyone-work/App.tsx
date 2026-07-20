@@ -1419,7 +1419,7 @@ function ExploreHub({navigate}:{navigate:(screen:Screen)=>void}){
       <View style={focusStyles.journeyRail}>{relationshipJourneySteps.map((step,index)=><React.Fragment key={step.id}><Pressable accessibilityRole="button" accessibilityLabel={`${step.label} stage`} onPress={()=>navigate(step.target as Screen)} style={focusStyles.journeyStep}><MiniPremiumIcon name={step.icon as keyof typeof Ionicons.glyphMap} tone={index===0?'ruby':index===3?'gold':'dark'} size={32} iconSize={15}/><Text style={focusStyles.journeyLabel}>{step.label}</Text></Pressable>{index<relationshipJourneySteps.length-1&&<View style={focusStyles.journeyLine}/>}</React.Fragment>)}</View>
       <View style={[focusStyles.featuredRow,wide&&focusStyles.featuredRowWide]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Open Executive Circle" onPress={()=>navigate('executive')} style={[focusStyles.executiveCard,wide&&focusStyles.featuredWide]}><LinearGradient colors={['rgba(212,175,55,.18)','rgba(229,9,47,.08)']} style={StyleSheet.absoluteFill}/><View style={focusStyles.featureIcon}><PremiumIcon name="briefcase" tone="gold" size={50} iconSize={23}/></View><View style={{flex:1}}><Text style={styles.kicker}>EXECUTIVE CIRCLE</Text><Text style={focusStyles.featureTitle}>Selective professional introductions.</Text><Text style={focusStyles.featureBody}>Verified career, values and relationship intent for members who prefer a smaller, curated circle.</Text></View><Ionicons name="chevron-forward" size={19} color={colors.gold}/></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Open people who liked you" onPress={()=>navigate('likes')} style={[focusStyles.likesCard,wide&&focusStyles.likesWide]}><MiniPremiumIcon name="heart-circle" tone="ruby" size={42} iconSize={20}/><View style={{flex:1}}><Text style={focusStyles.likesTitle}>People who chose you</Text><Text style={focusStyles.featureBody}>Private interest, kept calm and intentional.</Text></View><Ionicons name="chevron-forward" size={18} color={colors.muted}/></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open people who liked you" onPress={()=>navigate('likes')} style={[focusStyles.likesCard,wide&&focusStyles.likesWide]}><MiniPremiumIcon name="heart-circle" tone="ruby" size={42} iconSize={20}/><View style={{flex:1}}><Text style={focusStyles.likesTitle}>People who chose you</Text><Text style={[focusStyles.featureBody,focusStyles.likesBody]}>Private interest, kept calm and intentional.</Text></View><Ionicons name="chevron-forward" size={18} color={colors.muted}/></Pressable>
       </View>
       <View style={homeCleanStyles.sectionRow}><Text style={styles.sectionLabel}>SERIOUS DATING TOOLS</Text><Text style={homeCleanStyles.sectionHint}>Private by default</Text></View>
       <View style={[focusStyles.toolGrid,wide&&focusStyles.toolGridWide]}>{tools.map(tool=><ExploreTool key={tool.title} {...tool} wide={wide} onPress={()=>navigate(tool.target)}/>)}</View>
@@ -4639,15 +4639,19 @@ function Profile({experienceMode,connectionStatus,partnerName,onModeChange,onOpe
           <PremiumIcon name="settings-outline" tone="dark" size={42} iconSize={20}/>
         </Pressable>
       </View>
-    <LinearGradient colors={['#F8DDE3','#FFF8F5','#FFFDFC']} style={profilePremiumStyles.hero}>
+    <LinearGradient colors={['#F7DDE2','#FFF8F5','#FFFDFC']} style={profilePremiumStyles.hero}>
         <View style={profilePremiumStyles.heroGlow}/>
-        <View style={profilePremiumStyles.avatarHalo}>
-          <View style={profilePremiumStyles.avatarRing}>{profilePhoto?<Image source={{uri:profilePhoto}} style={profilePremiumStyles.avatarPhoto}/>:<Text style={[styles.avatarText,{fontSize:38}]}>{displayName[0]?.toUpperCase()??'D'}</Text>}</View>
-          <View style={profilePremiumStyles.statusGem}><MiniPremiumIcon name="diamond" tone="gold" size={30} iconSize={14}/></View>
+        <View style={profilePremiumStyles.identityRow}>
+          <View style={profilePremiumStyles.avatarHalo}>
+            <View style={profilePremiumStyles.avatarRing}>{profilePhoto?<Image source={{uri:profilePhoto}} style={profilePremiumStyles.avatarPhoto}/>:<Text style={[styles.avatarText,{fontSize:30}]}>{displayName[0]?.toUpperCase()??'D'}</Text>}</View>
+            <View style={profilePremiumStyles.statusGem}><MiniPremiumIcon name="diamond" tone="gold" size={30} iconSize={14}/></View>
+          </View>
+          <View style={profilePremiumStyles.identityCopy}>
+            <View style={profilePremiumStyles.nameRow}><Text style={profilePremiumStyles.name}>{displayName}{displayAge?`, ${displayAge}`:''}</Text>{verified&&<MiniPremiumIcon name="shield-checkmark" tone="plum" size={34} iconSize={16}/>}</View>
+            <Text style={profilePremiumStyles.meta} numberOfLines={2}>{displayProfession} · {displayCity}</Text>
+            <View style={mediaStyles.mediaBadges}>{verified&&<Chip label="Selfie verified" selected/>}{hasVoiceIntro&&<Chip label="Voice intro" selected/>}<Chip label={isCoupleMode?'Couple Mode':'Serious intent'} gold/></View>
+          </View>
         </View>
-        <View style={profilePremiumStyles.nameRow}><Text style={profilePremiumStyles.name}>{displayName}{displayAge?`, ${displayAge}`:''}</Text>{verified&&<MiniPremiumIcon name="shield-checkmark" tone="plum" size={34} iconSize={16}/>}</View>
-        <Text style={profilePremiumStyles.meta}>{displayProfession} · {displayCity}</Text>
-        <View style={mediaStyles.mediaBadges}>{verified&&<Chip label="Selfie verified" selected/>}{hasVoiceIntro&&<Chip label="Voice intro" selected/>}<Chip label={isCoupleMode?'Couple Mode':'Serious intent'} gold/></View>
         <View style={profilePremiumStyles.stats}>
           <View style={profilePremiumStyles.stat}><Text style={profilePremiumStyles.statValue}>{profilePhoto?'1 / 3':'0 / 3'}</Text><Text style={profilePremiumStyles.statLabel}>photos</Text></View>
           <View style={profilePremiumStyles.statLine}/>
@@ -4657,7 +4661,7 @@ function Profile({experienceMode,connectionStatus,partnerName,onModeChange,onOpe
         </View>
         <View style={styles.progress}><View style={{width:`${Math.min(100,profileStrength)}%`,height:'100%',backgroundColor:colors.gold}}/></View>
       </LinearGradient>
-      <View style={coupleModeStyles.profileModeCard}><View style={shared.row}><PremiumIcon name={isCoupleMode?'heart-circle':'search-circle'} tone={isCoupleMode?'gold':'ruby'} size={48} iconSize={22}/><View style={{flex:1,marginLeft:10}}><Text style={styles.kicker}>APP EXPERIENCE</Text><Text style={styles.cardTitle}>{isCoupleMode?'Using DestinyOne together':'Looking for your person'}</Text><Text style={styles.helper}>{isCoupleMode?`${connectionStatus==='active'&&partnerName?`Connected with ${partnerName}. `:''}Matches, Discover and Likes are hidden.`:'Serious introductions and matching tools are active.'}</Text></View></View><View style={coupleModeStyles.profileModeChoices}><Pressable accessibilityRole="radio" accessibilityState={{checked:!isCoupleMode}} onPress={()=>onModeChange('seeking')} style={[coupleModeStyles.profileModeChoice,!isCoupleMode&&coupleModeStyles.profileModeChoiceOn]}><Ionicons name="search-outline" size={17} color={!isCoupleMode?colors.ivory:colors.muted}/><Text style={[coupleModeStyles.profileModeChoiceText,!isCoupleMode&&{color:colors.ivory}]}>Find my person</Text></Pressable><Pressable accessibilityRole="radio" accessibilityState={{checked:isCoupleMode}} onPress={()=>onModeChange('couple')} style={[coupleModeStyles.profileModeChoice,isCoupleMode&&coupleModeStyles.profileModeChoiceOn]}><Ionicons name="heart-outline" size={17} color={isCoupleMode?colors.gold:colors.muted}/><Text style={[coupleModeStyles.profileModeChoiceText,isCoupleMode&&{color:colors.ivory}]}>With my partner</Text></Pressable></View></View>
+      <View style={coupleModeStyles.profileModeCard}><View style={shared.row}><PremiumIcon name={isCoupleMode?'heart-circle':'search-circle'} tone={isCoupleMode?'gold':'ruby'} size={48} iconSize={22}/><View style={{flex:1,marginLeft:10}}><Text style={styles.kicker}>APP EXPERIENCE</Text><Text style={styles.cardTitle}>{isCoupleMode?'Using DestinyOne together':'Looking for your person'}</Text><Text style={styles.helper}>{isCoupleMode?`${connectionStatus==='active'&&partnerName?`Connected with ${partnerName}. `:''}Matches, Discover and Likes are hidden.`:'Serious introductions and matching tools are active.'}</Text></View></View><View style={coupleModeStyles.profileModeChoices}><Pressable accessibilityRole="radio" accessibilityState={{checked:!isCoupleMode}} onPress={()=>onModeChange('seeking')} style={[coupleModeStyles.profileModeChoice,!isCoupleMode&&coupleModeStyles.profileModeChoiceOn]}><Ionicons name="search-outline" size={17} color={!isCoupleMode?'#FFFDFC':'#6F5A61'}/><Text style={[coupleModeStyles.profileModeChoiceText,!isCoupleMode&&coupleModeStyles.profileModeChoiceTextOn]}>Find my person</Text></Pressable><Pressable accessibilityRole="radio" accessibilityState={{checked:isCoupleMode}} onPress={()=>onModeChange('couple')} style={[coupleModeStyles.profileModeChoice,isCoupleMode&&coupleModeStyles.profileModeChoiceOn]}><Ionicons name="heart-outline" size={17} color={isCoupleMode?'#F7D77A':'#6F5A61'}/><Text style={[coupleModeStyles.profileModeChoiceText,isCoupleMode&&coupleModeStyles.profileModeChoiceTextOn]}>With my partner</Text></Pressable></View></View>
       {!isCoupleMode&&<View style={profilePremiumStyles.readinessCard}>
         <View style={shared.row}>
           <View>
@@ -4677,8 +4681,8 @@ function Profile({experienceMode,connectionStatus,partnerName,onModeChange,onOpe
         <View style={{flex:1}}><Text style={styles.kicker}>DESTINY PASS</Text><Text style={styles.cardTitle}>Invite a friend · Get 7 days</Text><Text style={styles.helper}>Your pass unlocks after their verified profile is complete.</Text></View>
         <MiniPremiumIcon name="chevron-forward" tone="dark" size={32} iconSize={15}/>
       </Pressable>}
-      <Pressable onPress={()=>navigate('pricing')} style={styles.plusBanner}>
-        <View><Text style={styles.kicker}>DESTINYONE MEMBERSHIP</Text><Text style={styles.plusTitle}>More thoughtful possibilities.</Text></View>
+      <Pressable onPress={()=>navigate('pricing')} style={[styles.plusBanner,profilePremiumStyles.membershipBanner]}>
+        <View><Text style={styles.kicker}>DESTINYONE MEMBERSHIP</Text><Text style={[styles.plusTitle,profilePremiumStyles.membershipTitle]}>More thoughtful possibilities.</Text></View>
         <PremiumIcon name="arrow-forward-circle" tone="ruby" size={45} iconSize={22}/>
       </Pressable>
       <View style={{gap:11}}><Text style={styles.sectionLabel}>PROFILE & PRIVACY</Text><View style={profilePremiumStyles.actionGrid}>{profileActions.map(action=><Pressable accessibilityRole="button" accessibilityLabel={action.label} onPress={action.onPress} key={action.label} style={profilePremiumStyles.actionTile}><PremiumIcon name={action.icon} tone={action.tone} size={42} iconSize={19}/><Text style={profilePremiumStyles.actionTitle}>{action.label}</Text><Text style={profilePremiumStyles.actionBody}>{action.body}</Text></Pressable>)}</View></View>
@@ -5069,11 +5073,12 @@ const coupleModeStyles=StyleSheet.create({
   privateList:{gap:8},
   privateRow:{minHeight:64,padding:12,borderRadius:8,backgroundColor:'rgba(255,255,255,.04)',borderWidth:1,borderColor:'rgba(255,255,255,.07)',flexDirection:'row',alignItems:'center',gap:10},
   privateTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
-  profileModeCard:{gap:14,padding:15,borderRadius:8,backgroundColor:'rgba(212,175,55,.06)',borderWidth:1,borderColor:'rgba(212,175,55,.24)'},
-  profileModeChoices:{minHeight:48,padding:4,borderRadius:8,backgroundColor:'rgba(8,2,4,.72)',flexDirection:'row',gap:5},
-  profileModeChoice:{flex:1,minHeight:40,paddingHorizontal:7,borderRadius:6,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6},
-  profileModeChoiceOn:{backgroundColor:'rgba(128,18,40,.86)',borderWidth:1,borderColor:'rgba(212,175,55,.30)'},
-  profileModeChoiceText:{fontFamily:'Poppins_700Bold',fontSize:10,color:colors.muted,textAlign:'center'},
+  profileModeCard:{gap:14,padding:15,borderRadius:16,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E7D8D1',shadowColor:'#4A1826',shadowOpacity:.05,shadowRadius:12},
+  profileModeChoices:{minHeight:52,padding:4,borderRadius:14,backgroundColor:'#F1E7E1',borderWidth:1,borderColor:'#E4D3CB',flexDirection:'row',gap:5},
+  profileModeChoice:{flex:1,minHeight:42,paddingHorizontal:7,borderRadius:10,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6},
+  profileModeChoiceOn:{backgroundColor:'#951D40',borderWidth:1,borderColor:'#7E1734',shadowColor:'#951D40',shadowOpacity:.18,shadowRadius:8},
+  profileModeChoiceText:{fontFamily:'Poppins_700Bold',fontSize:10,color:'#6F5A61',textAlign:'center'},
+  profileModeChoiceTextOn:{color:'#FFFDFC'},
 });
 
 const verificationStyles=StyleSheet.create({
@@ -5343,15 +5348,17 @@ const adminOpsStyles=StyleSheet.create({
 });
 
 const profilePremiumStyles=StyleSheet.create({
-  hero:{alignItems:'center',gap:10,padding:20,borderRadius:30,borderWidth:1,borderColor:'rgba(183,138,47,.42)',overflow:'hidden',shadowColor:'#8F2946',shadowOpacity:.16,shadowRadius:24,shadowOffset:{width:0,height:12}},
+  hero:{gap:15,padding:18,borderRadius:24,borderWidth:1,borderColor:'rgba(183,138,47,.42)',overflow:'hidden',shadowColor:'#8F2946',shadowOpacity:.14,shadowRadius:20,shadowOffset:{width:0,height:10}},
   heroGlow:{position:'absolute',width:220,height:220,borderRadius:110,top:-80,right:-70,backgroundColor:'rgba(229,9,47,.20)'},
-  avatarHalo:{width:118,height:118,borderRadius:59,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(212,175,55,.10)',borderWidth:1,borderColor:'rgba(212,175,55,.26)',shadowColor:colors.gold,shadowOpacity:.28,shadowRadius:20},
-  avatarRing:{width:98,height:98,borderRadius:49,backgroundColor:'#6D1022',alignItems:'center',justifyContent:'center',borderWidth:2,borderColor:'rgba(255,255,255,.25)',overflow:'hidden'},
+  identityRow:{flexDirection:'row',alignItems:'center',gap:14,zIndex:1},
+  identityCopy:{flex:1,minWidth:0,gap:4},
+  avatarHalo:{width:94,height:94,borderRadius:47,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(212,175,55,.12)',borderWidth:1,borderColor:'rgba(183,138,47,.42)',shadowColor:colors.gold,shadowOpacity:.22,shadowRadius:16},
+  avatarRing:{width:78,height:78,borderRadius:39,backgroundColor:'#6D1022',alignItems:'center',justifyContent:'center',borderWidth:2,borderColor:'rgba(255,255,255,.38)',overflow:'hidden'},
   avatarPhoto:{width:'100%',height:'100%'},
-  statusGem:{position:'absolute',right:4,bottom:6},
+  statusGem:{position:'absolute',right:-2,bottom:0},
   nameRow:{flexDirection:'row',alignItems:'center',gap:8},
-  name:{fontFamily:'Poppins_700Bold',fontSize:25,color:'#24171A'},
-  meta:{fontFamily:'Poppins_400Regular',fontSize:12.5,color:'#60454D'},
+  name:{fontFamily:'Poppins_700Bold',fontSize:23,lineHeight:29,color:'#24171A'},
+  meta:{fontFamily:'Poppins_400Regular',fontSize:11.5,lineHeight:16,color:'#60454D'},
   stats:{width:'100%',flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:10,paddingHorizontal:8,borderRadius:20,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',marginTop:2},
   stat:{flex:1,alignItems:'center'},
   statValue:{fontFamily:'Poppins_700Bold',fontSize:15,color:'#24171A'},
@@ -5362,6 +5369,8 @@ const profilePremiumStyles=StyleSheet.create({
   readinessScoreText:{fontFamily:'Poppins_700Bold',fontSize:14,color:colors.gold},
   readinessItem:{flexDirection:'row',alignItems:'flex-start',gap:10,padding:12,borderRadius:12,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E7D8D1'},
   readinessTitle:{fontFamily:'Poppins_700Bold',fontSize:12.5,color:'#24171A',marginBottom:2},
+  membershipBanner:{borderRadius:20,backgroundColor:'#4A0C1B',borderColor:'#A12A4A',shadowColor:'#8D1737',shadowOpacity:.16,shadowRadius:14},
+  membershipTitle:{color:'#FFF8F5'},
   actionGrid:{flexDirection:'row',flexWrap:'wrap',gap:10},
   actionTile:{flexGrow:1,flexBasis:'47%',minWidth:145,minHeight:112,padding:13,borderRadius:12,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E6D7CC',justifyContent:'space-between',shadowColor:'#4A1826',shadowOpacity:.045,shadowRadius:8},
   actionTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:'#24171A',marginTop:10},
@@ -5437,13 +5446,14 @@ const focusStyles=StyleSheet.create({
   featuredRow:{gap:10},
   featuredRowWide:{flexDirection:'row',alignItems:'stretch'},
   featuredWide:{flex:1},
-  executiveCard:{minHeight:154,padding:15,borderRadius:8,overflow:'hidden',borderWidth:1,borderColor:'rgba(212,175,55,.30)',backgroundColor:'#1C0908',flexDirection:'row',alignItems:'center',gap:12},
+  executiveCard:{minHeight:154,padding:15,borderRadius:16,overflow:'hidden',borderWidth:1,borderColor:'rgba(212,175,55,.48)',backgroundColor:'#2B160D',flexDirection:'row',alignItems:'center',gap:12,shadowColor:'#7A4C18',shadowOpacity:.14,shadowRadius:14},
   featureIcon:{width:54,height:54,alignItems:'center',justifyContent:'center'},
-  featureTitle:{fontFamily:'Poppins_700Bold',fontSize:17,lineHeight:22,color:colors.ivory,marginTop:2},
-  featureBody:{fontFamily:'Poppins_400Regular',fontSize:10.5,lineHeight:15.5,color:'#CDB8BD',marginTop:3},
-  likesCard:{minHeight:78,padding:13,borderRadius:8,backgroundColor:'rgba(255,255,255,.04)',borderWidth:1,borderColor:'rgba(255,255,255,.09)',flexDirection:'row',alignItems:'center',gap:10},
+  featureTitle:{fontFamily:'Poppins_700Bold',fontSize:17,lineHeight:22,color:'#FFF8F0',marginTop:2},
+  featureBody:{fontFamily:'Poppins_400Regular',fontSize:10.5,lineHeight:15.5,color:'#E7CDD0',marginTop:3},
+  likesCard:{minHeight:78,padding:13,borderRadius:16,backgroundColor:'#FFF9F6',borderWidth:1,borderColor:'#E9D8D0',flexDirection:'row',alignItems:'center',gap:10,shadowColor:'#4A1826',shadowOpacity:.05,shadowRadius:10},
   likesWide:{maxWidth:310,minHeight:154},
-  likesTitle:{fontFamily:'Poppins_700Bold',fontSize:13,color:colors.ivory},
+  likesTitle:{fontFamily:'Poppins_700Bold',fontSize:13,color:'#2A1820'},
+  likesBody:{color:'#75616A'},
   toolGrid:{gap:8},
   toolGridWide:{flexDirection:'row',flexWrap:'wrap'},
   tool:{minHeight:76,padding:12,borderRadius:8,backgroundColor:'rgba(255,255,255,.035)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',flexDirection:'row',alignItems:'center',gap:10},
