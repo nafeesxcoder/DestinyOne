@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../lib/supabase',()=>({
+  appEnvironment:'development',
+  requiresRealBackend:false,
   isSupabaseConfigured:false,
   supabase:{auth:{getSession:vi.fn()}},
 }));

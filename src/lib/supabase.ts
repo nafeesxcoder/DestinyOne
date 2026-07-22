@@ -8,20 +8,27 @@ import {
   configuredSupabaseUrl,
 } from '../config/supabase';
 import type { Database } from '../types/database';
+import { evaluateBackendRuntime } from '../domain/backendRuntime';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || configuredSupabaseUrl || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || configuredSupabaseAnonKey || '';
-export const appEnvironment =
-  process.env.EXPO_PUBLIC_APP_ENV || configuredAppEnvironment || process.env.NODE_ENV || 'development';
-export const requiresRealBackend =
-  (process.env.EXPO_PUBLIC_REQUIRE_REAL_BACKEND ?? String(configuredRequiresRealBackend)) === 'true';
+const explicitSupabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const explicitSupabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = explicitSupabaseUrl || configuredSupabaseUrl || '';
+const supabaseAnonKey = explicitSupabaseAnonKey || configuredSupabaseAnonKey || '';
 
-export const isSupabaseConfigured =
-  supabaseUrl.startsWith('https://') && supabaseAnonKey.length > 20;
+export const backendRuntime = evaluateBackendRuntime({
+  appEnvironment: process.env.EXPO_PUBLIC_APP_ENV || configuredAppEnvironment || process.env.NODE_ENV,
+  requiresRealBackend:
+    (process.env.EXPO_PUBLIC_REQUIRE_REAL_BACKEND ?? String(configuredRequiresRealBackend)) === 'true',
+  supabaseUrl,
+  supabaseAnonKey,
+  hasExplicitSupabaseUrl: Boolean(explicitSupabaseUrl),
+  hasExplicitSupabaseAnonKey: Boolean(explicitSupabaseAnonKey),
+});
 
-export const backendReadinessError = requiresRealBackend && !isSupabaseConfigured
-  ? 'Production backend is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY before releasing DestinyOne.'
-  : '';
+export const appEnvironment = backendRuntime.appEnvironment;
+export const requiresRealBackend = backendRuntime.requiresRealBackend;
+export const isSupabaseConfigured = backendRuntime.isSupabaseConfigured;
+export const backendReadinessError = backendRuntime.blockingReason;
 
 const canReadAuthSessionFromUrl =
   typeof window !== 'undefined' && typeof window.location !== 'undefined';

@@ -5,6 +5,7 @@ DestinyOne needs analytics and crash monitoring before scale, but it must never 
 ## What can be tracked
 
 - App flow events: onboarding started/completed, match viewed, interested/pass, mutual match, icebreaker answered.
+- Relationship Path events: path stage opened, date status transition, reflection category saved, matching-consent change and reminder change.
 - Commerce flow events: Spark/Rose sent, gift quote requested, gift order state, date reservation intent.
 - Safety/support events: report submitted, block used, safety check-in state, support ticket created.
 - Reliability events: app crash, screen load failure, slow startup, failed media picker, failed payment or provider timeout.
@@ -39,4 +40,4 @@ When backend/API work is resumed, connect providers in this order:
 3. Performance monitoring for startup, navigation, chat send, media picker, gift quote and date reservation quote.
 4. Alert routing to the Trust/Ops owner for crash spikes, auth failures, gift/date provider errors and payment failures.
 
-Current app status: privacy-safe event boundaries, redaction logic, error boundary and Admin Audit gate are ready. Final live release still needs provider DSNs/keys, dashboards, alert ownership, consent QA and physical-device validation.
+Current app status: privacy-safe event boundaries, redaction logic, error boundary, an off-by-default analytics control and a server-side Relationship Path property allowlist are ready. Final live release still needs provider DSNs/keys, dashboards, alert ownership, consent QA and physical-device validation.

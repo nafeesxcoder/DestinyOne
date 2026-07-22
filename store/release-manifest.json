@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "status": "draft",
+  "product": {
+    "name": "DestinyOne",
+    "category": "Dating",
+    "minimumAge": 18,
+    "audience": "South Asians in the USA and Canada seeking serious relationships or marriage",
+    "markets": ["US", "CA"],
+    "supportedLanguages": ["en"]
+  },
+  "identifiers": {
+    "iosBundleId": "com.destinyone.app",
+    "androidPackage": "com.destinyone.app",
+    "urlScheme": "destinyone"
+  },
+  "copy": {
+    "appStore": {
+      "name": "DestinyOne",
+      "subtitle": "For something real.",
+      "promotionalText": "Thoughtful introductions for South Asians in the USA and Canada who are ready for a committed relationship or marriage.",
+      "keywords": "South Asian dating,Indian dating,marriage,serious relationship,Canada,USA",
+      "fullDescriptionFile": "store/full-description.txt"
+    },
+    "playStore": {
+      "name": "DestinyOne",
+      "shortDescription": "Intentional South Asian dating in the USA and Canada.",
+      "fullDescriptionFile": "store/full-description.txt"
+    }
+  },
+  "publicUrls": {
+    "privacy": "",
+    "terms": "",
+    "support": "",
+    "accountDeletion": ""
+  },
+  "support": {
+    "email": "",
+    "approved": false,
+    "escalationOwnerReference": ""
+  },
+  "review": {
+    "accessReference": "",
+    "instructionsReference": "",
+    "credentialsEmbedded": false
+  },
+  "compliance": {
+    "legalReviewApproved": false,
+    "privacyLabelsApproved": false,
+    "dataSafetyApproved": false,
+    "ageRatingCompleted": false,
+    "ugcModerationDeclarationCompleted": false,
+    "accountDeletionTested": false,
+    "encryptionDeclarationCompleted": true
+  },
+  "commerce": {
+    "storeBillingLive": false,
+    "appleProductIds": [],
+    "googleProductIds": [],
+    "restorePurchaseEvidenceReference": "",
+    "refundEvidenceReference": ""
+  },
+  "providers": {
+    "verificationLive": false,
+    "venueInventoryLive": false,
+    "giftFulfillmentLive": false,
+    "pushNotificationsLive": false,
+    "crashReportingLive": false
+  },
+  "assets": {
+    "appStoreScreenshotReferences": [],
+    "playStoreScreenshotReferences": [],
+    "modelConsentEvidenceReference": "",
+    "reviewedOnPhysicalDevices": false
+  },
+  "evidence": {
+    "releaseTicket": "",
+    "physicalDeviceQaReference": "",
+    "backendGateReference": "",
+    "providerGateReference": ""
+  }
+}

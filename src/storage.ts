@@ -1,5 +1,24 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+export type DatePlanStatus = 'proposed' | 'accepted' | 'declined' | 'countered' | 'completed';
+export type RelationshipReflectionChoice = 'continue' | 'pause' | 'close';
+export type RelationshipReflectionRecord = {
+  choice: RelationshipReflectionChoice;
+  dateMessageId: string;
+  dateProposalId?: string;
+  useForMatching: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type RelationshipReminderRecord = {
+  enabled: boolean;
+  dateMessageId: string;
+  dateProposalId?: string;
+  scheduledFor?: string;
+  updatedAt: number;
+};
+
 const STORAGE_KEY = '@destinyone/app_state/v2';
 const LEGACY_STORAGE_KEYS = ['@destinyone/app_state/v1', '@mi_amore/app_state/v1'];
 
@@ -36,7 +55,7 @@ export type ChatMessage = {
   sticker?: { faceUri: string; emoji: string; label: string; filter?: string };
   voice?: { uri: string; durationMs: number };
   location?: { latitude: number; longitude: number; label: string; live: boolean; expiresAt?: number; accuracy?: number };
-  date?: { venue: string; category: string; area: string; time: string; safetyCheckIn: boolean; packageTitle?: string; packageTier?: string };
+  date?: { venue: string; category: string; area: string; time: string; safetyCheckIn: boolean; packageTitle?: string; packageTier?: string; proposalId?: string; planStatus?: DatePlanStatus };
   createdAt: number;
   status: 'sent' | 'delivered' | 'read';
 };
@@ -69,6 +88,7 @@ export type CoupleChatSettings = {
 
 export type ProfileDraft = {
   firstName: string;
+  gender: '' | 'woman' | 'man' | 'nonbinary';
   age: string;
   city: string;
   height: string;
@@ -115,7 +135,10 @@ export type PersistedAppState = {
   matchFilters: MatchFilters;
   roseLedger: RoseLedger;
   lastSeenVisible: boolean;
+  analyticsConsent: boolean;
   chatSettings: Record<string, CoupleChatSettings>;
+  relationshipReflections: Record<string, RelationshipReflectionRecord>;
+  relationshipReminders: Record<string, RelationshipReminderRecord>;
 };
 
 export const defaultMatchFilters: MatchFilters = {
@@ -141,6 +164,7 @@ export const initialRoseLedger: RoseLedger = {
 
 export const initialProfileDraft: ProfileDraft = {
   firstName: '',
+  gender: '',
   age: '',
   city: '',
   height: '',
@@ -172,7 +196,10 @@ export const initialPersistedState: PersistedAppState = {
   matchFilters: defaultMatchFilters,
   roseLedger: initialRoseLedger,
   lastSeenVisible: true,
+  analyticsConsent: false,
   chatSettings: {},
+  relationshipReflections: {},
+  relationshipReminders: {},
 };
 
 export async function loadAppState(): Promise<PersistedAppState> {
@@ -211,6 +238,12 @@ export async function loadAppState(): Promise<PersistedAppState> {
       profileDraft: hasLegacyDemoProfile ? initialProfileDraft : profileDraft,
       matchFilters: { ...defaultMatchFilters, ...(parsed.matchFilters ?? {}) },
       roseLedger: { ...initialRoseLedger, ...(parsed.roseLedger ?? {}) },
+      relationshipReflections: Object.fromEntries(Object.entries(parsed.relationshipReflections ?? {}).map(([matchId,value])=>[
+        matchId,
+        { ...(value as RelationshipReflectionRecord), useForMatching: (value as RelationshipReflectionRecord).useForMatching ?? false },
+      ])),
+      relationshipReminders: parsed.relationshipReminders ?? {},
+      analyticsConsent: parsed.analyticsConsent ?? false,
     };
   } catch {
     return initialPersistedState;

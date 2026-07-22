@@ -153,13 +153,13 @@ export function buildNetworkEffectPlan(input: {
   const launchCities = buildCityLaunchPlans(input.matches);
   const selectedPriority = launchCities.find((city) => input.selectedCities.some((selected) => belongsToLaunchCity(selected, city)));
   const priorityCity = selectedPriority ?? [...launchCities].sort((a, b) => b.currentProfiles - a.currentProfiles)[0] ?? launchCities[0]!;
-  const inviteCurrent = Math.min(3, Math.max(0, input.invitedVerifiedFriends ?? input.vouchesCount));
+  const inviteCurrent = Math.min(3, Math.max(0, input.invitedVerifiedFriends ?? 0));
   const inviteChallenge: InviteChallenge = {
     title: 'Bring 3 verified friends',
     current: inviteCurrent,
     target: 3,
     remaining: Math.max(0, 3 - inviteCurrent),
-    reward: 'Unlock trusted-badge boost, gift coins, and city founder status.',
+    reward: 'Rewards unlock only after each friend verifies, activates, and passes fraud review.',
     complete: inviteCurrent >= 3,
   };
   const seededCities = launchCities.filter((city) => city.status === 'MVP seeded').length;
@@ -188,7 +188,7 @@ export function buildNetworkEffectPlan(input: {
     {
       id: 'referral_rewards',
       title: 'Referral rewards',
-      body: 'Reward quality invites with gift coins, profile boosts and event priority — not cheap spam points.',
+      body: 'Reward quality invites only after verified activation and fraud review — never for installs or raw signups.',
       actionLabel: 'Rewards',
       actionScreen: 'circle',
       icon: 'gift-outline',

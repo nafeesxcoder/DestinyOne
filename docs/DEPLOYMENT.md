@@ -39,9 +39,25 @@ pnpm release:check
 
 This runs TypeScript, tests, and a production web export.
 
+## Supabase production deployment
+
+The web preview and database release are deliberately separate. The hosted
+database currently contains legacy `profiles` and `messages` tables, so do not
+run migration 001 directly against it.
+
+```bash
+pnpm backend:preflight
+pnpm supabase:verify
+```
+
+Use `.github/workflows/supabase-production.yml` only after reviewing the legacy
+schema or selecting a clean production project. The manual workflow requires a
+typed `DEPLOY` confirmation, a reviewed-baseline checkbox, GitHub production
+environment approval, a migration dry run, and post-deploy verification.
+
 ## Important before public launch
 
-- Replace mock/demo auth with Supabase/Firebase.
+- Keep demo auth disabled in production and finish the reviewed Supabase schema deployment.
 - Connect production payment keys for store billing and Stripe Apple Pay.
 - Review privacy policy, terms, gift delivery flow, and safety reporting with legal.
 - Test on real iPhone/Android devices before App Store or Play Store submission.

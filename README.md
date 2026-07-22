@@ -1,6 +1,6 @@
 # DestinyOne
 
-A premium, intentional dating and matrimony MVP for Indians in the USA, built with Expo, React Native, and TypeScript.
+A premium, intentional dating and matrimony MVP for South Asians in the USA and Canada, built with Expo, React Native, and TypeScript.
 
 DestinyOne is exclusively for committed long-term relationships and marriage. Casual and short-term intentions are not part of the product.
 
@@ -12,6 +12,8 @@ pnpm start
 ```
 
 Then press `i` for iOS, `a` for Android, or `w` for the web preview.
+
+For development-only visual QA, open a screen directly with `?preview=<screen>`, for example `?preview=home`, `?preview=chat`, `?preview=events`, or `?preview=pricing`. This shortcut is disabled when `EXPO_PUBLIC_APP_ENV=production`.
 
 ## Quality checks
 
@@ -73,6 +75,10 @@ DestinyOne keeps checkout simple and store-compliant: digital subscriptions and 
 - `docs/PLAY_STORE_LAUNCH.md` explains the Android/Google Play launch flow.
 - `docs/PLAY_STORE_DATA_SAFETY_DRAFT.md` provides a draft Data Safety worksheet.
 - `docs/REAL_APP_ROADMAP.md` tracks the real backend/auth/storage/verification launch path.
+- `docs/PRODUCTION_SCORECARD.md` is the evidence-based baseline and defines what 10/10 means for every business area.
+- `docs/ARCHITECTURE_AND_FEATURE_BASELINE.md` maps the current app architecture, feature inventory, dependencies, and production gaps.
+- `docs/PHASE_1_UI_QA.md` records the responsive UI/brand audit, interaction checks, fixes, and remaining device-level gates.
+- `docs/PHASE_2_PRODUCT_DIFFERENTIATION.md` defines the Relationship Path, competitor signals, feature hierarchy, metrics, and remaining validation gates.
 - `docs/AI_MATCHING_AND_PRIVACY.md` explains the privacy-safe AI matching and Red Rose rules.
 - `docs/STORE_LISTING.md` contains App Store and Google Play copy plus the screenshot story.
 - `docs/PRIVACY_POLICY_DRAFT.md`, `docs/TERMS_DRAFT.md`, and `docs/COMMUNITY_GUIDELINES.md` provide launch drafts that require final company details and legal review.

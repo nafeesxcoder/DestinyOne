@@ -32,9 +32,13 @@ DestinyOne should feel smart without becoming creepy.
 - Red Rose notes should be respectful and reportable.
 - Roses must not bypass block, report, or safety controls.
 
-## Production upgrade
+## Production boundary
 
-The current app uses a local privacy-safe scorer. Production should move ranking to the backend so users cannot tamper with match scoring, daily limits, rose limits, or paid credits.
+Preview mode uses a local privacy-safe scorer for demonstration. Real-member
+builds fail closed and use the server-owned v2 eligibility/ranking engine, so
+clients cannot alter scores, daily limits, repeat cooldowns, safety exclusions,
+or model versions. The app receives only qualitative labels and up to three
+plain-language reasons.
 
 ## Observability boundary
 

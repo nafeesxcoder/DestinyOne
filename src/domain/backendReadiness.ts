@@ -26,6 +26,9 @@ export type BackendLaunchInput = {
   emailOtpReady: boolean;
   phoneOtpProviderReady: boolean;
   databaseTypesReady: boolean;
+  hostedSchemaVerified: boolean;
+  migrationHistoryAligned: boolean;
+  databaseTestsPassed: boolean;
   rlsPoliciesReady: boolean;
   storageBucketsReady: boolean;
   realtimePersistenceReady: boolean;
@@ -78,10 +81,15 @@ export function buildBackendLaunchSnapshot(input: BackendLaunchInput): BackendLa
     );
   const authReady = backendConnected && input.authAdapterReady && input.emailOtpReady && input.phoneOtpProviderReady;
   const schemaCoverage = percent(input.backendReadyModuleCount, input.dataModuleCount);
-  const schemaReady = input.migrationCount >= 7 && input.databaseTypesReady && schemaCoverage >= 95;
+  const schemaReady = input.migrationCount >= 17 &&
+    input.databaseTypesReady &&
+    input.hostedSchemaVerified &&
+    input.migrationHistoryAligned &&
+    input.databaseTestsPassed &&
+    schemaCoverage >= 95;
   const rlsReady = schemaReady && input.rlsPoliciesReady;
   const realtimeReady = input.realtimePersistenceReady && input.realtimeModuleCount >= 7;
-  const edgeReady = input.edgeFunctionCount >= 2 && input.edgeFunctionsReady;
+  const edgeReady = input.edgeFunctionCount >= 4 && input.edgeFunctionsReady;
   const secretsReady = input.serverSecretsReady && input.productionEnvLocked && (input.requiresRealBackend || input.appEnvironment === 'production');
 
   const gates: BackendLaunchGate[] = [
@@ -108,10 +116,10 @@ export function buildBackendLaunchSnapshot(input: BackendLaunchInput): BackendLa
     {
       id: 'schema_migrations',
       title: 'Schema and generated types',
-      body: `${input.migrationCount} migration(s) · ${schemaCoverage}% data-module schema coverage · database types ${input.databaseTypesReady ? 'ready' : 'need regeneration'}.`,
+      body: `${input.migrationCount} migration(s) · ${schemaCoverage}% source coverage · hosted schema ${input.hostedSchemaVerified ? 'verified' : 'not verified'} · migration history ${input.migrationHistoryAligned ? 'aligned' : 'not aligned'} · database tests ${input.databaseTestsPassed ? 'passed' : 'not run on target'}.`,
       ready: schemaReady,
       started: input.migrationCount > 0,
-      nextStep: 'Run migrations against the linked Supabase project and regenerate TypeScript database types.',
+      nextStep: 'Review the existing hosted baseline, align migration history, run database tests, then verify every required table and RPC.',
     },
     {
       id: 'rls_security',

@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { buildGiftFulfillmentPlan, buildGiftSteps, estimateGiftOrderQuote, formatGiftMoney, giftOrderSummary } from './gifts';
 
 vi.mock('../lib/supabase', () => ({
+  appEnvironment: 'development',
+  requiresRealBackend: false,
   isSupabaseConfigured: false,
   supabase: { auth: { getSession: vi.fn() } },
 }));

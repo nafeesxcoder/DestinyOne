@@ -1,11 +1,13 @@
 export type Match = {
-  id: string; name: string; age: number; city: string; profession: string;
+  id: string; profileId?: string; matchId?: string; name: string; age: number; city: string; profession: string;
   gender: 'woman' | 'man' | 'nonbinary';
   intent: string; match: 'Strong Match' | 'Great Match' | 'Exceptional Match';
   vibes: string[]; photo: string; photos: string[]; about: string; values: string; goals: string;
   timeline: string; children: string; family: string; relocation: string; languages: string[];
   interests: string[]; familyPriority: 'high' | 'balanced' | 'independent';
   vouches: { count: number; qualities: string[] };
+  reasons?: string[];
+  modelVersion?: string;
 };
 
 export const matches: Match[] = [

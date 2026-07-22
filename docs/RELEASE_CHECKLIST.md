@@ -10,11 +10,13 @@
 - [x] Build numbers start at 1 and EAS profiles are defined
 - [x] Product QA, Interaction QA, Dating Policy Compliance, Store Review, and Release Readiness domain gates are covered by tests
 - [x] Profile setup includes the current 25–35 audience age gate
+- [x] Canonical App Store/Play Store draft copy is validated for USA + Canada scope and provider-truthful claims
 
 Run before every release:
 
 ```bash
 pnpm release:check
+pnpm store:release:verify # production submission only; expected to fail until approvals are complete
 ```
 
 ## Product QA
@@ -70,6 +72,7 @@ pnpm release:check
 - [ ] Complete age rating, content-moderation, user-generated-content, and account-deletion declarations
 - [ ] Verify dating-policy compliance: user content moderation, report/block, subscription disclosure, location consent, real-world date/gift safety, and delete-account flow
 - [ ] Add reviewer notes and a fully functional review/demo account; never submit production with demo OTP fallback enabled
+- [ ] Populate and approve `store/release-manifest.json`; production must pass `pnpm store:release:verify`
 
 ## Release commands
 

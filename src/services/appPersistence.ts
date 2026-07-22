@@ -1,23 +1,31 @@
-import type { ChatMessage, CoupleChatSettings, ProfileDraft } from '../storage';
+import type { ChatMessage, CoupleChatSettings, DatePlanStatus, ProfileDraft, RelationshipReflectionChoice } from '../storage';
+import { sanitizeRelationshipJourneyProperties, type RelationshipJourneyEventName } from '../domain/relationshipLearning';
 import {
   blockMember,
+  clearMatchingLearning,
   createDateProposal,
+  completeDateProposal,
   createLiveLocationShare,
+  fetchRelationshipJourney,
   fetchMatchMessages,
   recordProfileView,
   recordDiscoverySignal,
-  replaceCurrentUserProfilePhotos,
+  recordRelationshipJourneyEvent,
+  respondToDateProposal,
   reportMember,
+  saveCurrentMemberProfile,
+  saveMatchingPreferences,
   saveChatSettings,
+  saveRelationshipReflection,
+  setRelationshipReminder,
   sendCurrentUserMessage,
   subscribeToChatMessages,
   submitIcebreakerAnswer,
   submitMatchDecision,
+  unmatchMember,
   uploadCurrentUserProfileMedia,
   uploadCurrentUserProfilePhotos,
-  upsertCurrentUserProfile,
   upsertPrivacySettings,
-  upsertUserPreferences,
 } from './backend';
 
 type PersistenceReason = 'backend' | 'preview_id' | 'demo' | 'error';
@@ -56,6 +64,39 @@ export async function persistDateProposal(matchId: string, date: NonNullable<Cha
   return persistSafely(() => createDateProposal(matchId, date));
 }
 
+export async function persistDatePlanStatus(proposalId: string | undefined, status: DatePlanStatus) {
+  if (!proposalId || !isBackendUuid(proposalId)) return { saved: false, reason: 'preview_id' } satisfies PersistenceResult;
+  if (status === 'completed') return persistSafely(() => completeDateProposal(proposalId));
+  if (status === 'proposed') return { saved: false, reason: 'demo' } satisfies PersistenceResult;
+  return persistSafely(() => respondToDateProposal(proposalId, status));
+}
+
+export async function persistRelationshipReflection(proposalId: string | undefined, choice: RelationshipReflectionChoice, useForMatching = false) {
+  if (!proposalId || !isBackendUuid(proposalId)) return { saved: false, reason: 'preview_id' } satisfies PersistenceResult;
+  return persistSafely(() => saveRelationshipReflection(proposalId, choice, useForMatching));
+}
+
+export async function persistRelationshipReminder(proposalId: string | undefined, enabled: boolean) {
+  if (!proposalId || !isBackendUuid(proposalId)) return { saved: false, reason: 'preview_id' } satisfies PersistenceResult;
+  return persistSafely(() => setRelationshipReminder(proposalId, enabled));
+}
+
+export async function persistRelationshipJourneyEvent(eventName: RelationshipJourneyEventName, properties: Record<string,unknown>) {
+  const sanitized=sanitizeRelationshipJourneyProperties(properties) as Record<string,string|boolean>;
+  return persistSafely(() => recordRelationshipJourneyEvent(eventName, sanitized));
+}
+
+export async function fetchPersistedRelationshipJourney(matchId: string) {
+  if (!isBackendUuid(matchId)) return null;
+  try {
+    return await fetchRelationshipJourney(matchId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Could not load relationship journey.';
+    console.warn('[DestinyOne relationship journey]', message);
+    return null;
+  }
+}
+
 export async function fetchPersistedChatMessages(matchId: string) {
   if (!isBackendUuid(matchId)) return [] satisfies ChatMessage[];
   try {
@@ -86,7 +127,7 @@ export async function persistProfileView(viewedProfileId: string, durationSecond
 
 export async function persistDiscoverySignal(targetProfileId: string, signal: 'view' | 'interested' | 'skip') {
   if (!isBackendUuid(targetProfileId)) return { saved: false, reason: 'preview_id' } satisfies PersistenceResult;
-  return persistSafely(() => recordDiscoverySignal(targetProfileId, signal));
+  return persistSafely(() => recordDiscoverySignal(targetProfileId, signal, `discovery-${signal}-${Date.now()}`));
 }
 
 export async function persistMatchDecision(targetProfileId: string, decision: 'interested' | 'pass') {
@@ -99,9 +140,9 @@ export async function persistIcebreakerAnswer(matchId: string, question: string,
   return persistSafely(() => submitIcebreakerAnswer(matchId, question, answer));
 }
 
-export async function persistReport(reportedId: string, reason: string, details?: string) {
+export async function persistReport(reportedId: string, reason: string, details: string | undefined, clientActionId: string) {
   if (!isBackendUuid(reportedId)) return { saved: false, reason: 'preview_id' } satisfies PersistenceResult;
-  return persistSafely(() => reportMember(reportedId, reason, details));
+  return persistSafely(() => reportMember(reportedId, reason, details, clientActionId));
 }
 
 export async function persistBlock(blockedId: string) {
@@ -109,23 +150,29 @@ export async function persistBlock(blockedId: string) {
   return persistSafely(() => blockMember(blockedId));
 }
 
+export async function persistUnmatch(matchId: string, clientActionId: string) {
+  if (!isBackendUuid(matchId)) return { saved: false, reason: 'preview_id' } satisfies PersistenceResult;
+  return persistSafely(() => unmatchMember(matchId, clientActionId));
+}
+
 export async function persistPrivacySettings(settings: {
   lastSeenVisible?: boolean;
   onlineStatusVisible?: boolean;
   privateMode?: boolean;
   profileViewNotifications?: boolean;
+  analyticsConsent?: boolean;
 }) {
   return persistSafely(() => upsertPrivacySettings({
     last_seen_visible: settings.lastSeenVisible,
     online_status_visible: settings.onlineStatusVisible,
     private_mode: settings.privateMode,
     profile_view_notifications: settings.profileViewNotifications,
+    analytics_consent: settings.analyticsConsent,
   }));
 }
 
 export type OnboardingProfileSyncInput = {
   profile: ProfileDraft;
-  verified: boolean;
   photos: string[];
   selfieUri: string;
   voiceIntroUri: string;
@@ -135,6 +182,7 @@ export type OnboardingProfileSyncInput = {
   smartDiscovery: boolean;
   crossedPaths: boolean;
   lastSeenVisible: boolean;
+  matchFilters: import('../storage').MatchFilters;
 };
 
 function normalizeText(value: string, fallback: string) {
@@ -170,6 +218,30 @@ function intentToDatabase(intent: string): 'long_term' | 'marriage' | 'long_term
   return 'long_term';
 }
 
+function matchingAttributesFromAlignment(alignment: Record<string, string>) {
+  const familyPriority = alignment.family?.includes('deeply')
+    ? 'high' as const
+    : alignment.family?.includes('independent')
+      ? 'independent' as const
+      : 'balanced' as const;
+  const childrenIntent = alignment.children?.includes('Definitely')
+    ? 'wants' as const
+    : alignment.children?.includes('Do not')
+      ? 'does_not_want' as const
+      : 'open' as const;
+  const marriageTimeline = alignment.timeline?.includes('1–2')
+    ? '1_2_years' as const
+    : alignment.timeline?.includes('2–3')
+      ? '2_3_years' as const
+      : 'later' as const;
+  const relocation = alignment.relocation?.includes('Yes')
+    ? 'open' as const
+    : alignment.relocation?.includes('stay')
+      ? 'same_city' as const
+      : 'open' as const;
+  return { familyPriority, childrenIntent, marriageTimeline, relocation };
+}
+
 export async function persistOnboardingProfile(input: OnboardingProfileSyncInput) {
   return persistSafely(async () => {
     const firstName = normalizeText(input.profile.firstName, 'Member').split(/\s+/)[0] ?? 'Member';
@@ -185,7 +257,7 @@ export async function persistOnboardingProfile(input: OnboardingProfileSyncInput
       ? await uploadCurrentUserProfileMedia('voice', input.voiceIntroUri)
       : null;
 
-    const profile = await upsertCurrentUserProfile({
+    const profilePayload = {
       first_name: firstName,
       birth_date: birthDateFromAge(input.profile.age),
       city,
@@ -194,19 +266,13 @@ export async function persistOnboardingProfile(input: OnboardingProfileSyncInput
       religion: input.profile.religion.trim() || null,
       community: input.profile.community.trim() || null,
       bio: bio || null,
-      verified: input.verified,
-      onboarding_complete: true,
       voice_intro_path: uploadedVoicePath ?? (input.voiceIntroUri || null),
-    });
+    };
 
     const uploadedPhotoPaths = input.photos.length
       ? await uploadCurrentUserProfilePhotos(input.photos)
       : null;
-    if (uploadedPhotoPaths?.length) {
-      await replaceCurrentUserProfilePhotos(uploadedPhotoPaths);
-    }
-
-    await upsertUserPreferences({
+    const preferencesPayload = {
       intent: intentToDatabase(input.intent),
       vibes: topVibes,
       marriage_timeline: input.alignment.timeline ?? null,
@@ -215,6 +281,19 @@ export async function persistOnboardingProfile(input: OnboardingProfileSyncInput
       relocation: input.alignment.relocation ?? null,
       smart_discovery: input.smartDiscovery,
       crossed_paths: input.crossedPaths,
+    };
+
+    const profile = await saveCurrentMemberProfile(
+      profilePayload,
+      preferencesPayload,
+      uploadedPhotoPaths,
+    );
+
+    await saveMatchingPreferences({
+      filters: input.matchFilters,
+      profile: input.profile,
+      ...matchingAttributesFromAlignment(input.alignment),
+      smartDiscovery: input.smartDiscovery,
     });
 
     await upsertPrivacySettings({
@@ -233,20 +312,40 @@ export async function persistOnboardingProfile(input: OnboardingProfileSyncInput
   });
 }
 
+export async function persistMatchingPreferences(input: {
+  filters: import('../storage').MatchFilters;
+  profile: ProfileDraft;
+  alignment: Record<string, string>;
+  smartDiscovery: boolean;
+}) {
+  return persistSafely(() => saveMatchingPreferences({
+    filters: input.filters,
+    profile: input.profile,
+    ...matchingAttributesFromAlignment(input.alignment),
+    smartDiscovery: input.smartDiscovery,
+  }));
+}
+
+export async function persistClearMatchingLearning() {
+  return persistSafely(() => clearMatchingLearning());
+}
+
 export async function persistChatSettings(matchId: string, settings: CoupleChatSettings) {
   if (!isBackendUuid(matchId)) return { saved: false, reason: 'preview_id' } satisfies PersistenceResult;
   return persistSafely(() => saveChatSettings(matchId, settings));
 }
 
-export async function persistLiveLocationShare(matchId: string, location: NonNullable<ChatMessage['location']>) {
+export async function persistLiveLocationShare(matchId: string, location: NonNullable<ChatMessage['location']>, clientActionId: string) {
   if (!isBackendUuid(matchId)) return { saved: false, reason: 'preview_id' } satisfies PersistenceResult;
   const expiresAt = location.expiresAt;
   if (!expiresAt) return { saved: false, reason: 'demo' } satisfies PersistenceResult;
+  const durationMinutes = Math.max(5, Math.min(60, Math.ceil((expiresAt - Date.now()) / 60000)));
   return persistSafely(() => createLiveLocationShare({
     matchId,
+    clientActionId,
     latitude: location.latitude,
     longitude: location.longitude,
     accuracyM: location.accuracy ?? null,
-    expiresAt: new Date(expiresAt).toISOString(),
+    durationMinutes,
   }));
 }

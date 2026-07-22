@@ -52,6 +52,7 @@ export type MessageRow = {
   id: string;
   match_id: string;
   sender_id: string;
+  client_message_id: string | null;
   kind: 'text' | 'image' | 'gif' | 'gift' | 'date' | 'snap' | 'sticker' | 'voice' | 'location';
   body: string | null;
   media_path: string | null;
@@ -121,13 +122,49 @@ export type Database = {
         updated_at: string;
       }>;
       gift_order_events: Table<{ id: string; gift_order_id: string; status: GiftOrderStatus; title: string; body: string | null; provider_payload: Json; created_at: string }>;
-      date_proposals: Table<{ id: string; match_id: string; proposer_id: string; venue_name: string; area_label: string; proposed_at: string; status: 'pending' | 'accepted' | 'declined' | 'countered'; safety_check_in: boolean; created_at: string }>;
+      date_proposals: Table<{ id: string; match_id: string; proposer_id: string; venue_name: string; area_label: string; proposed_at: string; status: 'pending' | 'accepted' | 'declined' | 'countered' | 'completed'; safety_check_in: boolean; responded_by: string | null; responded_at: string | null; completed_at: string | null; created_at: string }>;
+      relationship_reflections: Table<{ id: string; date_proposal_id: string; user_id: string; choice: 'continue' | 'pause' | 'close'; use_for_matching: boolean; created_at: string; updated_at: string }, { date_proposal_id: string; user_id: string; choice: 'continue' | 'pause' | 'close'; use_for_matching?: boolean; updated_at?: string }>;
+      relationship_learning_signals: Table<{ id: string; user_id: string; source_reflection_id: string; signal: 'positive' | 'neutral' | 'negative'; active: boolean; created_at: string; updated_at: string }>;
+      relationship_reminders: Table<{ id: string; date_proposal_id: string; user_id: string; enabled: boolean; reminder_at: string; delivered_at: string | null; created_at: string; updated_at: string }>;
+      relationship_journey_events: Table<{ id: string; user_id: string; event_name: 'relationship_path_opened' | 'date_plan_status_changed' | 'private_reflection_saved' | 'relationship_learning_consent_changed' | 'date_reminder_changed'; properties: Json; occurred_at: string }>;
       trusted_vouches: Table<{ id: string; user_id: string; voucher_hash: string; qualities: string[]; status: 'pending' | 'complete' | 'revoked'; created_at: string }>;
-      discovery_signals: Table<{ id: string; user_id: string; target_id: string; signal: 'view' | 'interested' | 'skip'; created_at: string }>;
+      discovery_signals: Table<{ id: string; user_id: string; target_id: string; signal: 'view' | 'interested' | 'skip'; client_action_id: string | null; created_at: string }>;
+      profile_match_attributes: Table<{
+        user_id: string;
+        gender: 'woman' | 'man' | 'nonbinary';
+        family_priority: 'high' | 'balanced' | 'independent';
+        children_intent: 'wants' | 'open' | 'does_not_want';
+        marriage_timeline: '1_2_years' | '2_3_years' | 'later';
+        relocation: 'open' | 'same_city' | 'not_open';
+        languages: string[];
+        updated_at: string;
+      }>;
+      matching_preferences: Table<{
+        user_id: string;
+        looking_for: 'women' | 'men' | 'everyone';
+        min_age: number;
+        max_age: number;
+        cities: string[];
+        intents: PreferenceRow['intent'][];
+        must_have_vibes: string[];
+        family_priority: 'any' | 'high' | 'balanced';
+        children: 'any' | 'wants' | 'open' | 'does_not_want';
+        marriage_timeline: 'any' | '1_2_years' | '2_3_years';
+        relocation: 'any' | 'open' | 'same_city';
+        distance_preference: 'anywhere' | 'selected_cities' | 'same_state' | 'open_to_relocate';
+        smart_discovery: boolean;
+        updated_at: string;
+      }>;
+      matching_model_versions: Table<{ version: string; status: 'active' | 'retired'; weights: Json; notes: string | null; activated_at: string | null; created_at: string }>;
+      daily_match_recommendations: Table<{ id: string; user_id: string; target_id: string; match_id: string; recommendation_day: string; rank: number; label: MatchRow['label']; reasons: string[]; model_version: string; score_internal: number; created_at: string }>;
+      match_feedback: Table<{ id: string; user_id: string; match_id: string; feedback: 'promising' | 'not_aligned' | 'met_in_person'; use_for_matching: boolean; client_action_id: string; created_at: string; updated_at: string }>;
+      matching_model_events: Table<{ id: string; model_version: string; action: 'activated' | 'quality_snapshot' | 'rollback'; actor_id: string | null; metrics: Json; created_at: string }>;
+      matching_model_guardrails: Table<{ model_version: string; minimum_recommendations: number; minimum_conversation_rate: number; minimum_date_acceptance_rate: number; maximum_report_rate: number; maximum_exposure_gap: number; created_at: string; updated_at: string }>;
       subscriptions: Table<{ user_id: string; plan: 'free' | 'plus'; status: string; provider: string | null; provider_customer_id: string | null; expires_at: string | null; updated_at: string }>;
       coin_ledger: Table<{ id: string; user_id: string; amount: number; reason: string; reference_id: string | null; created_at: string }>;
       blocks: Table<{ blocker_id: string; blocked_id: string; created_at: string }>;
-      reports: Table<{ id: string; reporter_id: string; reported_id: string; reason: string; details: string | null; status: 'open' | 'reviewing' | 'resolved'; created_at: string }>;
+      reports: Table<{ id: string; reporter_id: string; reported_id: string; reason: string; details: string | null; client_action_id: string | null; severity: 'normal' | 'high' | 'critical'; triage_due_at: string | null; status: 'open' | 'reviewing' | 'resolved'; created_at: string }>;
+      safety_action_events: Table<{ id: string; actor_id: string; target_id: string | null; match_id: string | null; report_id: string | null; action: 'report_submitted' | 'member_blocked' | 'match_unmatched' | 'live_location_started'; client_action_id: string; metadata: Json; created_at: string }>;
       safety_checkins: Table<{ id: string; user_id: string; date_proposal_id: string; status: 'scheduled' | 'safe' | 'needs_help'; checked_in_at: string | null; created_at: string }>;
       deletion_requests: Table<{ id: string; user_id: string; status: 'requested' | 'processing' | 'complete' | 'rejected'; requested_at: string; completed_at: string | null }>;
       privacy_settings: Table<{
@@ -137,8 +174,9 @@ export type Database = {
         profile_view_notifications: boolean;
         private_mode: boolean;
         profile_view_threshold_seconds: number;
+        analytics_consent: boolean;
         updated_at: string;
-      }, { user_id: string } & Partial<{ last_seen_visible: boolean; online_status_visible: boolean; profile_view_notifications: boolean; private_mode: boolean; profile_view_threshold_seconds: number; updated_at: string }>>;
+      }, { user_id: string } & Partial<{ last_seen_visible: boolean; online_status_visible: boolean; profile_view_notifications: boolean; private_mode: boolean; profile_view_threshold_seconds: number; analytics_consent: boolean; updated_at: string }>>;
       profile_views: Table<{
         id: string;
         viewer_id: string;
@@ -182,6 +220,7 @@ export type Database = {
         id: string;
         match_id: string;
         sender_id: string;
+        client_action_id: string | null;
         latitude: number;
         longitude: number;
         accuracy_m: number | null;
@@ -199,13 +238,63 @@ export type Database = {
         created_at: string;
         updated_at: string;
       }, { user_id: string; platform: 'ios' | 'android' | 'web'; token: string; device_label?: string | null; revoked_at?: string | null; updated_at?: string }>;
+      city_launch_markets: Table<{
+        city_key: 'nyc' | 'bay_area' | 'dallas' | 'toronto' | 'chicago'; display_name: string; country_code: 'US' | 'CA';
+        discovery_state: 'waitlist_only' | 'controlled_pilot' | 'healthy_pilot' | 'open'; verified_active_goal: number;
+        adjacent_market: string | null; updated_at: string;
+      }>;
+      city_waitlist_entries: Table<{
+        id: string; user_id: string; city_key: string; locality: string; region: string; country_code: 'US' | 'CA';
+        source: 'member' | 'referral' | 'ambassador' | 'event'; status: 'waiting' | 'invited' | 'activated' | 'paused' | 'declined';
+        consented_at: string; invited_at: string | null; activated_at: string | null; created_at: string; updated_at: string;
+      }>;
+      city_referral_invites: Table<{
+        id: string; inviter_id: string; city_key: string; invite_code: string;
+        status: 'created' | 'opened' | 'joined' | 'verified' | 'expired' | 'revoked';
+        reward_status: 'locked' | 'eligible' | 'granted' | 'reversed'; expires_at: string; created_at: string; redeemed_by: string | null;
+      }>;
+      city_ambassador_applications: Table<{
+        id: string; user_id: string; city_key: string; community_reach: string; hosting_experience: string; safety_commitment: boolean;
+        status: 'submitted' | 'interview' | 'approved' | 'declined' | 'paused'; reviewer_id: string | null; reviewer_note: string | null;
+        created_at: string; updated_at: string;
+      }>;
     };
     Views: Record<never, never>;
     Functions: {
       daily_matches: {
         Args: { result_limit?: number };
-        Returns: Array<{ profile_id: string; match_id: string; match_label: string }>;
+        Returns: Array<{
+          profile_id: string;
+          match_id: string;
+          first_name: string;
+          age: number;
+          city: string;
+          profession: string;
+          bio: string | null;
+          verified: boolean;
+          gender: 'woman' | 'man' | 'nonbinary';
+          intent: PreferenceRow['intent'];
+          vibes: string[];
+          family_priority: 'high' | 'balanced' | 'independent';
+          children_intent: 'wants' | 'open' | 'does_not_want';
+          marriage_timeline: '1_2_years' | '2_3_years' | 'later';
+          relocation: 'open' | 'same_city' | 'not_open';
+          languages: string[];
+          vouch_count: number;
+          photo_paths: string[];
+          match_label: string;
+          reasons: string[];
+          model_version: string;
+        }>;
       };
+      get_matching_pool_status: { Args: Record<string, never>; Returns: Json };
+      activate_matching_model: { Args: { p_version: string; p_metrics?: Json }; Returns: void };
+      record_matching_quality_snapshot: { Args: { p_metrics: Json }; Returns: Json };
+      rollback_matching_model: { Args: { p_version: string; p_reason: string; p_change_ticket: string }; Returns: void };
+      save_matching_preferences: { Args: { p_preferences: Json; p_attributes?: Json }; Returns: Json };
+      submit_match_feedback: { Args: { p_match_id: string; p_feedback: 'promising' | 'not_aligned' | 'met_in_person'; p_use_for_matching: boolean; p_client_action_id: string }; Returns: Json };
+      clear_matching_learning: { Args: Record<string, never>; Returns: void };
+      record_discovery_signal: { Args: { p_target_id: string; p_signal: 'view' | 'interested' | 'skip'; p_client_action_id: string }; Returns: Json };
       current_coin_balance: { Args: Record<string, never>; Returns: number };
       request_account_deletion: { Args: Record<string, never>; Returns: string };
       record_profile_view: { Args: { viewed_user_id: string; duration_seconds?: number; source?: string }; Returns: string | null };
@@ -220,6 +309,87 @@ export type Database = {
           p_proposed_at: string;
           p_safety_check_in?: boolean;
         };
+        Returns: Json;
+      };
+      respond_to_date_proposal: { Args: { p_date_proposal_id: string; p_response: 'accepted' | 'declined' | 'countered' }; Returns: Json };
+      complete_date_proposal: { Args: { p_date_proposal_id: string }; Returns: Json };
+      upsert_relationship_reflection: { Args: { p_date_proposal_id: string; p_choice: 'continue' | 'pause' | 'close'; p_use_for_matching?: boolean }; Returns: Json };
+      set_relationship_reminder: { Args: { p_date_proposal_id: string; p_enabled: boolean }; Returns: Json };
+      record_relationship_journey_event: { Args: { p_event_name: string; p_properties?: Json }; Returns: string | null };
+      process_relationship_reminders: { Args: { p_limit?: number }; Returns: number };
+      get_relationship_journey: { Args: { p_match_id: string }; Returns: Json };
+      get_current_member_bootstrap: { Args: Record<string, never>; Returns: Json };
+      block_member: { Args: { p_blocked_id: string }; Returns: void };
+      submit_member_report: { Args: { p_reported_id: string; p_reason: string; p_details: string | null; p_client_action_id: string }; Returns: Json };
+      unmatch_member: { Args: { p_match_id: string; p_client_action_id: string }; Returns: Json };
+      start_live_location_share: {
+        Args: {
+          p_match_id: string;
+          p_client_action_id: string;
+          p_latitude: number;
+          p_longitude: number;
+          p_accuracy_m?: number | null;
+          p_duration_minutes?: number;
+        };
+        Returns: Json;
+      };
+      save_current_member_profile: {
+        Args: {
+          p_profile: Json;
+          p_preferences: Json;
+          p_photo_paths?: string[] | null;
+        };
+        Returns: Json;
+      };
+      send_match_message: {
+        Args: {
+          p_match_id: string;
+          p_client_message_id: string;
+          p_kind: MessageRow['kind'];
+          p_body?: string | null;
+          p_media_path?: string | null;
+          p_metadata?: Json;
+        };
+        Returns: Json;
+      };
+      join_city_waitlist: {
+        Args: { p_city_key: string; p_locality: string; p_region: string; p_country_code: 'US' | 'CA'; p_source?: 'member' | 'referral' | 'ambassador' | 'event' };
+        Returns: Json;
+      };
+      create_city_referral: { Args: { p_city_key: string }; Returns: Json };
+      apply_city_ambassador: {
+        Args: { p_city_key: string; p_community_reach: string; p_hosting_experience: string; p_safety_commitment: boolean };
+        Returns: Json;
+      };
+      record_growth_event: {
+        Args: { p_event_id: string; p_session_id: string; p_event_name: string; p_properties?: Json };
+        Returns: boolean;
+      };
+      record_growth_attribution_touch: {
+        Args: { p_touch_id: string; p_channel: string; p_campaign_key?: string | null; p_city_key?: string | null };
+        Returns: boolean;
+      };
+      redeem_growth_referral: {
+        Args: { p_invite_code: string; p_idempotency_key: string };
+        Returns: Json;
+      };
+      assign_growth_experiment: { Args: { p_experiment_key: string }; Returns: Json };
+      get_current_entitlements: { Args: Record<string, never>; Returns: Json };
+      restore_store_purchases: { Args: Record<string, never>; Returns: Json };
+      prepare_store_purchase: {
+        Args: { p_product_key: string; p_platform: 'apple_iap' | 'google_play'; p_idempotency_key: string };
+        Returns: Json;
+      };
+      consume_billing_entitlement: {
+        Args: { p_entitlement_key: string; p_units: number; p_idempotency_key: string };
+        Returns: Json;
+      };
+      send_golden_spark: {
+        Args: { p_recipient_id: string; p_note: string; p_idempotency_key: string };
+        Returns: Json;
+      };
+      request_billing_refund: {
+        Args: { p_receipt_id: string; p_reason: string; p_idempotency_key: string };
         Returns: Json;
       };
     };

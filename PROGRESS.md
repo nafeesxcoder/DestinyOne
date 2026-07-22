@@ -1,6 +1,12 @@
 # DestinyOne — Build Tracker
 
-Current product progress: **100%**
+Current prototype feature coverage: **100%**
+
+Production readiness is **not 100%**. The evidence-based baseline and 10/10
+acceptance gates are tracked in `docs/PRODUCTION_SCORECARD.md`. The prototype
+contains broad UI and domain foundations, while real backend providers, live
+operations, city liquidity, billing, marketplace supply, physical-device QA,
+and launch evidence remain in progress.
 
 - [x] 5% — Expo and TypeScript foundation
 - [x] 10% — Premium design system and reusable UI primitives
@@ -21,8 +27,12 @@ Current product progress: **100%**
 - [x] 85% — Production-ready Supabase schema, typed client, auth adapter, realtime and billing data contracts
 - [x] 90% — Reporting, blocking, unmatching, Safety Center, check-ins, privacy, and account deletion
 - [x] 95% — Automated tests, accessibility, privacy-safe analytics boundary, and crash recovery
-- [x] 100% — Store assets, EAS build profiles, release package, and mobile launch QA
+- [x] 100% — Mock-MVP feature inventory, store assets, EAS profiles, and release package
 
-The code-complete MVP is now at 100%. The current OTP demo code is `123456`. Public store submission remains gated on production credentials, backend secrets, billing products, legal URLs, and physical-device testing documented in `docs/RELEASE_CHECKLIST.md`.
+The mock/local MVP feature inventory is complete. The current OTP demo code is
+`123456`. Public store submission remains gated on production credentials,
+backend secrets, billing products, legal URLs, operational staffing, real-city
+pilot evidence, and physical-device testing documented in
+`docs/RELEASE_CHECKLIST.md`.
 
-Latest polish: P1 Abuse / Fraud Protection Gate added — romance scam rules, in-chat safety scanner, report/block graph, paid-action abuse limits, account integrity, fraud-provider checks, freeze/evidence/appeal workflows, member education, Admin Audit UI, release readiness connection, tests, and `docs/ABUSE_FRAUD_PROTECTION.md`.
+Latest phase: Growth Engine added — consent-gated funnel events, privacy-safe attribution, guarded deterministic experiments, verified-activation referral rewards, immutable reward ledger, service-only cohort reporting, honest Admin Audit visibility, tests, and `docs/PHASE_8_GROWTH_ENGINE.md`.

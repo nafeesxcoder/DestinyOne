@@ -1,0 +1,2 @@
+-- Keep shared seed data non-sensitive. Database tests create isolated members
+-- inside transactions and roll them back.

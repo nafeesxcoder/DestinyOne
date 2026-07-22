@@ -55,6 +55,7 @@ describe('network effects', () => {
       selectedCities: ['New York, NY'],
       verified: true,
       vouchesCount: 3,
+      invitedVerifiedFriends: 3,
     });
 
     expect(plan.inviteChallenge.complete).toBe(true);

@@ -9,8 +9,8 @@ P1 is the bridge between a polished MVP and a real city-by-city dating business.
    - Pending: live venue provider, reservation provider, hours/ratings/maps, payment/refund webhooks, inventory and staffed support SLAs.
 
 2. **City growth backend**
-   - Current: NYC, Bay Area, Dallas, Toronto and Chicago launch plan exists; Supabase-shaped data model, migrations, realtime hooks and backend launch gate are represented.
-   - Pending: production environment lock, SMS provider, server secrets, backups/monitoring, waitlist/referral tables, city density dashboard and verified invite tracking.
+   - Current: NYC, Bay Area, Dallas, Toronto and Chicago have controlled launch states, private waitlist/referral/ambassador contracts, service-only cohort/liquidity snapshots, and an Admin density gate.
+   - Pending: production environment lock, server deployment, backups/monitoring, consented live metrics, verified invite acquisition and eight weeks of Toronto pilot evidence.
 
 3. **Indian professional events**
    - Current: mixers, video speed dates, premium dinners, alumni/professional group concepts and launch-city capacity targets exist.

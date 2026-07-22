@@ -43,31 +43,14 @@ Use:
 
 ## Step 2 — Store listing copy
 
-Short description, under 80 characters:
+The canonical short description is in `store/release-manifest.json`. The
+current reviewed draft, under 80 characters, is:
 
 ```text
-Intentional dating for Indians in the USA. For something real.
+Intentional South Asian dating in the USA and Canada.
 ```
 
-Full description:
-
-```text
-DestinyOne is a premium relationship app for Indians living in the USA who are looking for something real — serious dating, long-term commitment, and marriage-minded connections.
-
-Meet curated daily matches, share values, plan safer dates, and chat only after mutual interest. DestinyOne is designed to feel intentional, modern, and respectful — not endless swiping.
-
-Highlights:
-• Curated daily matches
-• Serious relationship and marriage intent
-• Verified-member flow
-• Icebreakers before chat
-• Voice intro placeholder
-• Real date planner
-• Safety center with report, block, and unmatch tools
-• Optional premium plan for more daily matches
-
-DestinyOne is for adults. Always meet in public, protect your personal information, and use your own judgment.
-```
+Upload the full description only from `store/full-description.txt`.
 
 Suggested category:
 
@@ -102,6 +85,7 @@ From this project folder:
 
 ```bash
 pnpm release:check
+pnpm store:release:verify
 pnpm dlx eas-cli login
 pnpm dlx eas-cli build --platform android --profile production
 ```

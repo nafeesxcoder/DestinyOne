@@ -41,7 +41,9 @@ Do not mark data as sold. The product intent is not to sell personal data.
 
 - Ads: `No`, unless an ad SDK is added later.
 - App category: `Dating`.
-- Target audience: adults only.
+- Target audience: adults age 18 and older only.
 - In-app purchases: `Yes` once DestinyOne Plus/gift coins are live.
 - User-generated content: `Yes` because profiles, photos, and chat exist.
-- App access instructions: use OTP `123456` for the current demo build.
+- Preview-only app access may use the documented demo OTP. A production
+  submission must use a protected real-backend reviewer account and must never
+  include its credentials or OTP in source files or the app bundle.
