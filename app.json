@@ -1,0 +1,69 @@
+{
+  "expo": {
+    "name": "DestinyOne",
+    "slug": "destinyone",
+    "version": "1.0.0",
+    "description": "Intentional dating for South Asians in the USA and Canada, built for committed relationships and marriage.",
+    "icon": "./assets/icon-red-velvet.png",
+    "scheme": "destinyone",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "primaryColor": "#E5092F",
+    "splash": {
+      "image": "./assets/splash-red-velvet.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#090002"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.destinyone.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.destinyone.app",
+      "versionCode": 1,
+      "allowBackup": false,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-red-velvet.png",
+        "backgroundColor": "#090002"
+      },
+      "blockedPermissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon-red-velvet.png",
+      "name": "DestinyOne",
+      "shortName": "DestinyOne",
+      "themeColor": "#090002",
+      "backgroundColor": "#090002"
+    },
+    "plugins": [
+      ["expo-image-picker", {
+        "photosPermission": "DestinyOne needs photo access so you can build your relationship profile.",
+        "cameraPermission": "DestinyOne uses the camera for profile photos and selfie verification."
+      }],
+      ["expo-audio", {
+        "microphonePermission": "DestinyOne uses the microphone to record your optional voice introduction.",
+        "enableBackgroundPlayback": false,
+        "enableBackgroundRecording": false
+      }],
+      ["expo-location", {
+        "locationWhenInUsePermission": "DestinyOne uses approximate location only when you enable Crossed Paths. Your exact location is never shown to other members.",
+        "locationAlwaysAndWhenInUsePermission": false,
+        "locationAlwaysPermission": false,
+        "isIosBackgroundLocationEnabled": false,
+        "isAndroidBackgroundLocationEnabled": false
+      }],
+      ["@stripe/stripe-react-native", {
+        "merchantIdentifier": "merchant.com.destinyone.app",
+        "enableGooglePay": true
+      }]
+    ]
+  }
+}
