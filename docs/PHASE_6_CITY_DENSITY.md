@@ -84,6 +84,23 @@ enforcement is composed directly into server matching eligibility.
 - TypeScript and the Expo web export must pass before publishing.
 - Local pgTAP execution still requires a Docker-compatible PostgreSQL runtime.
 
+## Weekly operational refresh
+
+`refresh-city-density` is a server-only Edge Function for the weekly city
+measurement. It requires the `CITY_DENSITY_CRON_SECRET` header and uses the
+Supabase service key inside the function; neither is ever exposed to members.
+It records only city-level aggregates through `record_city_density_week`.
+
+The first version measures verified active members, mutual-match reply quality,
+meaningful two-way conversations, accepted dates, safety events, waitlist and
+approved ambassadors. Reciprocal preference cohorts, eligibility medians,
+eight-week retention and event capacity deliberately remain zero until their
+consented data sources are connected. A missing metric is a failed gate, never
+an assumed pass.
+
+Schedule it once each Monday with the current `CITY_DENSITY_CRON_SECRET`, then
+review the resulting evidence before any dual-approved market-state change.
+
 ## What is intentionally not claimed
 
 No city has verified live density yet. Hosted migration deployment, consented

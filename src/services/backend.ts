@@ -628,6 +628,85 @@ export async function fetchRelationshipJourney(matchId: string) {
   return data;
 }
 
+export type RelationshipBlueprintInput = {
+  pace: string;
+  family: string;
+  home: string;
+  future: string;
+};
+
+export async function fetchRelationshipBlueprint() {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const userId = await requireCurrentUserId();
+  const { data, error } = await supabase.from('relationship_blueprints').select().eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function saveRelationshipBlueprint(input: RelationshipBlueprintInput) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('save_relationship_blueprint', {
+    p_relationship_pace: input.pace,
+    p_family_connection: input.family,
+    p_future_home: input.home,
+    p_future_planning: input.future,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchCommunityRooms(city: string) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured || !city.trim()) return null;
+  const { data, error } = await supabase
+    .from('community_rooms')
+    .select()
+    .ilike('city', city.trim())
+    .order('starts_at', { ascending: true })
+    .limit(30);
+  if (error) throw error;
+  return data;
+}
+
+export async function joinCommunityRoom(roomId: string) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('join_community_room', { p_room_id: roomId });
+  if (error) throw error;
+  return data as { room_id: string; status: 'confirmed' | 'waitlisted'; idempotent: boolean };
+}
+
+export async function leaveCommunityRoom(roomId: string) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('leave_community_room', { p_room_id: roomId });
+  if (error) throw error;
+  return data;
+}
+
+export async function createDateSafetyPlan(input: { matchId?: string; checkInEnabled: boolean; checkInAt?: string; trustedContactLabel?: string }) {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('create_date_safety_plan', {
+    p_match_id: input.matchId ?? null,
+    p_check_in_enabled: input.checkInEnabled,
+    p_check_in_at: input.checkInAt ?? null,
+    p_trusted_contact_label: input.trustedContactLabel?.trim() || null,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function updateDateSafetyPlanStatus(planId: string, status: 'checked_in' | 'needs_help' | 'cancelled') {
+  ensureBackendConfigured();
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase.rpc('update_date_safety_plan_status', { p_plan_id: planId, p_status: status });
+  if (error) throw error;
+  return data;
+}
+
 export function subscribeToMessages(matchId: string, onMessage: (payload: unknown) => void): RealtimeChannel | null {
   if (!isSupabaseConfigured) return null;
   return supabase.channel(`match:${matchId}`).on(

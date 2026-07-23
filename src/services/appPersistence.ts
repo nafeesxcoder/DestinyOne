@@ -17,6 +17,8 @@ import {
   saveMatchingPreferences,
   saveChatSettings,
   saveRelationshipReflection,
+  saveRelationshipBlueprint,
+  createDateSafetyPlan,
   setRelationshipReminder,
   sendCurrentUserMessage,
   subscribeToChatMessages,
@@ -85,6 +87,15 @@ export async function persistRelationshipReminder(proposalId: string | undefined
 export async function persistRelationshipJourneyEvent(eventName: RelationshipJourneyEventName, properties: Record<string,unknown>) {
   const sanitized=sanitizeRelationshipJourneyProperties(properties) as Record<string,string|boolean>;
   return persistSafely(() => recordRelationshipJourneyEvent(eventName, sanitized));
+}
+
+export async function persistRelationshipBlueprint(input: { pace: string; family: string; home: string; future: string }) {
+  return persistSafely(() => saveRelationshipBlueprint(input));
+}
+
+export async function persistDateSafetyPlan(input: { matchId?: string; checkInEnabled: boolean; checkInAt?: string; trustedContactLabel?: string }) {
+  if (input.matchId && !isBackendUuid(input.matchId)) return { saved: false, reason: 'preview_id' } satisfies PersistenceResult;
+  return persistSafely(() => createDateSafetyPlan(input));
 }
 
 export async function fetchPersistedRelationshipJourney(matchId: string) {

@@ -130,6 +130,22 @@ export type Database = {
       relationship_learning_signals: Table<{ id: string; user_id: string; source_reflection_id: string; signal: 'positive' | 'neutral' | 'negative'; active: boolean; created_at: string; updated_at: string }>;
       relationship_reminders: Table<{ id: string; date_proposal_id: string; user_id: string; enabled: boolean; reminder_at: string; delivered_at: string | null; created_at: string; updated_at: string }>;
       relationship_journey_events: Table<{ id: string; user_id: string; event_name: 'relationship_path_opened' | 'date_plan_status_changed' | 'private_reflection_saved' | 'relationship_learning_consent_changed' | 'date_reminder_changed'; properties: Json; occurred_at: string }>;
+      relationship_blueprints: Table<{
+        user_id: string; relationship_pace: string | null; family_connection: string | null;
+        future_home: string | null; future_planning: string | null; updated_at: string;
+      }, { user_id: string } & Partial<{ relationship_pace: string | null; family_connection: string | null; future_home: string | null; future_planning: string | null }>>;
+      community_rooms: Table<{
+        id: string; city: string; category: 'For you' | 'Professional' | 'Culture' | 'New here'; title: string;
+        description: string; public_venue_label: string | null; starts_at: string; capacity: number; verified_only: boolean;
+        status: 'draft' | 'scheduled' | 'cancelled' | 'completed'; host_id: string | null; created_at: string; updated_at: string;
+      }>;
+      community_room_memberships: Table<{ room_id: string; user_id: string; status: 'confirmed' | 'waitlisted' | 'cancelled'; joined_at: string; updated_at: string }>;
+      community_room_messages: Table<{ id: string; room_id: string; sender_id: string; body: string; created_at: string }, { room_id: string; sender_id: string; body: string }>;
+      date_safety_plans: Table<{
+        id: string; user_id: string; match_id: string | null; check_in_enabled: boolean; check_in_at: string | null;
+        trusted_contact_label: string | null; status: 'planned' | 'checked_in' | 'needs_help' | 'cancelled'; created_at: string; updated_at: string;
+      }>;
+      date_safety_plan_events: Table<{ id: string; plan_id: string; actor_id: string; event_type: 'plan_created' | 'check_in_confirmed' | 'help_requested' | 'plan_cancelled'; created_at: string }>;
       trusted_vouches: Table<{ id: string; user_id: string; voucher_hash: string; qualities: string[]; status: 'pending' | 'complete' | 'revoked'; created_at: string }>;
       discovery_signals: Table<{ id: string; user_id: string; target_id: string; signal: 'view' | 'interested' | 'skip'; client_action_id: string | null; created_at: string }>;
       profile_match_attributes: Table<{
@@ -522,6 +538,17 @@ export type Database = {
         Args: { p_receipt_id: string; p_reason: string; p_idempotency_key: string };
         Returns: Json;
       };
+      save_relationship_blueprint: {
+        Args: { p_relationship_pace: string; p_family_connection: string; p_future_home: string; p_future_planning: string };
+        Returns: Json;
+      };
+      join_community_room: { Args: { p_room_id: string }; Returns: Json };
+      leave_community_room: { Args: { p_room_id: string }; Returns: Json };
+      create_date_safety_plan: {
+        Args: { p_match_id: string | null; p_check_in_enabled: boolean; p_check_in_at: string | null; p_trusted_contact_label: string | null };
+        Returns: Json;
+      };
+      update_date_safety_plan_status: { Args: { p_plan_id: string; p_status: string }; Returns: Json };
       save_couple_mode_profile: { Args: { p_first_name: string; p_birth_date: string; p_city: string; p_profession: string }; Returns: void };
       set_couple_mode_enabled: { Args: { p_enabled: boolean }; Returns: void };
       search_couple_partner_by_phone: { Args: { p_phone_e164: string; p_client_request_id: string }; Returns: Json };

@@ -391,6 +391,12 @@ verify_jwt = true
 [functions.create-date-reservation-intent]
 verify_jwt = true
 
+[functions.search-places]
+verify_jwt = true
+
+[functions.refresh-city-density]
+verify_jwt = false
+
 [functions.relationship-reminders]
 # Scheduled worker authentication is enforced by x-cron-secret inside the
 # function, not by a member JWT.

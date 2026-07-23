@@ -6,8 +6,8 @@
 // Keep release credentials in local/EAS/Sites environment configuration. These
 // source defaults intentionally stay empty so a production build cannot appear
 // configured by inheriting a development project.
-export const configuredSupabaseUrl = '';
-export const configuredSupabaseAnonKey = '';
+export const configuredSupabaseUrl = 'https://rocjpnqexdtcgsbyqcis.supabase.co';
+export const configuredSupabaseAnonKey = 'sb_publishable_ITDDvRvXmGDtSRTdbZd4dQ_E0vwvw1D';
 
 export const configuredAppEnvironment = 'development';
 export const configuredRequiresRealBackend = false;

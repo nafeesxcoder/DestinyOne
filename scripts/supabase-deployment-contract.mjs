@@ -1,6 +1,6 @@
 export const deploymentContract = {
-  id: 'destinyone-backend-v31',
-  schemaVersion: 31,
+  id: 'destinyone-backend-v32',
+  schemaVersion: 32,
   tables: [
     'profiles',
     'user_preferences',
@@ -99,6 +99,12 @@ export const deploymentContract = {
     'billing_reconciliation_cases',
     'billing_finance_ingestion_runs',
     'referral_base_passes',
+    'relationship_blueprints',
+    'community_rooms',
+    'community_room_memberships',
+    'community_room_messages',
+    'date_safety_plans',
+    'date_safety_plan_events',
   ],
   rpcs: [
     'daily_matches',
@@ -182,5 +188,10 @@ export const deploymentContract = {
     'mark_match_messages_seen',
     'record_chat_screenshot',
     'get_backend_deployment_manifest',
+    'save_relationship_blueprint',
+    'join_community_room',
+    'leave_community_room',
+    'create_date_safety_plan',
+    'update_date_safety_plan_status',
   ],
 };
