@@ -534,7 +534,7 @@ function DestinyOneApp() {
     {screen==='vibes'&&<Vibes value={vibeList} onChange={setVibeList} onNext={()=>setScreen('intent')}/>}
     {screen==='intent'&&<Intent value={intent} onChange={setIntent} onNext={()=>setScreen('alignment')}/>}
     {screen==='alignment'&&<Alignment value={alignment} onChange={setAlignment} onNext={completeOnboarding}/>}
-    {screen==='home'&&<HomeClean profile={profileDraft} items={visibleMatches} matchLoadState={matchLoadState} matchingPoolStatus={matchingPoolStatus} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={setScreen}/>} 
+    {screen==='home'&&<HomeClean profile={profileDraft} items={visibleMatches} matchLoadState={matchLoadState} matchingPoolStatus={matchingPoolStatus} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} alignment={alignment} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={setScreen}/>}
     {screen==='explore'&&<ExploreHub navigate={setScreen}/>}
     {screen==='circle'&&<TrustedCircle vouches={vouches} coinBalance={coinBalance} rewardMode={vouchRewardsMode} onBack={()=>setScreen('explore')} onAddVouch={(quality)=>{if(vouchRewardsMode==='demo'&&vouches.length<3&&!vouches.includes(quality)){setVouches(current=>[...current,quality]);setCoinBalance(balance=>balance+100)}}}/>}
     {screen==='discovery'&&<DiscoveryCenter filters={matchFilters} onFiltersChange={updateMatchFilters} signals={discoverySignals} smartDiscovery={smartDiscovery} crossedPaths={crossedPaths} onSmartChange={updateSmartDiscovery} onCrossedChange={setCrossedPaths} onClear={clearMatchingActivity} onBack={()=>setScreen('explore')}/>}
@@ -907,9 +907,10 @@ function Alignment({value,onChange,onNext}:{value:Record<string,string>;onChange
   </FormPage>
 }
 
-function HomeClean({profile,items,matchLoadState,matchingPoolStatus,onRetryMatches,preferences,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{profile:ProfileDraft;items:Match[];matchLoadState:MemberMatchLoadState;matchingPoolStatus:MatchingPoolStatus|null;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
+function HomeClean({profile,items,matchLoadState,matchingPoolStatus,onRetryMatches,preferences,alignment,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{profile:ProfileDraft;items:Match[];matchLoadState:MemberMatchLoadState;matchingPoolStatus:MatchingPoolStatus|null;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};alignment:Record<string,string>;signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
   const {width}=useWindowDimensions();
   const [notificationsOpen,setNotificationsOpen]=useState(false);
+  const [passportOpen,setPassportOpen]=useState(false);
   const useMatchGrid=width>=900;
   const compactHome=width<430;
   const featured=items[0];
@@ -962,7 +963,22 @@ function HomeClean({profile,items,matchLoadState,matchingPoolStatus,onRetryMatch
         {featuredFaces.length>0&&<View accessibilityLabel="Today's curated member previews" style={homeCleanStyles.faceStack}>{featuredFaces.map((match,index)=><Image key={match.id} source={{uri:match.photo}} style={[homeCleanStyles.face,{marginLeft:index===0?0:-11,zIndex:featuredFaces.length-index}]}/>)}</View>}
       </View>
 
-      {crossedPaths&&<Pressable onPress={()=>navigate('discovery')} style={homeCleanStyles.crossedMini}>
+	      <Pressable accessibilityRole="button" accessibilityLabel="Open your Intent Passport" onPress={()=>setPassportOpen(true)} style={homeCleanStyles.intentPassport}>
+	        <LinearGradient colors={['#FFFDFB','#FBECEF','#FFF6E5']} style={StyleSheet.absoluteFill}/>
+	        <View style={homeCleanStyles.passportHeader}>
+	          <View style={homeCleanStyles.passportBrand}><PremiumIcon name="finger-print" tone="gold" size={42} iconSize={19}/><View><Text style={homeCleanStyles.passportEyebrow}>MY INTENT PASSPORT</Text><Text style={homeCleanStyles.passportTitle}>What you are building</Text></View></View>
+	          <View style={homeCleanStyles.passportEdit}><Ionicons name="create-outline" size={14} color="#8C1738"/><Text style={homeCleanStyles.passportEditText}>Edit</Text></View>
+	        </View>
+	        <View style={homeCleanStyles.passportGrid}>
+	          <View style={homeCleanStyles.passportItem}><Text style={homeCleanStyles.passportLabel}>COMMITMENT</Text><Text numberOfLines={2} style={homeCleanStyles.passportValue}>{preferences.intent||'Set your intention'}</Text></View>
+	          <View style={homeCleanStyles.passportItem}><Text style={homeCleanStyles.passportLabel}>MARRIAGE PACE</Text><Text numberOfLines={2} style={homeCleanStyles.passportValue}>{alignment.timeline||'Set your pace'}</Text></View>
+	          <View style={homeCleanStyles.passportItem}><Text style={homeCleanStyles.passportLabel}>FAMILY PLAN</Text><Text numberOfLines={2} style={homeCleanStyles.passportValue}>{alignment.children||'Set family plans'}</Text></View>
+	          <View style={homeCleanStyles.passportItem}><Text style={homeCleanStyles.passportLabel}>LIFESTYLE</Text><Text numberOfLines={2} style={homeCleanStyles.passportValue}>{preferences.vibes.slice(0,2).join(' · ')||'Add your vibes'}</Text></View>
+	        </View>
+	        <Text style={homeCleanStyles.passportFootnote}>Your private guide for better introductions. It is never a public compatibility score.</Text>
+	      </Pressable>
+
+	      {crossedPaths&&<Pressable onPress={()=>navigate('discovery')} style={homeCleanStyles.crossedMini}>
         <MiniPremiumIcon name="location" tone="gold" size={32} iconSize={15}/>
         <Text style={homeCleanStyles.crossedText}>Crossed paths is on — nearby profiles are included privately.</Text>
         <MiniPremiumIcon name="chevron-forward" tone="dark" size={28} iconSize={13}/>
@@ -991,6 +1007,7 @@ function HomeClean({profile,items,matchLoadState,matchingPoolStatus,onRetryMatch
     </ScrollView>
     <BottomNav active="home" navigate={navigate}/>
     <HomeNotifications visible={notificationsOpen} onClose={()=>setNotificationsOpen(false)} onOpenMatches={()=>{setNotificationsOpen(false);}} />
+    <IntentPassportSheet visible={passportOpen} commitment={preferences.intent} timeline={alignment.timeline} childrenPlan={alignment.children} familyStyle={alignment.family} relocation={alignment.relocation} lifestyle={preferences.vibes} onClose={()=>setPassportOpen(false)} onEdit={()=>{setPassportOpen(false);navigate('discovery')}}/>
   </SafeAreaView></LinearGradient>
 }
 
@@ -1007,6 +1024,27 @@ function HomeNotifications({visible,onClose,onOpenMatches}:{visible:boolean;onCl
       <Text style={homeCleanStyles.notificationIntro}>Small updates that help your next connection feel intentional.</Text>
       <View style={homeCleanStyles.notificationList}>{updates.map(update=><View key={update.title} style={homeCleanStyles.notificationRow}><MiniPremiumIcon name={update.icon} tone={update.tone} size={36} iconSize={17}/><View style={{flex:1}}><Text style={homeCleanStyles.notificationRowTitle}>{update.title}</Text><Text style={homeCleanStyles.notificationRowBody}>{update.body}</Text></View><Text style={homeCleanStyles.notificationTime}>{update.time}</Text></View>)}</View>
       <Button label="See today's picks" icon="heart" onPress={onOpenMatches}/>
+    </SafeAreaView>
+  </Modal>
+}
+
+function IntentPassportSheet({visible,commitment,timeline,childrenPlan,familyStyle,relocation,lifestyle,onClose,onEdit}:{visible:boolean;commitment:string;timeline?:string;childrenPlan?:string;familyStyle?:string;relocation?:string;lifestyle:string[];onClose:()=>void;onEdit:()=>void}){
+  const details=[
+    {label:'Commitment',value:commitment||'Set your intention'},
+    {label:'Marriage pace',value:timeline||'Set your pace'},
+    {label:'Family plan',value:childrenPlan||'Set family plans'},
+    {label:'Family involvement',value:familyStyle||'Set your preference'},
+    {label:'Relocation',value:relocation||'Set your preference'},
+    {label:'Lifestyle',value:lifestyle.slice(0,3).join(' · ')||'Add your vibes'},
+  ];
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Pressable style={homeCleanStyles.notificationBackdrop} onPress={onClose}/>
+    <SafeAreaView style={[homeCleanStyles.notificationSheet,homeCleanStyles.passportSheet]}>
+      <View style={homeCleanStyles.notificationHeader}><View><Text style={styles.sectionLabel}>MY INTENT PASSPORT</Text><Text style={homeCleanStyles.notificationTitle}>Your relationship blueprint</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Close Intent Passport" onPress={onClose} style={homeCleanStyles.notificationClose}><PremiumIcon name="close" tone="dark" size={34} iconSize={16}/></Pressable></View>
+      <View style={homeCleanStyles.passportSheetHero}><PremiumIcon name="finger-print" tone="gold" size={48} iconSize={22}/><View style={{flex:1}}><Text style={homeCleanStyles.passportSheetHeroTitle}>Built around what matters to you.</Text><Text style={homeCleanStyles.passportSheetHeroBody}>These choices guide your introductions before the first conversation.</Text></View></View>
+      <View style={homeCleanStyles.passportSheetGrid}>{details.map(detail=><View key={detail.label} style={homeCleanStyles.passportSheetItem}><Text style={homeCleanStyles.passportLabel}>{detail.label.toUpperCase()}</Text><Text style={homeCleanStyles.passportSheetValue}>{detail.value}</Text></View>)}</View>
+      <Text style={homeCleanStyles.passportSheetNote}>Only you can see this full passport. Members see only the details you decide to share.</Text>
+      <Button label="Adjust match preferences" icon="options-outline" onPress={onEdit}/>
     </SafeAreaView>
   </Modal>
 }
@@ -4780,6 +4818,18 @@ const homeCleanStyles=StyleSheet.create({
   heroNoteText:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#755817'},
   faceStack:{width:58,height:44,flexDirection:'row',alignItems:'center',justifyContent:'flex-end',zIndex:1},
   face:{width:36,height:36,borderRadius:18,borderWidth:2,borderColor:'#FFFDFC',backgroundColor:'#E6C2C9'},
+  intentPassport:{minHeight:178,padding:14,borderRadius:22,overflow:'hidden',borderWidth:1,borderColor:'#E9D4CA',backgroundColor:'#FFFDFC',gap:11,shadowColor:'#8B6370',shadowOpacity:.1,shadowRadius:15,elevation:2},
+  passportHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10},
+  passportBrand:{flex:1,flexDirection:'row',alignItems:'center',gap:9},
+  passportEyebrow:{fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:1.15,color:'#B14A69'},
+  passportTitle:{fontFamily:'Poppins_700Bold',fontSize:14,lineHeight:18,color:'#2A151C',marginTop:1},
+  passportEdit:{height:30,paddingHorizontal:10,borderRadius:15,flexDirection:'row',alignItems:'center',gap:4,backgroundColor:'#FFF9F6',borderWidth:1,borderColor:'#E6CDBF'},
+  passportEditText:{fontFamily:'Poppins_700Bold',fontSize:9,color:'#8C1738'},
+  passportGrid:{flexDirection:'row',flexWrap:'wrap',gap:7},
+  passportItem:{flexGrow:1,flexBasis:'47%',minHeight:52,padding:8,borderRadius:14,backgroundColor:'rgba(255,255,255,.72)',borderWidth:1,borderColor:'#EDDCD4'},
+  passportLabel:{fontFamily:'Poppins_700Bold',fontSize:7.1,letterSpacing:.72,color:'#A66E1D'},
+  passportValue:{fontFamily:'Poppins_700Bold',fontSize:9.2,lineHeight:13,color:'#3A2028',marginTop:3},
+  passportFootnote:{fontFamily:'Poppins_400Regular',fontSize:8.5,lineHeight:12,color:'#806D73'},
   chipWrap:{flexDirection:'row',flexWrap:'wrap',gap:6},
   cleanChip:{maxWidth:'100%',paddingHorizontal:9,paddingVertical:5,borderRadius:14,backgroundColor:'#FFF9F3',borderWidth:1,borderColor:'#E5D2C8'},
   cleanChipText:{fontFamily:'Poppins_600SemiBold',fontSize:9.2,color:colors.ivory},
@@ -4818,6 +4868,14 @@ const homeCleanStyles=StyleSheet.create({
   notificationRowTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,lineHeight:16,color:'#2A151C'},
   notificationRowBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:13,color:'#78666C',marginTop:1},
   notificationTime:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#A3838A',alignSelf:'flex-start'},
+  passportSheet:{gap:12},
+  passportSheetHero:{padding:12,borderRadius:18,backgroundColor:'#FFF5E7',borderWidth:1,borderColor:'#E9D3AD',flexDirection:'row',alignItems:'center',gap:10},
+  passportSheetHeroTitle:{fontFamily:'Poppins_700Bold',fontSize:13.5,lineHeight:18,color:'#2A151C'},
+  passportSheetHeroBody:{fontFamily:'Poppins_400Regular',fontSize:9.8,lineHeight:14,color:'#78666C',marginTop:2},
+  passportSheetGrid:{flexDirection:'row',flexWrap:'wrap',gap:8},
+  passportSheetItem:{flexGrow:1,flexBasis:'47%',minHeight:65,padding:10,borderRadius:15,backgroundColor:'#FFF9F7',borderWidth:1,borderColor:'#EBDCD5'},
+  passportSheetValue:{fontFamily:'Poppins_700Bold',fontSize:10.5,lineHeight:14.5,color:'#382129',marginTop:4},
+  passportSheetNote:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:'#78666C',textAlign:'center'},
 });
 
 const growthLoopStyles=StyleSheet.create({
