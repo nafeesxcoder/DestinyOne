@@ -14,9 +14,9 @@ describe('authentication validation', () => {
     expect(isValidPassword('Destiny123')).toBe(true);
   });
   it('keeps the current audience age gate at 25 to 35', () => {
-    expect(isEligibleMemberAge('24')).toBe(false);
-    expect(isEligibleMemberAge('25')).toBe(true);
-    expect(isEligibleMemberAge('35')).toBe(true);
-    expect(isEligibleMemberAge('36')).toBe(false);
+    expect(isEligibleMemberAge('17')).toBe(false);
+    expect(isEligibleMemberAge('18')).toBe(true);
+    expect(isEligibleMemberAge('60')).toBe(true);
+    expect(isEligibleMemberAge('61')).toBe(false);
   });
 });

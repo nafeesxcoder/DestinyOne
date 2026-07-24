@@ -179,7 +179,7 @@ export const initialPersistedState: PersistedAppState = {
   verified: false,
   profileDraft: initialProfileDraft,
   vibes: [],
-  intent: 'Long-term, leading to Marriage',
+  intent: '',
   alignment: {},
   chats: {},
   coinBalance: 500,

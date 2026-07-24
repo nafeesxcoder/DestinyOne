@@ -69,6 +69,13 @@ function getPreviewScreen():Screen|undefined{
   return requested&&previewScreens.includes(requested)?requested:undefined;
 }
 
+const onboardingPreviewScreens: Screen[] = ['welcome','auth','otp','verify','profileSetup','vibes','intent','alignment'];
+
+function isFreshOnboardingPreview() {
+  const preview = getPreviewScreen();
+  return preview !== undefined && onboardingPreviewScreens.includes(preview);
+}
+
 type RoseAvailability = { freeAvailable: boolean; paidCredits: number };
 type RosePopupPayload = { match: Match; note: string; paid: boolean };
 type AppNotice = { title: string; body: string; icon: keyof typeof Ionicons.glyphMap; tone?: PremiumIconTone; actionLabel?: string; actionScreen?: Screen };
@@ -120,7 +127,7 @@ function DestinyOneApp() {
   const [selected,setSelected] = useState<Match>(matches[0]!);
   const [datePlanPreset,setDatePlanPreset] = useState<PlaceItem|null>(null);
   const [vibeList,setVibeList] = useState<string[]>([]);
-  const [intent,setIntent] = useState('Long-term, leading to Marriage');
+  const [intent,setIntent] = useState('');
   const [alignment,setAlignment] = useState<Record<string,string>>({});
   const [verified,setVerified] = useState(false);
   const [authDestination,setAuthDestination] = useState('');
@@ -179,34 +186,40 @@ function DestinyOneApp() {
     loadAppState().then(async saved=>{
       if(!active)return;
       let nextScreen:Screen='welcome';
+      const freshOnboardingPreview=isFreshOnboardingPreview();
       if(memberDataRuntime.allowsLocalHydration){
-        setAuthDestination(saved.authDestination);
-        setVerified(saved.verified);
-        setProfileDraft({...initialPersistedState.profileDraft,...saved.profileDraft});
-        setVibeList(saved.vibes);
-        setIntent(saved.intent);
-        setAlignment(saved.alignment);
-        setChatMessages(saved.chats);
-        setCoinBalance(saved.coinBalance);
-        setProfilePhotos(saved.photos);
-        setSelfieUri(saved.selfieUri);
-        setVoiceIntroUri(saved.voiceIntroUri);
-        setVouches(saved.vouches);
-        setDiscoverySignals(saved.discoverySignals);
-        setSmartDiscovery(saved.smartDiscovery);
-        setCrossedPaths(saved.crossedPaths);
-        setBlockedIds(saved.blockedIds);
-        setReports(saved.reports);
-        setSafeCheckIns(saved.safeCheckIns);
-        setMatchFilters({...defaultMatchFilters,...saved.matchFilters});
-        setRoseLedger({...initialPersistedState.roseLedger,...saved.roseLedger});
-        setLastSeenVisible(saved.lastSeenVisible ?? true);
-        setAnalyticsConsent(saved.analyticsConsent ?? false);
-        setChatSettings(saved.chatSettings ?? {});
-        setRelationshipReflections(saved.relationshipReflections ?? {});
-        setRelationshipReminders(saved.relationshipReminders ?? {});
-        nextScreen=saved.onboardingComplete?'home':'welcome';
-        setOnboardingComplete(saved.onboardingComplete);
+        if(!freshOnboardingPreview){
+          setAuthDestination(saved.authDestination);
+          setVerified(saved.verified);
+          setProfileDraft({...initialPersistedState.profileDraft,...saved.profileDraft});
+          setVibeList(saved.vibes);
+          setIntent(saved.intent);
+          setAlignment(saved.alignment);
+          setChatMessages(saved.chats);
+          setCoinBalance(saved.coinBalance);
+          setProfilePhotos(saved.photos);
+          setSelfieUri(saved.selfieUri);
+          setVoiceIntroUri(saved.voiceIntroUri);
+          setVouches(saved.vouches);
+          setDiscoverySignals(saved.discoverySignals);
+          setSmartDiscovery(saved.smartDiscovery);
+          setCrossedPaths(saved.crossedPaths);
+          setBlockedIds(saved.blockedIds);
+          setReports(saved.reports);
+          setSafeCheckIns(saved.safeCheckIns);
+          setMatchFilters({...defaultMatchFilters,...saved.matchFilters});
+          setRoseLedger({...initialPersistedState.roseLedger,...saved.roseLedger});
+          setLastSeenVisible(saved.lastSeenVisible ?? true);
+          setAnalyticsConsent(saved.analyticsConsent ?? false);
+          setChatSettings(saved.chatSettings ?? {});
+          setRelationshipReflections(saved.relationshipReflections ?? {});
+          setRelationshipReminders(saved.relationshipReminders ?? {});
+          nextScreen=saved.onboardingComplete?'home':'welcome';
+          setOnboardingComplete(saved.onboardingComplete);
+        }else{
+          // A shared onboarding preview should never inherit another person's demo profile.
+          setOnboardingComplete(false);
+        }
       }
       if(memberDataRuntime.source==='server'){
         try{
@@ -523,6 +536,7 @@ function DestinyOneApp() {
     setRosePopup({match,note,paid});
   };
   const resetDemo=async()=>{await clearAppState();setVerified(initialPersistedState.verified);setProfileDraft(initialPersistedState.profileDraft);setVibeList(initialPersistedState.vibes);setIntent(initialPersistedState.intent);setAlignment(initialPersistedState.alignment);setChatMessages(initialPersistedState.chats);setChatDrafts({});setCoinBalance(initialPersistedState.coinBalance);setProfilePhotos(initialPersistedState.photos);setSelfieUri('');setVoiceIntroUri('');setVouches([]);setDiscoverySignals([]);setSmartDiscovery(true);setCrossedPaths(false);setBlockedIds([]);setReports([]);setSafeCheckIns([]);setMatchFilters(defaultMatchFilters);setRoseLedger(initialPersistedState.roseLedger);setLastSeenVisible(initialPersistedState.lastSeenVisible);setAnalyticsConsent(initialPersistedState.analyticsConsent);setChatSettings(initialPersistedState.chatSettings);setRelationshipReflections(initialPersistedState.relationshipReflections);setRelationshipReminders(initialPersistedState.relationshipReminders);setRosePopup(null);setAppNotice(null);setDetailSafetyOpen(false);setDismissedIds([]);setProfileViewNotifiedIds([]);setAuthDestination('');setAuthPassword('');setOnboardingComplete(false);setScreen('welcome')};
+  const restartOnboarding=()=>{setVerified(false);setProfileDraft(initialPersistedState.profileDraft);setVibeList([]);setIntent('');setAlignment({});setProfilePhotos([]);setSelfieUri('');setVoiceIntroUri('');setAuthDestination('');setAuthPassword('');setOnboardingComplete(false);setScreen('welcome')};
   const deleteAccount=async()=>{try{await requestAccountDeletion()}finally{await resetDemo()}};
   return <SafeAreaProvider><StatusBar style="light"/><View style={shared.screen}>
     {screen==='splash'&&<Splash/>}
@@ -551,7 +565,7 @@ function DestinyOneApp() {
 	    {screen==='datePlan'&&<DatePlanner match={selected} preset={datePlanPreset} onBack={()=>setScreen('events')} onSend={async(message)=>{const sent=await appendChatMessage(selected,message);if(sent)setScreen('chat');return sent}}/>}
     {screen==='safety'&&<SafetyCenter reports={reports} blockedCount={blockedIds.length} datePlans={Object.values(chatMessages).flat().filter(message=>message.type==='date')} safeCheckIns={safeCheckIns} onCheckIn={recordSafeCheckIn} onDeleteAccount={deleteAccount} onBack={()=>setScreen('profile')}/>}
     {screen==='likes'&&<Likes openPricing={()=>setScreen('pricing')} navigate={setScreen}/>}
-    {screen==='profile'&&<Profile profile={profileDraft} verified={verified} profilePhoto={profilePhotos[0]} hasVoiceIntro={!!voiceIntroUri} lastSeenVisible={lastSeenVisible} analyticsConsent={analyticsConsent} onLastSeenVisibleChange={updateLastSeenPrivacy} onAnalyticsConsentChange={updateAnalyticsPrivacy} navigate={setScreen} onOpenSetup={()=>setScreen('welcome')} onReset={resetDemo}/>}
+    {screen==='profile'&&<Profile profile={profileDraft} verified={verified} profilePhoto={profilePhotos[0]} hasVoiceIntro={!!voiceIntroUri} lastSeenVisible={lastSeenVisible} analyticsConsent={analyticsConsent} onLastSeenVisibleChange={updateLastSeenPrivacy} onAnalyticsConsentChange={updateAnalyticsPrivacy} navigate={setScreen} onOpenSetup={restartOnboarding} onReset={resetDemo}/>}
     {screen==='support'&&<SupportCenter onBack={()=>setScreen('profile')}/>}
     {screen==='pricing'&&<Pricing back={()=>setScreen('profile')} onBuyRoses={(amount=5)=>{setRoseLedger(current=>({...current,paidCredits:current.paidCredits+amount}));setAppNotice({title:'Spark pack added',body:`Preview pack added ${amount} Golden Sparks. Production uses Apple/Google in-app billing and restore purchase.`,icon:'sparkles',tone:'gold'})}}/>}
     <RoseComposer visible={!!roseTarget} recipientName={roseTarget?.name??''} availability={roseAvailability} onClose={()=>setRoseTarget(null)} onSend={(note)=>{if(roseTarget)void sendRose(roseTarget,note);setRoseTarget(null)}}/>
@@ -783,17 +797,24 @@ function ProfileSetup({
   const [mediaError,setMediaError]=useState('');
   const [cityQuery,setCityQuery]=useState(profile.city);
   const [photoPickerIndex,setPhotoPickerIndex]=useState<number|null>(null);
+  const [agePickerOpen,setAgePickerOpen]=useState(false);
   useEffect(()=>setCityQuery(profile.city),[profile.city]);
   const updateProfile=<Key extends keyof ProfileDraft>(key:Key,value:ProfileDraft[Key])=>onProfileChange({...profile,[key]:value});
   const citySuggestions=profileCities.filter(item=>item.toLowerCase().includes(cityQuery.trim().toLowerCase())).slice(0,12);
   const ageEligible=isEligibleMemberAge(profile.age);
   const profileReady=photos.length>=3&&profile.firstName.trim().length>=2&&!!profile.gender&&ageEligible&&!!profile.city&&profile.profession.trim().length>=2;
-  const continueLabel=photos.length<3?'Add 3 photos to continue':!profile.firstName.trim()?'Add your first name':!profile.gender?'Choose how you identify':!ageEligible?'Enter age 25–35':!profile.city?'Select your city':!profile.profession.trim()?'Add your profession':'Continue';
+  const continueLabel=photos.length<3?'Add 3 photos to continue':!profile.firstName.trim()?'Add your first name':!profile.gender?'Choose how you identify':!ageEligible?'Choose an age from 18–60':!profile.city?'Select your city':!profile.profession.trim()?'Add your profession':'Continue';
   const pickPhoto=async(index:number)=>{
     setMediaError('');
     const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
     if(!permission.granted){setMediaError('Photo library permission is needed to add profile photos.');return}
-    const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,aspect:[4,5],quality:.85});
+    const result=await ImagePicker.launchImageLibraryAsync({
+      mediaTypes:['images'],
+      // Browser file inputs do not support Expo's native crop flow reliably.
+      allowsEditing:Platform.OS!=='web',
+      aspect:Platform.OS==='web'?undefined:[4,5],
+      quality:.85,
+    });
     if(!result.canceled&&result.assets[0]){const next=[...photos];next[index]=result.assets[0].uri;onPhotosChange(next.filter(Boolean))}
   };
   const takePhoto=async(index:number)=>{
@@ -814,7 +835,7 @@ function ProfileSetup({
       <View style={{gap:8}}><Text style={shared.label}>I identify as</Text><View style={aiStyles.filterWrap}>{([
         ['woman','Woman'],['man','Man'],['nonbinary','Non-binary'],
       ] as const).map(([value,label])=><FilterChip key={value} label={label} active={profile.gender===value} onPress={()=>updateProfile('gender',value)}/>)}</View><Text style={styles.helper}>Used only for reciprocal matching preferences. This is never a ranking score.</Text></View>
-      <View style={[styles.twoCol,{width:'100%',minWidth:0}]}><View style={{flex:1,minWidth:0}}><Field label="Age" placeholder="29" keyboardType="number-pad" value={profile.age} onChangeText={(text:string)=>updateProfile('age',text.replace(/\D/g,'').slice(0,2))} error={profile.age&&!ageEligible?'DestinyOne is currently for ages 25–35.':''}/></View><View style={{flex:1,minWidth:0}}><Field label="Height" placeholder={'5′ 8″'} value={profile.height} onChangeText={(text:string)=>updateProfile('height',text)}/></View></View>
+      <View style={[styles.twoCol,{width:'100%',minWidth:0}]}><View style={{flex:1,minWidth:0,gap:8}}><Text style={shared.label}>Age</Text><Pressable accessibilityRole="button" accessibilityLabel="Choose your age" onPress={()=>setAgePickerOpen(true)} style={[selectorStyles.searchBox,profile.age&&!ageEligible&&{borderColor:colors.danger}]}><MiniPremiumIcon name="calendar-outline" tone="gold" size={32} iconSize={15}/><Text style={[selectorStyles.searchInput,{paddingHorizontal:0,paddingVertical:0}]}>{profile.age||'Choose age'}</Text><MiniPremiumIcon name="chevron-down" tone="dark" size={26} iconSize={12}/></Pressable>{profile.age&&!ageEligible&&<Text style={styles.formError}>DestinyOne is for adults ages 18–60.</Text>}</View><View style={{flex:1,minWidth:0}}><Field label="Height" placeholder={'5′ 8″'} value={profile.height} onChangeText={(text:string)=>updateProfile('height',text)}/></View></View>
       <View style={{gap:8}}>
         <Text style={shared.label}>City</Text>
         <View style={selectorStyles.searchBox}><MiniPremiumIcon name="location-outline" tone="rose" size={32} iconSize={15}/><TextInput value={cityQuery} onChangeText={text=>{setCityQuery(text);if(text!==profile.city)updateProfile('city','')}} placeholder="Search USA or Canada city" placeholderTextColor="#6F6875" style={selectorStyles.searchInput}/></View>
@@ -832,12 +853,17 @@ function ProfileSetup({
     </View>
     <VoiceIntroRecorder uri={voiceUri} onChange={onVoiceChange}/>
     <Button label={continueLabel} disabled={!profileReady} onPress={onNext}/>
+    <AgePickerSheet visible={agePickerOpen} selectedAge={profile.age} onClose={()=>setAgePickerOpen(false)} onSelect={age=>{updateProfile('age',age);setAgePickerOpen(false)}}/>
     <PhotoPickerSheet visible={photoPickerIndex!==null} slot={photoPickerIndex===null?0:photoPickerIndex+1} onClose={()=>setPhotoPickerIndex(null)} onCamera={()=>{const index=photoPickerIndex;if(index===null)return;setPhotoPickerIndex(null);void takePhoto(index)}} onGallery={()=>{const index=photoPickerIndex;if(index===null)return;setPhotoPickerIndex(null);void pickPhoto(index)}}/>
   </FormPage>
 }
 
+function AgePickerSheet({visible,selectedAge,onClose,onSelect}:{visible:boolean;selectedAge:string;onClose:()=>void;onSelect:(age:string)=>void}){
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,{maxHeight:'82%'}]}><SheetHeader title="Choose your age" subtitle="DestinyOne is for adults ages 18–60." onClose={onClose}/><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{gap:8,paddingBottom:8}}>{Array.from({length:43},(_,index)=>String(index+18)).map(age=><Pressable accessibilityRole="button" accessibilityState={{selected:selectedAge===age}} key={age} onPress={()=>onSelect(age)} style={[selectorStyles.suggestionRow,selectedAge===age&&selectorStyles.suggestionRowSelected]}><Text style={[selectorStyles.suggestionText,selectedAge===age&&selectorStyles.suggestionTextSelected]}>{age}</Text><MiniPremiumIcon name={selectedAge===age?'checkmark-circle':'chevron-forward'} tone={selectedAge===age?'gold':'dark'} size={28} iconSize={13}/></Pressable>)}</ScrollView></SafeAreaView></Modal>
+}
+
 function PhotoPickerSheet({visible,slot,onClose,onCamera,onGallery}:{visible:boolean;slot:number;onClose:()=>void;onCamera:()=>void;onGallery:()=>void}){
-  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={chatStyles.sheet}><SheetHeader title={`Add photo ${slot}`} subtitle="Choose a clear, recent photo for serious matches." onClose={onClose}/><View style={mediaStyles.photoChoiceHero}><PremiumIcon name="images" tone="gold" size={54} iconSize={25}/><View style={{flex:1}}><Text style={styles.cardTitle}>Profile photos build trust.</Text><Text style={styles.helper}>Use bright, recent photos where your face is easy to recognize.</Text></View></View><View style={mediaStyles.photoChoiceGrid}><Pressable onPress={onCamera} style={mediaStyles.photoChoice}><PremiumIcon name="camera" tone="ruby" size={50} iconSize={23}/><Text style={mediaStyles.photoChoiceTitle}>Camera</Text><Text style={mediaStyles.photoChoiceBody}>Take a new photo</Text></Pressable><Pressable onPress={onGallery} style={mediaStyles.photoChoice}><PremiumIcon name="image" tone="plum" size={50} iconSize={23}/><Text style={mediaStyles.photoChoiceTitle}>Gallery</Text><Text style={mediaStyles.photoChoiceBody}>Choose from library</Text></Pressable></View><Text style={styles.legal}>Photos stay in preview storage until backend upload is connected.</Text></SafeAreaView></Modal>
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={chatStyles.sheet}><SheetHeader title={`Add photo ${slot}`} subtitle="Choose a clear, recent photo for serious matches." onClose={onClose}/><View style={mediaStyles.photoChoiceHero}><PremiumIcon name="images" tone="gold" size={54} iconSize={25}/><View style={{flex:1}}><Text style={styles.cardTitle}>Profile photos build trust.</Text><Text style={styles.helper}>Use bright, recent photos where your face is easy to recognize.</Text></View></View><View style={mediaStyles.photoChoiceGrid}>{Platform.OS!=='web'&&<Pressable onPress={onCamera} style={mediaStyles.photoChoice}><PremiumIcon name="camera" tone="ruby" size={50} iconSize={23}/><Text style={mediaStyles.photoChoiceTitle}>Camera</Text><Text style={mediaStyles.photoChoiceBody}>Take a new photo</Text></Pressable>}<Pressable onPress={onGallery} style={mediaStyles.photoChoice}><PremiumIcon name="image" tone="plum" size={50} iconSize={23}/><Text style={mediaStyles.photoChoiceTitle}>Choose photo</Text><Text style={mediaStyles.photoChoiceBody}>Choose from your library</Text></Pressable></View><Text style={styles.legal}>Photos stay in preview storage until backend upload is connected.</Text></SafeAreaView></Modal>
 }
 
 function VoiceIntroRecorder({uri,onChange}:{uri:string;onChange:(uri:string)=>void}) {
@@ -4483,7 +4509,9 @@ const selectorStyles=StyleSheet.create({
   searchInput:{flex:1,minHeight:52,color:colors.ivory,fontFamily:'Poppins_400Regular',fontSize:14},
   suggestionPanel:{borderRadius:18,borderWidth:1,borderColor:colors.line,backgroundColor:'#FFFDFC',overflow:'hidden'},
   suggestionRow:{minHeight:42,paddingHorizontal:13,flexDirection:'row',alignItems:'center',borderBottomWidth:1,borderBottomColor:colors.line},
+  suggestionRowSelected:{backgroundColor:'rgba(229,9,47,.10)',borderColor:'rgba(212,175,55,.42)'},
   suggestionText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:12,color:colors.ivory},
+  suggestionTextSelected:{color:colors.ivory},
   selectedPill:{alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:11,paddingVertical:7,borderRadius:17,backgroundColor:'rgba(212,175,55,.12)',borderWidth:1,borderColor:'rgba(212,175,55,.35)'},
   selectedText:{fontFamily:'Poppins_600SemiBold',fontSize:11,color:'#F5DFA9'},
   religionChip:{minHeight:38,paddingHorizontal:12,borderRadius:19,borderWidth:1,borderColor:colors.line,backgroundColor:colors.surface2,flexDirection:'row',alignItems:'center',gap:6},
