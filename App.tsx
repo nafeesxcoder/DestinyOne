@@ -3535,8 +3535,10 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
   const selectMessage=(message:ChatMessage)=>setSelectedMessageId(current=>current===message.id?null:message.id);
   const reactToMessage=(messageId:string,reaction:string)=>{setMessageReactions(current=>({...current,[messageId]:reaction}));setSelectedMessageId(null)};
   const toggleStar=(messageId:string)=>{setStarredMessages(current=>current.includes(messageId)?current.filter(id=>id!==messageId):[...current,messageId]);setSelectedMessageId(null)};
-  return <LinearGradient colors={[activeTheme.bg,colors.black,activeTheme.bg]} style={{flex:1}}><SafeAreaView style={chatPremiumStyles.safeArea}>
-    <View style={[styles.chatHead,chatPremiumStyles.chatHead,{backgroundColor:'rgba(14,3,7,.96)',borderBottomColor:'rgba(255,255,255,.07)'}]}>
+  return <LinearGradient colors={['#FFFDFC','#F8EEE9','#FFFDFC']} style={{flex:1}}><SafeAreaView style={chatPremiumStyles.safeArea}>
+    <View
+      style={[styles.chatHead,chatPremiumStyles.chatHead,{backgroundColor:'#FFFDFC',borderBottomColor:colors.line}]}
+    >
       <Pressable accessibilityRole="button" accessibilityLabel="Back to matches" onPress={()=>navigate('home')}><PremiumIcon name="arrow-back" tone="dark" size={35} iconSize={17}/></Pressable>
       <Image source={{uri:match.photo}} style={[styles.chatAvatar,chatPremiumStyles.chatAvatar,{borderWidth:1,borderColor:activeTheme.accent}]}/>
       <View style={{flex:1}}><Text numberOfLines={1} style={shared.label}>{displayName}</Text><View style={chatStyles.onlineRow}><View style={[chatStyles.onlineDot,{backgroundColor:memberDataRuntime.source==='preview'?activeTheme.accent:colors.muted}]}/><Text style={styles.onlineText}>{memberDataRuntime.source==='preview'?(settings.nickname.trim()?`${match.name} · Online`:'Online'):'Private conversation'}</Text></View></View>
@@ -3546,7 +3548,7 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
     </View>
     {searchOpen&&<View style={chatStyles.searchBar}><Ionicons name="search-outline" size={18} color={colors.muted}/><TextInput accessibilityLabel="Search this conversation" autoFocus value={searchQuery} onChangeText={setSearchQuery} placeholder="Search this conversation" placeholderTextColor="#806D7D" style={chatStyles.searchInput}/><Text style={chatStyles.searchCount}>{normalizedSearch?`${visibleMessages.length} found`:''}</Text><Pressable accessibilityRole="button" accessibilityLabel="Close message search" onPress={()=>{setSearchOpen(false);setSearchQuery('')}}><Ionicons name="close" size={20} color={colors.muted}/></Pressable></View>}
     <View style={chatStyles.contextBar}><Pressable accessibilityRole="button" accessibilityLabel="Open relationship path" onPress={()=>{const dateStatus=latestDateMessage?.date?.planStatus??(latestDateMessage?'proposed':'none');const journey=buildRelationshipJourney({alignmentComplete:true,conversationUnlocked:true,dateStatus,reflection:reflection?.choice??null});onJourneyEvent('relationship_path_opened',{stage:journey.currentStage?.id??'complete'});setJourneyOpen(true)}} style={chatStyles.privateContext}><Ionicons name="heart-circle-outline" size={14} color={colors.gold}/><Text style={chatStyles.privateContextText}>{disappearingMessages?'24h · Path':'Relationship path'}</Text></Pressable><View style={shared.spacer}/><Pressable accessibilityRole="button" accessibilityLabel="Open Date Marketplace" onPress={()=>navigate('events')} style={chatStyles.contextAction}><Ionicons name="calendar-outline" size={14} color={colors.gold}/><Text style={chatStyles.contextActionText}>Date</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Reply coach" onPress={()=>setShowCoach(value=>!value)} style={[chatStyles.contextAction,showCoach&&chatStyles.contextActionOn]}><Ionicons name="sparkles-outline" size={14} color={showCoach?colors.gold:colors.muted}/><Text style={chatStyles.contextActionText}>Coach</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Search messages" onPress={()=>{setSearchOpen(value=>!value);setSearchQuery('')}} style={chatStyles.contextIcon}><Ionicons name="search-outline" size={17} color={colors.muted}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Chat theme" onPress={()=>setSettingsOpen(true)} style={chatStyles.contextIcon}><Ionicons name="color-palette-outline" size={17} color={colors.muted}/></Pressable></View>
-    {showCoach&&<View style={[coachStyles.chatCoach,chatStyles.coachPanel]}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:7}}>{chatCoachSuggestions.map(item=><Pressable key={item.label} onPress={()=>{setText(item.message(match));setShowCoach(false)}} style={[coachStyles.suggestionChip,{borderColor:'rgba(255,255,255,.10)',backgroundColor:'rgba(255,255,255,.045)'}]}><Text style={coachStyles.suggestionText}>{item.label}</Text></Pressable>)}</ScrollView><Pressable onPress={()=>navigate('coach')} style={chatStyles.coachOpen}><Text style={chatStyles.coachOpenText}>Open coach</Text></Pressable></View>}
+    {showCoach&&<View style={[coachStyles.chatCoach,chatStyles.coachPanel]}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:7}}>{chatCoachSuggestions.map(item=><Pressable key={item.label} onPress={()=>{setText(item.message(match));setShowCoach(false)}} style={[coachStyles.suggestionChip,{borderColor:colors.line,backgroundColor:'#FFFDFC'}]}><Text style={coachStyles.suggestionText}>{item.label}</Text></Pressable>)}</ScrollView><Pressable onPress={()=>navigate('coach')} style={chatStyles.coachOpen}><Text style={chatStyles.coachOpenText}>Open coach</Text></Pressable></View>}
     {!!chatError&&<Pressable onPress={()=>setChatError('')} style={chatStyles.errorBanner}><Text style={chatStyles.errorText}>{chatError}</Text><MiniPremiumIcon name="close" tone="dark" size={28} iconSize={13}/></Pressable>}
     <ScrollView ref={messagesRef} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'on-drag'} onContentSizeChange={()=>messagesRef.current?.scrollToEnd({animated:true})} contentContainerStyle={[styles.messages,chatPremiumStyles.messages]}>
       {memberDataRuntime.source==='preview'&&<><View style={styles.iceReveal}><Text style={styles.kicker}>ICEBREAKER REVEALED</Text><Text style={styles.revealText}>You both chose: <Text style={{color:colors.ivory}}>Road trip 🚗</Text></Text></View><Text style={chatStyles.dayLabel}>TODAY</Text><View style={[styles.theirBubble,chatPremiumStyles.theirBubble]}><Text style={styles.bubbleText}>Okay, excellent choice. Mountains or coast? 😊</Text><Text style={styles.time}>7:42 PM</Text></View></>}
@@ -4387,13 +4389,13 @@ const premiumButtonStyles=StyleSheet.create({
 });
 
 const bottomNavStyles=StyleSheet.create({
-  nav:{position:'absolute',left:10,right:10,bottom:8,minHeight:70,paddingTop:7,paddingBottom:7,backgroundColor:'rgba(18,3,9,.97)',borderWidth:1,borderColor:'rgba(255,255,255,.12)',borderRadius:24,shadowColor:'#FF2448',shadowOpacity:.18,shadowRadius:22,shadowOffset:{width:0,height:9},overflow:'hidden'},
+  nav:{position:'absolute',left:10,right:10,bottom:8,minHeight:70,paddingTop:7,paddingBottom:7,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,borderRadius:24,shadowColor:'#6E3442',shadowOpacity:.12,shadowRadius:22,shadowOffset:{width:0,height:9},overflow:'hidden'},
   navScroller:{flexDirection:'row',alignItems:'center',justifyContent:'space-around',paddingHorizontal:8,minWidth:'100%'},
   navItem:{flex:1,minWidth:58,alignItems:'center',justifyContent:'center',gap:1},
   navItemCompact:{minWidth:46},
   inactiveIcon:{width:31,height:31,borderRadius:16,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
   navText:{fontFamily:'Poppins_700Bold',fontSize:7.4,color:colors.muted},
-  navTextOn:{color:colors.ivory},
+  navTextOn:{color:colors.pink},
 });
 
 const couplesMarketStyles=StyleSheet.create({
@@ -4597,7 +4599,7 @@ const adminOpsStyles=StyleSheet.create({
 });
 
 const profilePremiumStyles=StyleSheet.create({
-  hero:{alignItems:'center',gap:10,padding:18,borderRadius:30,borderWidth:1,borderColor:'rgba(255,255,255,.13)',overflow:'hidden',shadowColor:'#FF2448',shadowOpacity:.20,shadowRadius:24,shadowOffset:{width:0,height:12}},
+  hero:{alignItems:'center',gap:10,padding:18,borderRadius:30,borderWidth:1,borderColor:'#F1C7CE',backgroundColor:'#FFF8F4',overflow:'hidden',shadowColor:'#C96A7B',shadowOpacity:.16,shadowRadius:24,shadowOffset:{width:0,height:12}},
   heroGlow:{position:'absolute',width:220,height:220,borderRadius:110,top:-80,right:-70,backgroundColor:'rgba(229,9,47,.20)'},
   avatarHalo:{width:118,height:118,borderRadius:59,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(212,175,55,.10)',borderWidth:1,borderColor:'rgba(212,175,55,.26)',shadowColor:colors.gold,shadowOpacity:.28,shadowRadius:20},
   avatarRing:{width:98,height:98,borderRadius:49,backgroundColor:'#F2DDE2',alignItems:'center',justifyContent:'center',borderWidth:2,borderColor:'rgba(255,255,255,.25)',overflow:'hidden'},
@@ -4605,31 +4607,31 @@ const profilePremiumStyles=StyleSheet.create({
   statusGem:{position:'absolute',right:4,bottom:6},
   nameRow:{flexDirection:'row',alignItems:'center',gap:8},
   name:{fontFamily:'Poppins_700Bold',fontSize:25,color:colors.ivory},
-  meta:{fontFamily:'Poppins_400Regular',fontSize:12.5,color:'#E4CAD0'},
-  stats:{width:'100%',flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:10,paddingHorizontal:8,borderRadius:20,backgroundColor:'rgba(0,0,0,.20)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',marginTop:2},
+  meta:{fontFamily:'Poppins_400Regular',fontSize:12.5,color:colors.muted},
+  stats:{width:'100%',flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:10,paddingHorizontal:8,borderRadius:20,backgroundColor:'#F3E6E4',borderWidth:1,borderColor:colors.line,marginTop:2},
   stat:{flex:1,alignItems:'center'},
   statValue:{fontFamily:'Poppins_700Bold',fontSize:15,color:colors.ivory},
-  statLabel:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#CDB5BB',marginTop:2,textAlign:'center'},
-  statLine:{width:1,height:30,backgroundColor:'rgba(255,255,255,.12)'},
+  statLabel:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:colors.muted,marginTop:2,textAlign:'center'},
+  statLine:{width:1,height:30,backgroundColor:colors.line},
   readinessCard:{gap:13,padding:16,borderRadius:26,backgroundColor:'#FFF9F5',borderWidth:1,borderColor:'rgba(212,175,55,.22)',shadowColor:colors.gold,shadowOpacity:.10,shadowRadius:14},
   readinessScore:{width:54,height:54,borderRadius:27,backgroundColor:'rgba(212,175,55,.14)',borderWidth:1,borderColor:'rgba(212,175,55,.34)',alignItems:'center',justifyContent:'center'},
   readinessScoreText:{fontFamily:'Poppins_700Bold',fontSize:14,color:colors.gold},
-  readinessItem:{flexDirection:'row',alignItems:'flex-start',gap:10,padding:12,borderRadius:18,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.075)'},
+  readinessItem:{flexDirection:'row',alignItems:'flex-start',gap:10,padding:12,borderRadius:18,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line},
   readinessTitle:{fontFamily:'Poppins_700Bold',fontSize:12.5,color:colors.ivory,marginBottom:2},
   shareStatus:{marginTop:-12,padding:12,borderRadius:18,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.22)',flexDirection:'row',alignItems:'center',gap:9},
-  shareStatusText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.8,lineHeight:16,color:'#EFD8B0'},
+  shareStatusText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.8,lineHeight:16,color:colors.ivory},
 });
 
 const backendReadyStyles=StyleSheet.create({
-  card:{gap:14,padding:16,borderRadius:26,backgroundColor:'#19090D',borderWidth:1,borderColor:'rgba(212,175,55,.24)',shadowColor:colors.gold,shadowOpacity:.08,shadowRadius:16},
+  card:{gap:14,padding:16,borderRadius:26,backgroundColor:'#FFF8F1',borderWidth:1,borderColor:'#E5C87C',shadowColor:colors.gold,shadowOpacity:.08,shadowRadius:16},
   stats:{flexDirection:'row',gap:8},
-  stat:{flex:1,minHeight:64,borderRadius:18,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.075)',alignItems:'center',justifyContent:'center',padding:8},
+  stat:{flex:1,minHeight:64,borderRadius:18,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,alignItems:'center',justifyContent:'center',padding:8},
   statValue:{fontFamily:'Poppins_700Bold',fontSize:16,color:colors.ivory},
-  statLabel:{fontFamily:'Poppins_600SemiBold',fontSize:8.8,color:'#CDB5BB',marginTop:2,textAlign:'center'},
+  statLabel:{fontFamily:'Poppins_600SemiBold',fontSize:8.8,color:colors.muted,marginTop:2,textAlign:'center'},
   providerQueue:{gap:8},
   providerRow:{flexDirection:'row',alignItems:'center',gap:9,padding:10,borderRadius:16,backgroundColor:'rgba(212,175,55,.055)',borderWidth:1,borderColor:'rgba(212,175,55,.15)'},
   providerTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
-  providerBody:{fontFamily:'Poppins_400Regular',fontSize:9.2,lineHeight:13,color:'#BFA9AF',marginTop:1},
+  providerBody:{fontFamily:'Poppins_400Regular',fontSize:9.2,lineHeight:13,color:colors.muted,marginTop:1},
 });
 
 const vibeStyles=StyleSheet.create({
@@ -4665,16 +4667,16 @@ const focusStyles=StyleSheet.create({
   featuredRow:{gap:10},
   featuredRowWide:{flexDirection:'row',alignItems:'stretch'},
   featuredWide:{flex:1},
-  executiveCard:{minHeight:154,padding:15,borderRadius:8,overflow:'hidden',borderWidth:1,borderColor:'rgba(212,175,55,.30)',backgroundColor:'#1C0908',flexDirection:'row',alignItems:'center',gap:12},
+  executiveCard:{minHeight:154,padding:15,borderRadius:8,overflow:'hidden',borderWidth:1,borderColor:'#DFC581',backgroundColor:'#FFF7EA',flexDirection:'row',alignItems:'center',gap:12},
   featureIcon:{width:54,height:54,alignItems:'center',justifyContent:'center'},
   featureTitle:{fontFamily:'Poppins_700Bold',fontSize:17,lineHeight:22,color:colors.ivory,marginTop:2},
-  featureBody:{fontFamily:'Poppins_400Regular',fontSize:10.5,lineHeight:15.5,color:'#CDB8BD',marginTop:3},
-  likesCard:{minHeight:78,padding:13,borderRadius:8,backgroundColor:'rgba(255,255,255,.04)',borderWidth:1,borderColor:'rgba(255,255,255,.09)',flexDirection:'row',alignItems:'center',gap:10},
+  featureBody:{fontFamily:'Poppins_400Regular',fontSize:10.5,lineHeight:15.5,color:colors.muted,marginTop:3},
+  likesCard:{minHeight:78,padding:13,borderRadius:8,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,flexDirection:'row',alignItems:'center',gap:10},
   likesWide:{maxWidth:310,minHeight:154},
   likesTitle:{fontFamily:'Poppins_700Bold',fontSize:13,color:colors.ivory},
   toolGrid:{gap:8},
   toolGridWide:{flexDirection:'row',flexWrap:'wrap'},
-  tool:{minHeight:76,padding:12,borderRadius:8,backgroundColor:'rgba(255,255,255,.035)',borderWidth:1,borderColor:'rgba(255,255,255,.08)',flexDirection:'row',alignItems:'center',gap:10},
+  tool:{minHeight:76,padding:12,borderRadius:8,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,flexDirection:'row',alignItems:'center',gap:10},
   toolWide:{width:'49%'},
   toolTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
   toolBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:colors.muted,marginTop:2},
@@ -4692,18 +4694,18 @@ const homeCleanStyles=StyleSheet.create({
   sideButton:{width:58,minHeight:58,borderRadius:20,backgroundColor:'rgba(27,4,10,.88)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',alignItems:'center',justifyContent:'center',gap:4,shadowColor:'#FF2448',shadowOpacity:.2,shadowRadius:14},
   goldButton:{borderColor:'rgba(212,175,55,.35)',backgroundColor:'rgba(42,18,8,.9)'},
   sideText:{fontFamily:'Poppins_700Bold',fontSize:8.5,color:'#E9D8DC'},
-  hero:{minHeight:92,borderRadius:22,overflow:'hidden',padding:13,flexDirection:'row',alignItems:'center',gap:13,borderWidth:1,borderColor:'rgba(255,255,255,.09)',backgroundColor:'#1B0308'},
-  dailyCount:{width:72,minHeight:66,borderRadius:18,backgroundColor:'rgba(229,9,47,.13)',borderWidth:1,borderColor:'rgba(255,110,128,.20)',alignItems:'center',justifyContent:'center',padding:7},
+  hero:{minHeight:92,borderRadius:22,overflow:'hidden',padding:13,flexDirection:'row',alignItems:'center',gap:13,borderWidth:1,borderColor:'#EBC9D0',backgroundColor:'#FDEDEF'},
+  dailyCount:{width:72,minHeight:66,borderRadius:18,backgroundColor:'#FFF9F3',borderWidth:1,borderColor:'#D9B866',alignItems:'center',justifyContent:'center',padding:7},
   heroCopy:{flex:1,gap:8},
   heroTitle:{fontFamily:'Poppins_700Bold',fontSize:14,color:colors.ivory},
   heroTop:{flexDirection:'row',alignItems:'center',gap:13},
   roseSeal:{width:58,height:58,borderRadius:29,backgroundColor:'#A80022',borderWidth:1,borderColor:'rgba(255,255,255,.20)',alignItems:'center',justifyContent:'center',shadowColor:'#FF2448',shadowOpacity:.5,shadowRadius:18},
   roseEmoji:{fontFamily:'Poppins_700Bold',fontSize:25,color:colors.ivory},
   script:{fontFamily:'Satisfy_400Regular',fontSize:31,color:colors.ivory},
-  heroBody:{fontFamily:'Poppins_400Regular',fontSize:12.2,lineHeight:18,color:'#D8BFC5',marginTop:1},
+  heroBody:{fontFamily:'Poppins_400Regular',fontSize:12.2,lineHeight:18,color:colors.muted,marginTop:1},
   chipWrap:{flexDirection:'row',flexWrap:'wrap',gap:6},
-  cleanChip:{maxWidth:'100%',paddingHorizontal:9,paddingVertical:5,borderRadius:14,backgroundColor:'rgba(255,255,255,.06)',borderWidth:1,borderColor:'rgba(255,255,255,.09)'},
-  cleanChipText:{fontFamily:'Poppins_600SemiBold',fontSize:9.2,color:'#F0D8DE'},
+  cleanChip:{maxWidth:'100%',paddingHorizontal:9,paddingVertical:5,borderRadius:14,backgroundColor:'#FFF9F3',borderWidth:1,borderColor:'#E5D2C8'},
+  cleanChipText:{fontFamily:'Poppins_600SemiBold',fontSize:9.2,color:colors.ivory},
   statsRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingTop:2},
   statBlock:{maxWidth:112},
   statNumber:{fontFamily:'Poppins_700Bold',fontSize:18,color:colors.ivory},
@@ -5004,13 +5006,13 @@ const styles=StyleSheet.create({
 });
 
 const chatPremiumStyles=StyleSheet.create({
-  safeArea:{flex:1,width:'100%',maxWidth:Platform.OS==='web'?820:undefined,alignSelf:'center',borderLeftWidth:Platform.OS==='web'?1:0,borderRightWidth:Platform.OS==='web'?1:0,borderColor:'rgba(255,255,255,.06)'},
+  safeArea:{flex:1,width:'100%',maxWidth:Platform.OS==='web'?820:undefined,alignSelf:'center',backgroundColor:'#FFFDFC',borderLeftWidth:Platform.OS==='web'?1:0,borderRightWidth:Platform.OS==='web'?1:0,borderColor:colors.line},
   chatHead:{height:58,paddingHorizontal:13,gap:9},
   chatAvatar:{width:39,height:39,borderRadius:20},
-  safety:{padding:6,gap:6,backgroundColor:'rgba(212,175,55,.055)',borderBottomWidth:1,borderBottomColor:'rgba(255,255,255,.06)'},
+  safety:{padding:6,gap:6,backgroundColor:'#FFF8F1',borderBottomWidth:1,borderBottomColor:colors.line},
   messages:{padding:14,gap:10},
-  theirBubble:{maxWidth:'74%',padding:12,borderRadius:18,borderBottomLeftRadius:6,backgroundColor:'rgba(255,255,255,.065)',borderWidth:1,borderColor:'rgba(255,255,255,.06)'},
-  composer:{paddingHorizontal:12,paddingVertical:8,gap:8,borderTopColor:'rgba(255,255,255,.07)',backgroundColor:'rgba(12,2,5,.96)'},
+  theirBubble:{maxWidth:'74%',padding:12,borderRadius:18,borderBottomLeftRadius:6,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line},
+  composer:{paddingHorizontal:12,paddingVertical:8,gap:8,borderTopColor:colors.line,backgroundColor:'#FFFDFC'},
   chatInput:{height:43,backgroundColor:'transparent',paddingHorizontal:14},
 });
 
@@ -5327,32 +5329,32 @@ const journeyStyles=StyleSheet.create({
 const chatStyles=StyleSheet.create({
   onlineRow:{flexDirection:'row',alignItems:'center',gap:5,marginTop:2},
   onlineDot:{width:6,height:6,borderRadius:3,backgroundColor:'#58C980'},
-  headerAction:{width:33,height:33,borderRadius:17,backgroundColor:'rgba(255,255,255,.035)',alignItems:'center',justifyContent:'center'},
-  searchBar:{minHeight:48,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'rgba(18,4,8,.98)',borderBottomWidth:1,borderBottomColor:'rgba(255,255,255,.07)'},
+  headerAction:{width:33,height:33,borderRadius:17,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,alignItems:'center',justifyContent:'center'},
+  searchBar:{minHeight:48,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'#FFFDFC',borderBottomWidth:1,borderBottomColor:colors.line},
   searchInput:{flex:1,height:40,color:colors.ivory,fontFamily:'Poppins_400Regular',fontSize:12},
   searchCount:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:colors.gold},
-  contextBar:{minHeight:38,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:8,backgroundColor:'rgba(12,2,5,.94)',borderBottomWidth:1,borderBottomColor:'rgba(255,255,255,.06)'},
+  contextBar:{minHeight:38,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:8,backgroundColor:'#FFF8F4',borderBottomWidth:1,borderBottomColor:colors.line},
   privateContext:{flexDirection:'row',alignItems:'center',gap:5},
-  privateContextText:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:'#CDB5BB'},
-  contextAction:{height:28,paddingHorizontal:9,borderRadius:14,flexDirection:'row',alignItems:'center',gap:5,borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
+  privateContextText:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:colors.muted},
+  contextAction:{height:28,paddingHorizontal:9,borderRadius:14,flexDirection:'row',alignItems:'center',gap:5,borderWidth:1,borderColor:colors.line,backgroundColor:'#FFFDFC'},
   contextActionOn:{backgroundColor:'rgba(212,175,55,.08)',borderColor:'rgba(212,175,55,.22)'},
-  contextActionText:{fontFamily:'Poppins_700Bold',fontSize:9,color:'#D8C1C6'},
-  contextIcon:{width:28,height:28,borderRadius:14,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
-  coachPanel:{paddingHorizontal:12,paddingVertical:8,flexDirection:'row',alignItems:'center',gap:8,backgroundColor:'rgba(15,3,7,.96)',borderBottomColor:'rgba(255,255,255,.06)'},
+  contextActionText:{fontFamily:'Poppins_700Bold',fontSize:9,color:colors.ivory},
+  contextIcon:{width:28,height:28,borderRadius:14,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:colors.line,backgroundColor:'#FFFDFC'},
+  coachPanel:{paddingHorizontal:12,paddingVertical:8,flexDirection:'row',alignItems:'center',gap:8,backgroundColor:'#FFF8F4',borderBottomColor:colors.line},
   errorBanner:{marginHorizontal:12,marginTop:8,paddingHorizontal:12,paddingVertical:9,borderRadius:12,backgroundColor:'#F9E8EC',flexDirection:'row',alignItems:'center',gap:8},
   errorText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:11,color:colors.ivory},
-  dayLabel:{alignSelf:'center',fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:1.2,color:'#BDA5AB',backgroundColor:'rgba(255,255,255,.045)',paddingHorizontal:10,paddingVertical:5,borderRadius:10},
-  typingBubble:{alignSelf:'flex-start',flexDirection:'row',gap:4,paddingHorizontal:13,paddingVertical:10,borderRadius:18,borderBottomLeftRadius:6,backgroundColor:'rgba(255,255,255,.055)'},
+  dayLabel:{alignSelf:'center',fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:1.2,color:colors.muted,backgroundColor:'#F3E7E4',paddingHorizontal:10,paddingVertical:5,borderRadius:10},
+  typingBubble:{alignSelf:'flex-start',flexDirection:'row',gap:4,paddingHorizontal:13,paddingVertical:10,borderRadius:18,borderBottomLeftRadius:6,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line},
   typingDot:{width:6,height:6,borderRadius:3,backgroundColor:colors.muted},
   messageGroup:{width:'100%',alignItems:'flex-end'},
-  messageActions:{alignSelf:'flex-end',minHeight:40,marginTop:4,paddingHorizontal:6,flexDirection:'row',alignItems:'center',gap:3,backgroundColor:'rgba(28,8,13,.98)',borderWidth:1,borderColor:'rgba(255,255,255,.10)',borderRadius:8},
+  messageActions:{alignSelf:'flex-end',minHeight:40,marginTop:4,paddingHorizontal:6,flexDirection:'row',alignItems:'center',gap:3,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,borderRadius:8},
   reactionButton:{width:33,height:33,alignItems:'center',justifyContent:'center'},
   reactionText:{fontSize:18},
   reactionPill:{position:'absolute',left:-7,bottom:-12,minWidth:30,height:25,paddingHorizontal:5,borderRadius:13,backgroundColor:'#FCF1F2',borderWidth:1,borderColor:'rgba(255,255,255,.13)',alignItems:'center',justifyContent:'center'},
   messageActionIcon:{width:33,height:33,borderRadius:17,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,.05)'},
   emptySearch:{alignSelf:'center',alignItems:'center',gap:8,padding:18},
   emptySearchText:{fontFamily:'Poppins_400Regular',fontSize:11,color:colors.muted,textAlign:'center'},
-  keyboardWrap:{marginBottom:78,backgroundColor:'rgba(9,0,3,.98)',position:'relative',zIndex:12},
+  keyboardWrap:{marginBottom:78,backgroundColor:'#FFFDFC',borderTopWidth:1,borderTopColor:colors.line,position:'relative',zIndex:12},
   inputWrap:{flex:1,height:43,borderRadius:22,backgroundColor:colors.surface,flexDirection:'row',alignItems:'center',paddingRight:10},
   safetyNudge:{marginHorizontal:10,marginBottom:8,padding:11,borderRadius:18,backgroundColor:'rgba(212,175,55,.08)',borderWidth:1,borderColor:'rgba(212,175,55,.22)',flexDirection:'row',alignItems:'flex-start',gap:9},
   safetyNudgeTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
@@ -5362,26 +5364,26 @@ const chatStyles=StyleSheet.create({
   safetySignalText:{fontFamily:'Poppins_700Bold',fontSize:7.8,color:'#F5DDE2'},
   safetyNudgeButton:{alignSelf:'center',paddingHorizontal:10,paddingVertical:7,borderRadius:16,backgroundColor:'rgba(229,9,47,.16)',borderWidth:1,borderColor:'rgba(229,9,47,.35)'},
   safetyNudgeButtonText:{fontFamily:'Poppins_700Bold',fontSize:9,color:colors.pinkSoft},
-  attachmentTray:{position:'absolute',left:12,right:12,bottom:62,zIndex:20,flexDirection:'row',flexWrap:'wrap',gap:8,padding:12,borderRadius:22,backgroundColor:'rgba(27,8,13,.99)',borderWidth:1,borderColor:'rgba(255,255,255,.12)',shadowColor:'#000',shadowOpacity:.5,shadowRadius:24,shadowOffset:{width:0,height:12},elevation:18},
+  attachmentTray:{position:'absolute',left:12,right:12,bottom:62,zIndex:20,flexDirection:'row',flexWrap:'wrap',gap:8,padding:12,borderRadius:22,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,shadowColor:'#6E3442',shadowOpacity:.18,shadowRadius:24,shadowOffset:{width:0,height:12},elevation:18},
   attachmentTrayWide:{right:undefined,width:388},
   attachment:{width:'23%',minWidth:60,alignItems:'center',gap:4},
   attachmentIcon:{width:42,height:42,borderRadius:21,alignItems:'center',justifyContent:'center'},
   attachmentLabel:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:colors.muted},
-  replyPreview:{minHeight:52,marginHorizontal:10,marginTop:7,padding:8,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'rgba(255,255,255,.05)',borderRadius:8,borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
+  replyPreview:{minHeight:52,marginHorizontal:10,marginTop:7,padding:8,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'#FFF8F4',borderRadius:8,borderWidth:1,borderColor:colors.line},
   replyAccent:{width:3,alignSelf:'stretch',borderRadius:2,backgroundColor:colors.gold},
   replyTitle:{fontFamily:'Poppins_700Bold',fontSize:9.5,color:colors.gold},
-  replyText:{fontFamily:'Poppins_400Regular',fontSize:10,color:'#D7C4C9',marginTop:2},
+  replyText:{fontFamily:'Poppins_400Regular',fontSize:10,color:colors.muted,marginTop:2},
   optionList:{gap:7},
-  optionRow:{minHeight:64,padding:10,flexDirection:'row',alignItems:'center',gap:10,borderRadius:8,backgroundColor:'rgba(255,255,255,.04)',borderWidth:1,borderColor:'rgba(255,255,255,.07)'},
+  optionRow:{minHeight:64,padding:10,flexDirection:'row',alignItems:'center',gap:10,borderRadius:8,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line},
   optionTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,color:colors.ivory},
   optionBody:{fontFamily:'Poppins_400Regular',fontSize:9,lineHeight:13,color:colors.muted,marginTop:2},
   sendButton:{width:42,height:42,borderRadius:21,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center',shadowColor:colors.pink,shadowOpacity:.3,shadowRadius:10},
-  emojiPanel:{maxHeight:250,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.07)',backgroundColor:'rgba(13,3,7,.98)',paddingTop:10},
+  emojiPanel:{maxHeight:250,borderTopWidth:1,borderTopColor:colors.line,backgroundColor:'#FFF8F4',paddingTop:10},
   emojiHeader:{paddingHorizontal:18,marginBottom:8,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   emojiTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
   emojiCount:{fontFamily:'Poppins_600SemiBold',fontSize:9.5,color:colors.muted},
   emojiTray:{flexDirection:'row',flexWrap:'wrap',gap:8,paddingHorizontal:16,paddingBottom:14},
-  emojiButton:{width:38,height:38,borderRadius:19,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.06)'},
+  emojiButton:{width:38,height:38,borderRadius:19,alignItems:'center',justifyContent:'center',backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line},
   emoji:{fontSize:23},
   coachOpen:{height:30,paddingHorizontal:13,borderRadius:15,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:'rgba(255,255,255,.10)'},
   coachOpenText:{fontFamily:'Poppins_700Bold',fontSize:10,color:'#FFC4CD'},
