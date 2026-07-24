@@ -908,6 +908,7 @@ function Alignment({value,onChange,onNext}:{value:Record<string,string>;onChange
 
 function HomeClean({profile,items,matchLoadState,matchingPoolStatus,onRetryMatches,preferences,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{profile:ProfileDraft;items:Match[];matchLoadState:MemberMatchLoadState;matchingPoolStatus:MatchingPoolStatus|null;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
   const {width}=useWindowDimensions();
+  const [notificationsOpen,setNotificationsOpen]=useState(false);
   const useMatchGrid=width>=900;
   const compactHome=width<430;
   const featured=items[0];
@@ -934,6 +935,10 @@ function HomeClean({profile,items,matchLoadState,matchingPoolStatus,onRetryMatch
         <Text numberOfLines={1} style={homeCleanStyles.greetingSub}>Thoughtful connections. Meaningful futures.</Text>
       </View>
       <View style={homeCleanStyles.headerActions}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open notifications" onPress={()=>setNotificationsOpen(true)} style={homeCleanStyles.headerButton}>
+          <PremiumIcon name="notifications-outline" tone="ruby" size={36} iconSize={17}/>
+          <View style={homeCleanStyles.notificationBadge}><Text style={homeCleanStyles.notificationBadgeText}>3</Text></View>
+        </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Open match filters" onPress={()=>navigate('discovery')} style={homeCleanStyles.headerButton}><PremiumIcon name="options-outline" tone="dark" size={36} iconSize={17}/></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={()=>navigate('profile')} style={homeCleanStyles.headerButton}><PremiumIcon name="person-outline" tone="ruby" size={36} iconSize={17}/></Pressable>
       </View>
@@ -948,9 +953,10 @@ function HomeClean({profile,items,matchLoadState,matchingPoolStatus,onRetryMatch
           <Text style={homeCleanStyles.statLabel}>curated today</Text>
         </View>
         <View style={homeCleanStyles.heroCopy}>
-          <Text style={homeCleanStyles.heroEyebrow}>CURATED FOR YOUR FUTURE</Text>
+          <Text style={homeCleanStyles.heroEyebrow}>TODAY'S CURATED DROP</Text>
           <Text style={homeCleanStyles.heroTitle}>Chosen around your future.</Text>
-          <Text numberOfLines={3} style={homeCleanStyles.heroBody}>{retention.dailyMatches} thoughtful introductions. Clear intent before chemistry, with room for a real conversation.</Text>
+          <Text numberOfLines={2} style={homeCleanStyles.heroBody}>{retention.dailyMatches} introductions selected for shared intention, pace and values.</Text>
+          <View style={homeCleanStyles.heroNote}><MiniPremiumIcon name="sparkles" tone="gold" size={22} iconSize={10}/><Text style={homeCleanStyles.heroNoteText}>A thoughtful place to start</Text></View>
         </View>
         {featuredFaces.length>0&&<View accessibilityLabel="Today's curated member previews" style={homeCleanStyles.faceStack}>{featuredFaces.map((match,index)=><Image key={match.id} source={{uri:match.photo}} style={[homeCleanStyles.face,{marginLeft:index===0?0:-11,zIndex:featuredFaces.length-index}]}/>)}</View>}
       </View>
@@ -983,7 +989,25 @@ function HomeClean({profile,items,matchLoadState,matchingPoolStatus,onRetryMatch
       </View>}
     </ScrollView>
     <BottomNav active="home" navigate={navigate}/>
+    <HomeNotifications visible={notificationsOpen} onClose={()=>setNotificationsOpen(false)} onOpenMatches={()=>{setNotificationsOpen(false);}} />
   </SafeAreaView></LinearGradient>
+}
+
+function HomeNotifications({visible,onClose,onOpenMatches}:{visible:boolean;onClose:()=>void;onOpenMatches:()=>void}){
+  const updates=[
+    {icon:'heart' as const,tone:'ruby' as const,title:'Your daily introductions are ready',body:'Five people were selected around the future you described.',time:'Now'},
+    {icon:'sparkles' as const,tone:'gold' as const,title:'A new conversation prompt is waiting',body:'A light way to start something meaningful.',time:'2h'},
+    {icon:'shield-checkmark-outline' as const,tone:'plum' as const,title:'Your privacy settings are active',body:'Your exact location and contact details stay private.',time:'Yesterday'},
+  ];
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Pressable style={homeCleanStyles.notificationBackdrop} onPress={onClose}/>
+    <SafeAreaView style={homeCleanStyles.notificationSheet}>
+      <View style={homeCleanStyles.notificationHeader}><View><Text style={styles.sectionLabel}>YOUR UPDATES</Text><Text style={homeCleanStyles.notificationTitle}>Notifications</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Close notifications" onPress={onClose} style={homeCleanStyles.notificationClose}><PremiumIcon name="close" tone="dark" size={34} iconSize={16}/></Pressable></View>
+      <Text style={homeCleanStyles.notificationIntro}>Small updates that help your next connection feel intentional.</Text>
+      <View style={homeCleanStyles.notificationList}>{updates.map(update=><View key={update.title} style={homeCleanStyles.notificationRow}><MiniPremiumIcon name={update.icon} tone={update.tone} size={36} iconSize={17}/><View style={{flex:1}}><Text style={homeCleanStyles.notificationRowTitle}>{update.title}</Text><Text style={homeCleanStyles.notificationRowBody}>{update.body}</Text></View><Text style={homeCleanStyles.notificationTime}>{update.time}</Text></View>)}</View>
+      <Button label="See today's picks" icon="heart" onPress={onOpenMatches}/>
+    </SafeAreaView>
+  </Modal>
 }
 
 function ExploreHub({navigate}:{navigate:(screen:Screen)=>void}){
@@ -4701,24 +4725,28 @@ const homeCleanStyles=StyleSheet.create({
   headerSub:{fontFamily:'Poppins_400Regular',fontSize:11.5,lineHeight:17,color:'#78666C',marginTop:3},
   headerActions:{flexDirection:'row',gap:8},
   headerButton:{width:40,height:40,borderRadius:20,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E7D7CF',alignItems:'center',justifyContent:'center',shadowColor:'#67414B',shadowOpacity:.1,shadowRadius:9,elevation:2},
+  notificationBadge:{position:'absolute',right:-3,top:-4,minWidth:16,height:16,paddingHorizontal:3,borderRadius:8,backgroundColor:'#B20B34',borderWidth:1.5,borderColor:'#FFFDFC',alignItems:'center',justifyContent:'center'},
+  notificationBadgeText:{fontFamily:'Poppins_700Bold',fontSize:8,color:'#FFFFFF'},
   content:{paddingHorizontal:18,paddingBottom:100,gap:16},
   sideRail:{position:'absolute',right:12,top:132,zIndex:5,gap:9},
   sideButton:{width:58,minHeight:58,borderRadius:20,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,alignItems:'center',justifyContent:'center',gap:4,shadowColor:'#6E3442',shadowOpacity:.12,shadowRadius:14},
   goldButton:{borderColor:'#DFC581',backgroundColor:'#FFF6DE'},
   sideText:{fontFamily:'Poppins_700Bold',fontSize:8.5,color:colors.ivory},
-  hero:{minHeight:132,borderRadius:24,overflow:'hidden',padding:15,flexDirection:'row',alignItems:'center',gap:12,borderWidth:1,borderColor:'#E6C9BC',backgroundColor:'#FDEDEF',shadowColor:'#9C6272',shadowOpacity:.11,shadowRadius:16,elevation:2},
-  heroGlow:{position:'absolute',width:124,height:124,borderRadius:62,backgroundColor:'rgba(245,156,171,.25)',right:-42,top:-52},
-  dailyCount:{width:76,minHeight:82,borderRadius:38,backgroundColor:'#FFF9F3',borderWidth:1.5,borderColor:'#D9B866',alignItems:'center',justifyContent:'center',padding:7,shadowColor:'#B88A1E',shadowOpacity:.14,shadowRadius:9},
+  hero:{minHeight:146,borderRadius:24,overflow:'hidden',padding:16,flexDirection:'row',alignItems:'center',gap:13,borderWidth:1,borderColor:'#E6C9BC',backgroundColor:'#FDEDEF',shadowColor:'#9C6272',shadowOpacity:.11,shadowRadius:16,elevation:2},
+  heroGlow:{position:'absolute',width:154,height:154,borderRadius:77,backgroundColor:'rgba(245,156,171,.28)',right:-54,top:-59},
+  dailyCount:{width:82,minHeight:94,borderRadius:24,backgroundColor:'#FFFDFC',borderWidth:1.5,borderColor:'#D9B866',alignItems:'center',justifyContent:'center',padding:7,shadowColor:'#B88A1E',shadowOpacity:.14,shadowRadius:9},
   heroCopy:{flex:1,gap:3,zIndex:1},
   heroEyebrow:{fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:1.05,color:'#B9891E'},
-  heroTitle:{fontFamily:'Poppins_700Bold',fontSize:16,lineHeight:21,color:'#2A151C'},
+  heroTitle:{fontFamily:'Poppins_700Bold',fontSize:17,lineHeight:22,color:'#2A151C'},
   heroTop:{flexDirection:'row',alignItems:'center',gap:13},
   roseSeal:{width:58,height:58,borderRadius:29,backgroundColor:'#A80022',borderWidth:1,borderColor:'rgba(255,255,255,.20)',alignItems:'center',justifyContent:'center',shadowColor:'#FF2448',shadowOpacity:.5,shadowRadius:18},
   roseEmoji:{fontFamily:'Poppins_700Bold',fontSize:25,color:colors.ivory},
   script:{fontFamily:'Satisfy_400Regular',fontSize:31,color:colors.ivory},
   heroBody:{fontFamily:'Poppins_400Regular',fontSize:10.2,lineHeight:15,color:'#78666C',marginTop:1},
-  faceStack:{width:47,height:44,flexDirection:'row',alignItems:'center',justifyContent:'flex-end',zIndex:1},
-  face:{width:34,height:34,borderRadius:17,borderWidth:2,borderColor:'#FFF9F3',backgroundColor:'#E6C2C9'},
+  heroNote:{alignSelf:'flex-start',marginTop:2,paddingHorizontal:7,paddingVertical:4,borderRadius:12,backgroundColor:'#FFF7DE',flexDirection:'row',alignItems:'center',gap:4},
+  heroNoteText:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#755817'},
+  faceStack:{width:58,height:44,flexDirection:'row',alignItems:'center',justifyContent:'flex-end',zIndex:1},
+  face:{width:36,height:36,borderRadius:18,borderWidth:2,borderColor:'#FFFDFC',backgroundColor:'#E6C2C9'},
   chipWrap:{flexDirection:'row',flexWrap:'wrap',gap:6},
   cleanChip:{maxWidth:'100%',paddingHorizontal:9,paddingVertical:5,borderRadius:14,backgroundColor:'#FFF9F3',borderWidth:1,borderColor:'#E5D2C8'},
   cleanChipText:{fontFamily:'Poppins_600SemiBold',fontSize:9.2,color:colors.ivory},
@@ -4746,6 +4774,17 @@ const homeCleanStyles=StyleSheet.create({
   matchGrid:{flexDirection:'row',flexWrap:'wrap',gap:14},
   matchGridItem:{width:'49%'},
   emptyCard:{gap:12,alignItems:'center'},
+  notificationBackdrop:{...StyleSheet.absoluteFillObject,backgroundColor:'rgba(43,20,28,.34)'},
+  notificationSheet:{position:'absolute',left:0,right:0,bottom:0,gap:13,padding:18,paddingBottom:26,borderTopLeftRadius:28,borderTopRightRadius:28,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E8D7CF',shadowColor:'#3B1823',shadowOpacity:.25,shadowRadius:24,elevation:8},
+  notificationHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
+  notificationTitle:{fontFamily:'Poppins_700Bold',fontSize:22,lineHeight:27,color:'#2A151C'},
+  notificationClose:{width:36,height:36,borderRadius:18,alignItems:'center',justifyContent:'center',backgroundColor:'#F8EEEA',borderWidth:1,borderColor:'#E7D7CF'},
+  notificationIntro:{fontFamily:'Poppins_400Regular',fontSize:11.5,lineHeight:17,color:'#78666C'},
+  notificationList:{gap:8},
+  notificationRow:{minHeight:66,padding:10,borderRadius:17,backgroundColor:'#FFF8F7',borderWidth:1,borderColor:'#EDDCD5',flexDirection:'row',alignItems:'center',gap:9},
+  notificationRowTitle:{fontFamily:'Poppins_700Bold',fontSize:11.5,lineHeight:16,color:'#2A151C'},
+  notificationRowBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:13,color:'#78666C',marginTop:1},
+  notificationTime:{fontFamily:'Poppins_600SemiBold',fontSize:8.5,color:'#A3838A',alignSelf:'flex-start'},
 });
 
 const growthLoopStyles=StyleSheet.create({
