@@ -3,6 +3,8 @@ export const primaryNavigation=[
   {label:'Discover',target:'explore',purpose:'supporting_paths'},
   {label:'Chat',target:'chat',purpose:'meaningful_conversation'},
   {label:'Dates',target:'events',purpose:'accepted_real_dates'},
+  {label:'Gifts',target:'gifts',purpose:'thoughtful_gifting'},
+  {label:'Executive',target:'executive',purpose:'executive_circle'},
   {label:'Profile',target:'profile',purpose:'trust_and_control'},
 ] as const;
 
@@ -17,7 +19,8 @@ export const featureCatalog=[
   {id:'filters',tier:'supporting',entry:'explore'},
   {id:'relationship_coach',tier:'supporting',entry:'explore'},
   {id:'trusted_circle',tier:'supporting',entry:'explore'},
-  {id:'executive_circle',tier:'supporting',entry:'explore'},
+  {id:'executive_circle',tier:'supporting',entry:'executive'},
+  {id:'gift_marketplace',tier:'supporting',entry:'gifts'},
   {id:'gifts_games_gifs',tier:'delight',entry:'chat_attachment'},
   {id:'admin_readiness',tier:'operations',entry:'profile'},
 ] as const;
@@ -25,7 +28,7 @@ export const featureCatalog=[
 export function buildFeatureFocusSnapshot(){
   const primaryTargets=new Set(primaryNavigation.map(item=>item.target));
   const core=featureCatalog.filter(item=>item.tier==='core');
-  const mainNavigationExperiments=primaryNavigation.filter(item=>!['qualified_introductions','supporting_paths','meaningful_conversation','accepted_real_dates','trust_and_control'].includes(item.purpose));
+  const mainNavigationExperiments=primaryNavigation.filter(item=>!['qualified_introductions','supporting_paths','meaningful_conversation','accepted_real_dates','thoughtful_gifting','executive_circle','trust_and_control'].includes(item.purpose));
   return {
     primaryTabCount:primaryNavigation.length,
     mainNavigationExperiments,

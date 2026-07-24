@@ -59,7 +59,7 @@ import { primaryNavigation } from './src/domain/featureFocus';
 import { memberNeedsOnboarding } from './src/domain/memberBootstrap';
 import { canCommitMemberMutation, evaluateMemberDataRuntime, memberMutationFailureMessage, type MemberMutationResult } from './src/domain/memberDataRuntime';
 
-type Screen = 'splash'|'welcome'|'auth'|'otp'|'verify'|'profileSetup'|'vibes'|'intent'|'alignment'|'home'|'explore'|'circle'|'discovery'|'detail'|'mutual'|'icebreaker'|'chat'|'datePlan'|'safety'|'likes'|'profile'|'pricing'|'support'|'coach'|'events'|'executive'|'verifyHub'|'admin';
+type Screen = 'splash'|'welcome'|'auth'|'otp'|'verify'|'profileSetup'|'vibes'|'intent'|'alignment'|'home'|'explore'|'circle'|'discovery'|'detail'|'mutual'|'icebreaker'|'chat'|'gifts'|'datePlan'|'safety'|'likes'|'profile'|'pricing'|'support'|'coach'|'events'|'executive'|'verifyHub'|'admin';
 
 const previewScreens:Screen[]=['splash','welcome','auth','otp','verify','profileSetup','vibes','intent','alignment','home','explore','circle','discovery','detail','mutual','icebreaker','chat','datePlan','safety','likes','profile','pricing','support','coach','events','executive','verifyHub','admin'];
 
@@ -540,14 +540,15 @@ function DestinyOneApp() {
     {screen==='discovery'&&<DiscoveryCenter filters={matchFilters} onFiltersChange={updateMatchFilters} signals={discoverySignals} smartDiscovery={smartDiscovery} crossedPaths={crossedPaths} onSmartChange={updateSmartDiscovery} onCrossedChange={setCrossedPaths} onClear={clearMatchingActivity} onBack={()=>setScreen('explore')}/>}
     {screen==='coach'&&<RelationshipCoach match={selected} preferences={{intent,vibes:vibeList,filters:matchFilters}} onBack={()=>setScreen('explore')} onOpenFilters={()=>setScreen('discovery')} onUseInChat={useCoachDraftInChat}/>}
     {screen==='events'&&<EventsHub defaultCity={profileDraft.city} onBack={()=>setScreen('home')} onOpenDatePlan={(place)=>{setDatePlanPreset(place??null);setScreen('datePlan')}} navigate={setScreen} />}
-    {screen==='executive'&&<ExecutiveCircle navigate={setScreen} onBack={()=>setScreen('explore')} onOpenEvents={()=>setScreen('events')} onOpenPricing={()=>setScreen('pricing')} onOpenVerify={()=>setScreen('verifyHub')} onOpenDatePlan={()=>setScreen('datePlan')}/>}
+	    {screen==='executive'&&<ExecutiveCircle navigate={setScreen} navActive="executive" onBack={()=>setScreen('explore')} onOpenEvents={()=>setScreen('events')} onOpenPricing={()=>setScreen('pricing')} onOpenVerify={()=>setScreen('verifyHub')} onOpenDatePlan={()=>setScreen('datePlan')}/>}
     {screen==='verifyHub'&&<VerificationHub verified={verified} selfieUri={selfieUri} hasVoiceIntro={!!voiceIntroUri} vouches={vouches} onBack={()=>setScreen('profile')} onVerify={()=>{setVerified(true);setAppNotice({title:'Trust badge upgraded',body:'Selfie verification is marked complete in this preview. Production will connect liveness and ID providers.',icon:'shield-checkmark',tone:'gold'})}} onOpenSafety={()=>setScreen('safety')}/>}
     {screen==='admin'&&<AdminModerationPanel reports={reports} blockedCount={blockedIds.length} onBack={()=>setScreen('profile')}/>}
     {screen==='detail'&&<Detail match={selected} preferences={{intent,vibes:vibeList,filters:matchFilters}} back={()=>setScreen('home')} interested={()=>chooseInterested(selected)} onRose={()=>openRose(selected)} onProfileView={()=>notifyProfileView(selected)} onPrivateBlock={()=>setDetailSafetyOpen(true)}/>}
     {screen==='mutual'&&<Mutual match={selected} next={()=>setScreen('icebreaker')} back={()=>setScreen('home')}/>}
     {screen==='icebreaker'&&<Icebreaker match={selected} question={icebreakerQuestion} onSubmit={answerIcebreaker}/>}
     {screen==='chat'&&<Chat match={selected} messages={chatMessages[selected.id]??[]} reflection={relationshipReflections[selected.id]} reminder={relationshipReminders[selected.id]} settings={chatSettings[selected.id]??{nickname:'',theme:'Ruby Velvet'}} initialDraft={chatDrafts[selected.id]??''} onDraftConsumed={()=>setChatDrafts(current=>{const next={...current};delete next[selected.id];return next})} onSettingsChange={updateSelectedChatSettings} onDateStatus={(messageId,status)=>updateDatePlanStatus(selected.id,messageId,status)} onReflection={(messageId,choice)=>saveReflection(selected.id,messageId,choice)} onLearningConsent={(enabled)=>updateRelationshipLearningConsent(selected.id,enabled)} onReminder={(messageId,enabled)=>updateRelationshipReminder(selected.id,messageId,enabled)} onJourneyEvent={recordJourneyEvent} coinBalance={coinBalance} roseAvailability={roseAvailability} onRose={()=>openRose(selected)} onSend={(message)=>appendChatMessage(selected,message)} onSpendCoins={(coins)=>setCoinBalance(balance=>spendCoins(balance,coins))} onReport={reportSelected} onBlock={async()=>{if(await blockMatch(selected))setScreen('home')}} onUnmatch={async()=>{if(await unmatchMatch(selected))setScreen('home')}} navigate={setScreen}/>}
-    {screen==='datePlan'&&<DatePlanner match={selected} preset={datePlanPreset} onBack={()=>setScreen('events')} onSend={async(message)=>{const sent=await appendChatMessage(selected,message);if(sent)setScreen('chat');return sent}}/>}
+	    {screen==='gifts'&&<GiftsHub match={selected} balance={coinBalance} navigate={setScreen} onSpendCoins={(coins)=>setCoinBalance(balance=>spendCoins(balance,coins))} onNotice={(title,body)=>setAppNotice({title,body,icon:'gift',tone:'gold'})}/>}
+	    {screen==='datePlan'&&<DatePlanner match={selected} preset={datePlanPreset} onBack={()=>setScreen('events')} onSend={async(message)=>{const sent=await appendChatMessage(selected,message);if(sent)setScreen('chat');return sent}}/>}
     {screen==='safety'&&<SafetyCenter reports={reports} blockedCount={blockedIds.length} datePlans={Object.values(chatMessages).flat().filter(message=>message.type==='date')} safeCheckIns={safeCheckIns} onCheckIn={recordSafeCheckIn} onDeleteAccount={deleteAccount} onBack={()=>setScreen('profile')}/>}
     {screen==='likes'&&<Likes openPricing={()=>setScreen('pricing')} navigate={setScreen}/>}
     {screen==='profile'&&<Profile profile={profileDraft} verified={verified} profilePhoto={profilePhotos[0]} hasVoiceIntro={!!voiceIntroUri} lastSeenVisible={lastSeenVisible} analyticsConsent={analyticsConsent} onLastSeenVisibleChange={updateLastSeenPrivacy} onAnalyticsConsentChange={updateAnalyticsPrivacy} navigate={setScreen} onReset={resetDemo}/>}
@@ -1942,7 +1943,7 @@ const executiveApplicationSteps=[
   ['Concierge interview','A short call confirms expectations and dating boundaries.'],
   ['Approved circle','Member unlocks private intros, events, gifting and VIP date planning.'],
 ] as const;
-function ExecutiveCircle({navigate,onBack,onOpenEvents,onOpenPricing,onOpenVerify,onOpenDatePlan}:{navigate:(s:Screen)=>void;onBack:()=>void;onOpenEvents:()=>void;onOpenPricing:()=>void;onOpenVerify:()=>void;onOpenDatePlan:()=>void}){
+function ExecutiveCircle({navigate,onBack,onOpenEvents,onOpenPricing,onOpenVerify,onOpenDatePlan,navActive='explore'}:{navigate:(s:Screen)=>void;onBack:()=>void;onOpenEvents:()=>void;onOpenPricing:()=>void;onOpenVerify:()=>void;onOpenDatePlan:()=>void;navActive?:string}){
   const preview=memberDataRuntime.source==='preview';
   const [tab,setTab]=useState<'overview'|'apply'|'matches'|'concierge'>('overview');
   const [application,setApplication]=useState(preview?{role:'Founder / business owner',city:'New York, NY',intent:'Marriage in 12–24 months',privacy:'Hidden profile'}:{role:'',city:'',intent:'',privacy:''});
@@ -1989,7 +1990,7 @@ function ExecutiveCircle({navigate,onBack,onOpenEvents,onOpenPricing,onOpenVerif
       <Button label="Plan a VIP date" icon="restaurant" variant="secondary" onPress={onOpenDatePlan}/>
       <Button label="Upgrade to Executive annual" icon="diamond" variant="gold" onPress={onOpenPricing}/>
     </View>}
-  </ScrollView><BottomNav active="explore" navigate={navigate}/></SafeAreaView></LinearGradient>
+  </ScrollView><BottomNav active={navActive} navigate={navigate}/></SafeAreaView></LinearGradient>
 }
 
 function MetricPill({label,value,icon}:{label:string;value:string;icon:keyof typeof Ionicons.glyphMap}){
@@ -3459,7 +3460,7 @@ const coupleThemes=[
   {name:'Ivory Calm',accent:'#FFF0D2',soft:'rgba(255,240,210,.10)',panel:'#17110E',bg:'#070504',border:'#6D5A44'},
 ];
 
-function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftConsumed,onSettingsChange,onDateStatus,onReflection,onLearningConsent,onReminder,onJourneyEvent,coinBalance,roseAvailability,onRose,onSend,onSpendCoins,onReport,onBlock,onUnmatch,navigate}:{match:Match;messages:ChatMessage[];reflection?:RelationshipReflectionRecord;reminder?:RelationshipReminderRecord;settings:CoupleChatSettings;initialDraft?:string;onDraftConsumed?:()=>void;onSettingsChange:(settings:CoupleChatSettings)=>void;onDateStatus:(messageId:string,status:DatePlanStatus)=>void;onReflection:(messageId:string,choice:RelationshipReflectionChoice|null)=>void;onLearningConsent:(enabled:boolean)=>void;onReminder:(messageId:string,enabled:boolean)=>void;onJourneyEvent:(name:RelationshipJourneyEventName,properties:Record<string,string|boolean>)=>void;coinBalance:number;roseAvailability:RoseAvailability;onRose:()=>void;onSend:(message:ChatMessage)=>Promise<boolean>;onSpendCoins:(coins:number)=>void;onReport:(reason:string,details?:string)=>void;onBlock:()=>void;onUnmatch:()=>void;navigate:(s:Screen)=>void}) {
+function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftConsumed,onSettingsChange,onDateStatus,onReflection,onLearningConsent,onReminder,onJourneyEvent,coinBalance,roseAvailability,onRose,onSend,onSpendCoins,onReport,onBlock,onUnmatch,navigate,openGiftOnMount=false,navActive='chat'}:{match:Match;messages:ChatMessage[];reflection?:RelationshipReflectionRecord;reminder?:RelationshipReminderRecord;settings:CoupleChatSettings;initialDraft?:string;onDraftConsumed?:()=>void;onSettingsChange:(settings:CoupleChatSettings)=>void;onDateStatus:(messageId:string,status:DatePlanStatus)=>void;onReflection:(messageId:string,choice:RelationshipReflectionChoice|null)=>void;onLearningConsent:(enabled:boolean)=>void;onReminder:(messageId:string,enabled:boolean)=>void;onJourneyEvent:(name:RelationshipJourneyEventName,properties:Record<string,string|boolean>)=>void;coinBalance:number;roseAvailability:RoseAvailability;onRose:()=>void;onSend:(message:ChatMessage)=>Promise<boolean>;onSpendCoins:(coins:number)=>void;onReport:(reason:string,details?:string)=>void;onBlock:()=>void;onUnmatch:()=>void;navigate:(s:Screen)=>void;openGiftOnMount?:boolean;navActive?:string}) {
   const {width:chatWidth}=useWindowDimensions();
   const messagesRef=useRef<ScrollView|null>(null);
   const [text,setText]=useState('');
@@ -3497,6 +3498,12 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
     setShowEmoji(false);
     onDraftConsumed?.();
   },[initialDraft,onDraftConsumed]);
+  useEffect(()=>{
+    if(!openGiftOnMount)return;
+    setGiftOpen(true);
+    setShowAttachments(false);
+    setShowEmoji(false);
+  },[openGiftOnMount]);
   const createMessage=(message:Omit<ChatMessage,'id'|'createdAt'|'status'>):ChatMessage=>({...message,id:`${Date.now()}-${Math.random().toString(36).slice(2,7)}`,createdAt:Date.now(),status:'read'});
   const messageSummary=(message:ChatMessage)=>message.text?.trim()||message.date?.venue||message.gift?.name||(message.type==='voice'?'Voice message':message.type==='location'?'Live location':message.type==='image'?'Photo':message.type==='gif'?'GIF':message.type==='snap'?'View-once photo':'Message');
   const dispatchMessage=async(message:ChatMessage)=>{
@@ -3627,7 +3634,7 @@ function Chat({match,messages,reflection,reminder,settings,initialDraft,onDraftC
       {replyTarget&&<View style={chatStyles.replyPreview}><View style={chatStyles.replyAccent}/><View style={{flex:1}}><Text style={chatStyles.replyTitle}>Replying to your message</Text><Text numberOfLines={1} style={chatStyles.replyText}>{messageSummary(replyTarget)}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Cancel reply" onPress={()=>setReplyTarget(null)}><Ionicons name="close" size={20} color={colors.muted}/></Pressable></View>}
       <View style={[styles.composer,chatPremiumStyles.composer]}><Pressable accessibilityRole="button" accessibilityLabel={showAttachments?'Close attachments':'Add attachment'} onPress={()=>{setShowAttachments(value=>{if(!value)setAttachmentPage('main');return !value});setShowEmoji(false)}}><PremiumIcon name={showAttachments?'close':'add-circle-outline'} tone={showAttachments?'ruby':'dark'} size={36} iconSize={17}/></Pressable><View style={[chatStyles.inputWrap,{backgroundColor:'rgba(255,255,255,.055)',borderWidth:1,borderColor:recorderState.isRecording?colors.gold:'rgba(255,255,255,.10)'}]}><TextInput value={text} onChangeText={setText} onSubmitEditing={() => void sendText()} returnKeyType="send" placeholder={sending?'Sending…':recorderState.isRecording?'Recording voice note…':'Message…'} placeholderTextColor="#8C7888" editable={!recorderState.isRecording&&!sending} style={[styles.chatInput,chatPremiumStyles.chatInput]}/><Pressable accessibilityRole="button" accessibilityLabel={showEmoji?'Close emoji picker':'Open emoji picker'} onPress={()=>{setShowEmoji(value=>!value);setShowAttachments(false)}}><Ionicons name={showEmoji?'close':'happy-outline'} size={21} color={showEmoji?colors.gold:'#B59DA4'}/></Pressable></View><Pressable disabled={sending} accessibilityRole="button" accessibilityLabel={sending?'Sending message':text.trim()?'Send message':recorderState.isRecording?'Stop recording':'Record voice note'} onPress={sendOrRecord} style={chatStyles.sendButton}><Ionicons name={sending?'time-outline':text.trim()?'send':recorderState.isRecording?'stop':'mic'} size={20} color={colors.ivory}/></Pressable></View>
     </KeyboardAvoidingView>
-    <BottomNav active="chat" navigate={navigate}/>
+    <BottomNav active={navActive} navigate={navigate}/>
     <GifPicker visible={gifOpen} onClose={()=>setGifOpen(false)} onSelect={sendGif}/>
     <GiftShop visible={giftOpen} balance={coinBalance} recipientName={match.name} physicalMode={physicalGiftOrderingMode} digitalMode={digitalGiftWalletMode} onClose={()=>setGiftOpen(false)} onSendDigital={sendDigitalGift} onOrderPhysical={sendPhysicalGift}/>
     <GameSheet visible={gamesOpen} onClose={()=>setGamesOpen(false)} onPlay={startGame}/>
@@ -3791,6 +3798,21 @@ function RoseReceivedPopup({data,onClose,onOpenChat}:{data:RosePopupPayload|null
   if(!data)return null;
   const scale=pulse.interpolate({inputRange:[0,1],outputRange:[.96,1.05]});
   return <Modal visible transparent animationType="fade" onRequestClose={onClose}><View style={rosePopupStyles.backdrop}><LinearGradient colors={['#4A0010','#120004']} style={rosePopupStyles.card}><Pressable onPress={onClose} style={rosePopupStyles.close}><PremiumIcon name="close" tone="dark" size={36} iconSize={17}/></Pressable><Text style={rosePopupStyles.petal}>✦</Text><Text style={[rosePopupStyles.petal,rosePopupStyles.petalRight]}>✧</Text><Animated.View style={[rosePopupStyles.bloom,{transform:[{scale}]}]}><PremiumIcon name="sparkles" tone="gold" size={92} iconSize={42}/></Animated.View><Text style={launchStyles.scriptHero}>A Golden Spark arrived</Text><Text style={rosePopupStyles.title}>{data.match.name} gets this moment</Text><Text style={rosePopupStyles.note}>“{data.note}”</Text><View style={rosePopupStyles.pushPreview}><PremiumIcon name="notifications" tone="gold" size={38} iconSize={17}/><Text style={rosePopupStyles.pushPreviewText}>Push notification queued · opens to this romantic animation</Text></View><View style={{width:'100%',gap:10}}><Button label={`Open chat with ${data.match.name}`} icon="chatbubble" onPress={()=>onOpenChat(data.match)}/><Button label="Keep browsing" variant="ghost" onPress={onClose}/></View></LinearGradient></View></Modal>
+}
+
+function GiftsHub({match,balance,navigate,onSpendCoins,onNotice}:{match:Match;balance:number;navigate:(screen:Screen)=>void;onSpendCoins:(coins:number)=>void;onNotice:(title:string,body:string)=>void}){
+  const [open,setOpen]=useState(true);
+  const close=()=>{setOpen(false);navigate('chat')};
+  const sendDigital=(gift:DigitalGift)=>{
+    if(balance<gift.coins){onNotice('More coins needed',`This ${gift.name} needs ${gift.coins} coins. Your current balance is ${balance}.`);return}
+    onSpendCoins(gift.coins);
+    onNotice('Gift sent',`${gift.name} is ready for ${match.name} in the preview chat flow.`);
+  };
+  const orderPhysical=async(gift:PhysicalGift,note:string)=>{
+    onNotice('Gift request created',`${gift.name} was requested for ${match.name}. They must accept privately before any payment or delivery is confirmed.`);
+    setOpen(false);
+  };
+  return <SafeAreaView style={{flex:1,backgroundColor:'#FFF8F5'}}><View style={{flex:1}}><BottomNav active="gifts" navigate={navigate}/></View><GiftShop visible={open} balance={balance} recipientName={match.name} physicalMode="demo" digitalMode="demo" onClose={close} onSendDigital={sendDigital} onOrderPhysical={orderPhysical}/></SafeAreaView>;
 }
 
 function GifPicker({visible,onClose,onSelect}:{visible:boolean;onClose:()=>void;onSelect:(uri:string)=>void}){return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,{maxHeight:'88%'}]}><SheetHeader title="Choose a GIF" subtitle="100 everyday reaction GIFs" onClose={onClose}/><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={chatStyles.gifGrid}>{chatGifs.map((gif,index)=><Pressable key={`${gif.title}-${index}`} onPress={()=>onSelect(gif.uri)} style={chatStyles.gifCard}><Image source={{uri:gif.uri}} style={styles.fill}/><Text style={chatStyles.gifTitle}>{gif.title}</Text></Pressable>)}</ScrollView></SafeAreaView></Modal>}
@@ -4377,14 +4399,14 @@ function Info({title,body}:{title:string;body:string}){return <View style={{gap:
 function LifeAlignment({match}:{match:Match}){const rows=[['diamond-outline','Marriage outlook',match.timeline],['happy-outline','Family plans',match.children],['people-outline','Family involvement',match.family],['home-outline','Relocation',match.relocation],['chatbubbles-outline','Languages',match.languages.join(' · ')]] as const;return <View style={{gap:10}}><Text style={styles.sectionLabel}>LIFE ALIGNMENT</Text><View style={styles.alignmentCard}>{rows.map(([icon,label,value])=><View key={label} style={styles.alignmentRow}><MiniPremiumIcon name={icon} tone="rose" size={34} iconSize={16}/><View style={{flex:1}}><Text style={styles.alignmentRowLabel}>{label}</Text><Text style={styles.alignmentRowValue}>{value}</Text></View></View>)}</View><Text style={styles.alignmentPrivacy}>Shared to make intentions clear—not to reduce a person to a checklist.</Text><View style={circleStyles.profileVouch}><PremiumIcon name="people" tone="gold" size={46} iconSize={22}/><View style={{flex:1}}><Text style={circleStyles.profileVouchTitle}>Vouched for by {match.vouches.count} friends</Text><Text style={circleStyles.profileVouchBody}>People who know {match.name} describe them as:</Text><View style={circleStyles.qualityWrap}>{match.vouches.qualities.map(quality=><View key={quality} style={circleStyles.qualityPill}><Text style={circleStyles.qualityText}>{quality}</Text></View>)}</View></View></View><Text style={styles.alignmentPrivacy}>Friend vouches confirm character, not identity or safety. Always use your own judgment.</Text></View>}
 function BottomNav({active,navigate}:{active:string;navigate:(s:Screen)=>void}){
   const {width}=useWindowDimensions();
-  const compact=width<=360;
-  const navigationMeta:Record<typeof primaryNavigation[number]['target'],{icon:keyof typeof Ionicons.glyphMap;tone:PremiumIconTone}>={home:{icon:'heart',tone:'ruby'},explore:{icon:'compass',tone:'gold'},chat:{icon:'chatbubble',tone:'ruby'},events:{icon:'calendar',tone:'gold'},profile:{icon:'person',tone:'dark'}};
+  const compact=width<=520;
+  const navigationMeta:Record<typeof primaryNavigation[number]['target'],{icon:keyof typeof Ionicons.glyphMap;tone:PremiumIconTone}>={home:{icon:'heart',tone:'ruby'},explore:{icon:'compass',tone:'gold'},chat:{icon:'chatbubble',tone:'ruby'},events:{icon:'calendar',tone:'gold'},gifts:{icon:'gift',tone:'gold'},executive:{icon:'briefcase',tone:'gold'},profile:{icon:'person',tone:'dark'}};
   return <View accessibilityRole="tablist" style={bottomNavStyles.nav}><View style={bottomNavStyles.navScroller}>{primaryNavigation.map(({label,target})=>{
     const {icon,tone}=navigationMeta[target];
     const selected=active===target;
     return <Pressable accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{selected}} key={label} onPress={()=>navigate(target as Screen)} style={[bottomNavStyles.navItem,compact&&bottomNavStyles.navItemCompact]}>
       {selected?<PremiumIcon name={icon} tone={tone} size={compact?29:31} iconSize={compact?14:15}/>:<PremiumIcon name={`${icon}-outline` as keyof typeof Ionicons.glyphMap} tone="dark" size={compact?29:31} iconSize={compact?14:15}/>}
-      <Text style={[bottomNavStyles.navText,selected&&bottomNavStyles.navTextOn]}>{label}</Text>
+      <Text numberOfLines={1} style={[bottomNavStyles.navText,compact&&bottomNavStyles.navTextCompact,selected&&bottomNavStyles.navTextOn]}>{label}</Text>
     </Pressable>
   })}</View></View>
 }
@@ -4429,9 +4451,10 @@ const bottomNavStyles=StyleSheet.create({
   nav:{position:'absolute',left:10,right:10,bottom:8,minHeight:70,paddingTop:7,paddingBottom:7,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,borderRadius:24,shadowColor:'#6E3442',shadowOpacity:.12,shadowRadius:22,shadowOffset:{width:0,height:9},overflow:'hidden'},
   navScroller:{flexDirection:'row',alignItems:'center',justifyContent:'space-around',paddingHorizontal:8,minWidth:'100%'},
   navItem:{flex:1,minWidth:58,alignItems:'center',justifyContent:'center',gap:1},
-  navItemCompact:{minWidth:46},
+  navItemCompact:{minWidth:0},
   inactiveIcon:{width:31,height:31,borderRadius:16,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.08)'},
   navText:{fontFamily:'Poppins_700Bold',fontSize:7.4,color:colors.muted},
+  navTextCompact:{fontSize:6.1},
   navTextOn:{color:colors.pink},
 });
 
