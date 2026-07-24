@@ -59,9 +59,9 @@ import { primaryNavigation } from './src/domain/featureFocus';
 import { memberNeedsOnboarding } from './src/domain/memberBootstrap';
 import { canCommitMemberMutation, evaluateMemberDataRuntime, memberMutationFailureMessage, type MemberMutationResult } from './src/domain/memberDataRuntime';
 
-type Screen = 'splash'|'welcome'|'auth'|'otp'|'verify'|'profileSetup'|'vibes'|'intent'|'alignment'|'home'|'explore'|'circle'|'discovery'|'detail'|'mutual'|'icebreaker'|'chat'|'gifts'|'datePlan'|'safety'|'likes'|'profile'|'pricing'|'support'|'coach'|'events'|'executive'|'verifyHub'|'admin';
+type Screen = 'splash'|'welcome'|'auth'|'otp'|'verify'|'modeChoice'|'profileSetup'|'vibes'|'intent'|'alignment'|'home'|'explore'|'circle'|'discovery'|'detail'|'mutual'|'icebreaker'|'chat'|'gifts'|'datePlan'|'safety'|'likes'|'profile'|'pricing'|'support'|'coach'|'events'|'executive'|'verifyHub'|'admin';
 
-const previewScreens:Screen[]=['splash','welcome','auth','otp','verify','profileSetup','vibes','intent','alignment','home','explore','circle','discovery','detail','mutual','icebreaker','chat','datePlan','safety','likes','profile','pricing','support','coach','events','executive','verifyHub','admin'];
+const previewScreens:Screen[]=['splash','welcome','auth','otp','verify','modeChoice','profileSetup','vibes','intent','alignment','home','explore','circle','discovery','detail','mutual','icebreaker','chat','datePlan','safety','likes','profile','pricing','support','coach','events','executive','verifyHub','admin'];
 
 function getPreviewScreen():Screen|undefined{
   if(Platform.OS!=='web'||backendRuntime.mode!=='demo'||typeof window==='undefined')return undefined;
@@ -69,7 +69,7 @@ function getPreviewScreen():Screen|undefined{
   return requested&&previewScreens.includes(requested)?requested:undefined;
 }
 
-const onboardingPreviewScreens: Screen[] = ['welcome','auth','otp','verify','profileSetup','vibes','intent','alignment'];
+const onboardingPreviewScreens: Screen[] = ['welcome','auth','otp','verify','modeChoice','profileSetup','vibes','intent','alignment'];
 
 function isFreshOnboardingPreview() {
   const preview = getPreviewScreen();
@@ -128,6 +128,7 @@ function DestinyOneApp() {
   const [datePlanPreset,setDatePlanPreset] = useState<PlaceItem|null>(null);
   const [vibeList,setVibeList] = useState<string[]>([]);
   const [intent,setIntent] = useState('');
+  const [relationshipMode,setRelationshipMode] = useState<'single'|'couple'|''>('');
   const [alignment,setAlignment] = useState<Record<string,string>>({});
   const [verified,setVerified] = useState(false);
   const [authDestination,setAuthDestination] = useState('');
@@ -536,14 +537,15 @@ function DestinyOneApp() {
     setRosePopup({match,note,paid});
   };
   const resetDemo=async()=>{await clearAppState();setVerified(initialPersistedState.verified);setProfileDraft(initialPersistedState.profileDraft);setVibeList(initialPersistedState.vibes);setIntent(initialPersistedState.intent);setAlignment(initialPersistedState.alignment);setChatMessages(initialPersistedState.chats);setChatDrafts({});setCoinBalance(initialPersistedState.coinBalance);setProfilePhotos(initialPersistedState.photos);setSelfieUri('');setVoiceIntroUri('');setVouches([]);setDiscoverySignals([]);setSmartDiscovery(true);setCrossedPaths(false);setBlockedIds([]);setReports([]);setSafeCheckIns([]);setMatchFilters(defaultMatchFilters);setRoseLedger(initialPersistedState.roseLedger);setLastSeenVisible(initialPersistedState.lastSeenVisible);setAnalyticsConsent(initialPersistedState.analyticsConsent);setChatSettings(initialPersistedState.chatSettings);setRelationshipReflections(initialPersistedState.relationshipReflections);setRelationshipReminders(initialPersistedState.relationshipReminders);setRosePopup(null);setAppNotice(null);setDetailSafetyOpen(false);setDismissedIds([]);setProfileViewNotifiedIds([]);setAuthDestination('');setAuthPassword('');setOnboardingComplete(false);setScreen('welcome')};
-  const restartOnboarding=()=>{setVerified(false);setProfileDraft(initialPersistedState.profileDraft);setVibeList([]);setIntent('');setAlignment({});setProfilePhotos([]);setSelfieUri('');setVoiceIntroUri('');setAuthDestination('');setAuthPassword('');setOnboardingComplete(false);setScreen('welcome')};
+  const restartOnboarding=()=>{setVerified(false);setProfileDraft(initialPersistedState.profileDraft);setVibeList([]);setIntent('');setRelationshipMode('');setAlignment({});setProfilePhotos([]);setSelfieUri('');setVoiceIntroUri('');setAuthDestination('');setAuthPassword('');setOnboardingComplete(false);setScreen('welcome')};
   const deleteAccount=async()=>{try{await requestAccountDeletion()}finally{await resetDemo()}};
   return <SafeAreaProvider><StatusBar style="light"/><View style={shared.screen}>
     {screen==='splash'&&<Splash/>}
     {screen==='welcome'&&<Welcome onNext={()=>setScreen('auth')}/>}
     {screen==='auth'&&<Auth onNext={(destination,skipOtp,password)=>{setAuthDestination(destination);setAuthPassword(password??'');setScreen(skipOtp?'verify':'otp')}} onBack={()=>setScreen('welcome')}/>}
     {screen==='otp'&&<Otp destination={authDestination} password={authPassword} onBack={()=>setScreen('auth')} onVerified={()=>setScreen('verify')}/>}
-    {screen==='verify'&&<Verify verified={verified} selfieUri={selfieUri} onSelfie={setSelfieUri} setVerified={setVerified} onNext={()=>setScreen('profileSetup')}/>}
+    {screen==='verify'&&<Verify verified={verified} selfieUri={selfieUri} onSelfie={setSelfieUri} setVerified={setVerified} onNext={()=>setScreen('modeChoice')}/>}
+    {screen==='modeChoice'&&<RelationshipModeChoice value={relationshipMode} onChange={setRelationshipMode} onNext={()=>setScreen('profileSetup')}/>}
     {screen==='profileSetup'&&<ProfileSetup profile={profileDraft} onProfileChange={setProfileDraft} photos={profilePhotos} onPhotosChange={setProfilePhotos} voiceUri={voiceIntroUri} onVoiceChange={setVoiceIntroUri} onNext={()=>setScreen('vibes')}/>}
     {screen==='vibes'&&<Vibes value={vibeList} onChange={setVibeList} onNext={()=>setScreen('intent')}/>}
     {screen==='intent'&&<Intent value={intent} onChange={setIntent} onNext={()=>setScreen('alignment')}/>}
@@ -622,9 +624,9 @@ function Splash(){
   </LinearGradient>
 }
 
-function Welcome({onNext}:{onNext:()=>void}){return <LinearGradient colors={['#FFFDFC','#F8ECEA','#F8F3ED']} locations={[0,.58,1]} style={{flex:1}}><View style={styles.welcomeGlowOne}/><View style={styles.welcomeGlowTwo}/><SafeAreaView style={shared.safe}><View style={styles.welcomeTop}><Brand small/><View style={styles.memberPill}><View style={styles.memberDot}/><Text style={styles.memberText}>Intentional dating</Text></View></View><View style={styles.welcomeArt}><View style={styles.orbit}/><View style={styles.sparkOne}><MiniPremiumIcon name="sparkles" tone="rose" size={32} iconSize={15}/></View><View style={[styles.photoMini,{transform:[{rotate:'-8deg'}],left:25}]}><Image source={{uri:matches[1]!.photo}} style={styles.fill}/></View><View style={[styles.photoMini,{transform:[{rotate:'8deg'}],right:25,top:55}]}><Image source={{uri:matches[0]!.photo}} style={styles.fill}/></View><View style={styles.heart}><PremiumIcon name="heart" tone="ruby" size={54} iconSize={26}/></View><View style={styles.valueTag}><MiniPremiumIcon name="heart" tone="ruby" size={24} iconSize={11}/><Text style={styles.valueTagText}>Family first</Text></View></View><View style={{gap:14}}><SectionTitle eyebrow="Made for meaningful beginnings" title="Meet. Match. Build something real." body="A curated community of South Asians across the USA and Canada, here for relationships with intention."/><View style={launchStyles.trustRibbon}><TrustPoint icon="shield-checkmark" label="Verified"/><TrustPoint icon="heart" label="Intentional"/><TrustPoint icon="lock-closed" label="Private"/></View><View style={{gap:10,marginTop:4}}><Button label="Get Started" icon="arrow-forward" onPress={onNext}/><Button variant="ghost" label="I already have an account" onPress={onNext}/></View></View></SafeAreaView></LinearGradient>}
+function Welcome({onNext}:{onNext:()=>void}){return <LinearGradient colors={['#FFFDFC','#F8ECEA','#F8F3ED']} locations={[0,.58,1]} style={{flex:1}}><View style={styles.welcomeGlowOne}/><View style={styles.welcomeGlowTwo}/><SafeAreaView style={shared.safe}><View style={styles.welcomeTop}><Brand small/><View style={styles.memberPill}><View style={styles.memberDot}/><Text style={styles.memberText}>Intentional dating</Text></View></View><View style={styles.welcomeArt}><View style={styles.orbit}/><View style={styles.sparkOne}><MiniPremiumIcon name="sparkles" tone="rose" size={32} iconSize={15}/></View><View style={[styles.photoMini,{transform:[{rotate:'-8deg'}],left:25}]}><Image source={{uri:matches[1]!.photo}} style={styles.fill}/></View><View style={[styles.photoMini,{transform:[{rotate:'8deg'}],right:25,top:55}]}><Image source={{uri:matches[0]!.photo}} style={styles.fill}/></View><View style={styles.heart}><PremiumIcon name="heart" tone="ruby" size={54} iconSize={26}/></View><View style={styles.valueTag}><MiniPremiumIcon name="heart" tone="ruby" size={24} iconSize={11}/><Text style={styles.valueTagText}>Family first</Text></View></View><View style={{gap:14}}><SectionTitle eyebrow="Made for meaningful beginnings" title="Meet. Match. Build something real." body="A curated community of South Asians across the USA and Canada, here for relationships with intention."/><View style={launchStyles.trustCard}><View style={launchStyles.trustIntro}><MiniPremiumIcon name="shield-checkmark" tone="gold" size={34} iconSize={16}/><View style={{flex:1}}><Text style={launchStyles.trustTitle}>A calmer way to meet someone</Text><Text style={launchStyles.trustBody}>Every introduction is designed around trust, clear intent and privacy.</Text></View></View><View style={launchStyles.trustRibbon}><TrustPoint icon="shield-checkmark" label="Verified"/><TrustPoint icon="heart" label="Intentional"/><TrustPoint icon="lock-closed" label="Private"/></View></View><View style={{gap:10,marginTop:4}}><Button label="Get Started" icon="arrow-forward" onPress={onNext}/><Button variant="ghost" label="I already have an account" onPress={onNext}/></View></View></SafeAreaView></LinearGradient>}
 
-function TrustPoint({icon,label}:{icon:keyof typeof Ionicons.glyphMap;label:string}){return <View style={launchStyles.trustPoint}><PremiumIcon name={icon} tone={label==='Private'?'dark':label==='Verified'?'gold':'ruby'} size={24} iconSize={12}/><Text style={launchStyles.trustLabel}>{label}</Text></View>}
+function TrustPoint({icon,label}:{icon:keyof typeof Ionicons.glyphMap;label:string}){return <View style={launchStyles.trustPoint}><PremiumIcon name={icon} tone={label==='Private'?'dark':label==='Verified'?'gold':'ruby'} size={28} iconSize={13}/><Text style={launchStyles.trustLabel}>{label}</Text></View>}
 
 function RoseMark({size=34}:{size?:number}){
   return <Image source={premiumRose} resizeMode="cover" style={{width:size,height:size,borderRadius:size/2,borderWidth:1,borderColor:'rgba(255,255,255,.22)'}}/>;
@@ -683,10 +685,10 @@ function Auth({onNext,onBack}:{onNext:(destination:string,skipOtp?:boolean,passw
     </View>
     {!!socialStatus&&<View style={authStyles.socialStatus}><MiniPremiumIcon name="shield-checkmark" tone="gold" size={30} iconSize={14}/><Text style={authStyles.socialStatusText}>{socialStatus}</Text></View>}
     <View style={authStyles.orRow}><View style={authStyles.orLine}/><Text style={authStyles.orText}>or continue with</Text><View style={authStyles.orLine}/></View>
-    <View style={styles.segment}>
+    <View style={authStyles.methodCard}><View><Text style={authStyles.methodTitle}>Choose a sign-in method</Text><Text style={authStyles.methodBody}>Both are private. You can add another method later.</Text></View><View style={styles.segment}>
       <Segment label="Phone" active={mode==='phone'} onPress={()=>switchMode('phone')}/>
       <Segment label="Email" active={mode==='email'} onPress={()=>switchMode('email')}/>
-    </View>
+    </View></View>
     <View style={{gap:16}}>
       {mode==='phone'?<>
         <Field label="Phone number" placeholder="+1  (555)  000-0000" keyboardType="phone-pad" value={phone} onChangeText={setPhone} error={submitted&&!phoneValid?'Enter a valid 10-digit phone number.':''}/>
@@ -798,6 +800,9 @@ function ProfileSetup({
   const [cityQuery,setCityQuery]=useState(profile.city);
   const [photoPickerIndex,setPhotoPickerIndex]=useState<number|null>(null);
   const [agePickerOpen,setAgePickerOpen]=useState(false);
+  const [heightPickerOpen,setHeightPickerOpen]=useState(false);
+  const {width}=useWindowDimensions();
+  const photoHeight=width>=760?218:Math.max(156,Math.min(205,(width-72)*.43));
   useEffect(()=>setCityQuery(profile.city),[profile.city]);
   const updateProfile=<Key extends keyof ProfileDraft>(key:Key,value:ProfileDraft[Key])=>onProfileChange({...profile,[key]:value});
   const citySuggestions=profileCities.filter(item=>item.toLowerCase().includes(cityQuery.trim().toLowerCase())).slice(0,12);
@@ -827,15 +832,15 @@ function ProfileSetup({
   const choosePhoto=(index:number)=>{
     setPhotoPickerIndex(index);
   };
-  return <FormPage step={3} scroll>
+  return <FormPage step={4} scroll>
     <SectionTitle eyebrow="The essentials" title="Create your profile." body="Just enough to make a thoughtful first impression."/>
-    <View style={{gap:9}}><Text style={shared.label}>Add 3 recent photos</Text><View style={styles.photoRow}>{[0,1,2].map(index=><Pressable onPress={()=>choosePhoto(index)} key={index} style={styles.addPhoto}>{photos[index]?<Image source={{uri:photos[index]}} style={styles.fill}/>:<><MiniPremiumIcon name="add" tone="plum" size={36} iconSize={18}/><Text style={mediaStyles.addPhotoText}>Add</Text></>}<View style={styles.photoNum}><Text style={styles.photoNumText}>{index+1}</Text></View></Pressable>)}</View>{!!mediaError&&<Text style={styles.formError}>{mediaError}</Text>}</View>
+    <View style={onboardingStyles.photoSection}><View style={onboardingStyles.photoHeading}><View style={{flex:1}}><Text style={shared.label}>Add 3 recent photos</Text><Text style={onboardingStyles.photoHint}>A clear hello, your full look, and a small glimpse of your world.</Text></View><View style={onboardingStyles.photoCount}><Text style={onboardingStyles.photoCountText}>{photos.length}/3</Text></View></View><View style={styles.photoRow}>{[['A clear hello','Face the camera'],['Your full look','Show your style'],['Your world','A moment you love']].map(([title,subtitle],index)=><Pressable onPress={()=>choosePhoto(index)} key={title} style={[styles.addPhoto,{height:photoHeight,aspectRatio:undefined}]}>{photos[index]?<Image source={{uri:photos[index]}} style={styles.fill}/>:<><MiniPremiumIcon name="add" tone="plum" size={36} iconSize={18}/><Text style={onboardingStyles.photoSlotTitle}>{title}</Text><Text style={onboardingStyles.photoSlotBody}>{subtitle}</Text></>}<View style={styles.photoNum}><Text style={styles.photoNumText}>{index+1}</Text></View></Pressable>)}</View>{!!mediaError&&<Text style={styles.formError}>{mediaError}</Text>}</View>
     <View style={{gap:16}}>
       <Field label="First name" placeholder="Your first name" value={profile.firstName} onChangeText={(text:string)=>updateProfile('firstName',text)}/>
       <View style={{gap:8}}><Text style={shared.label}>I identify as</Text><View style={aiStyles.filterWrap}>{([
         ['woman','Woman'],['man','Man'],['nonbinary','Non-binary'],
       ] as const).map(([value,label])=><FilterChip key={value} label={label} active={profile.gender===value} onPress={()=>updateProfile('gender',value)}/>)}</View><Text style={styles.helper}>Used only for reciprocal matching preferences. This is never a ranking score.</Text></View>
-      <View style={[styles.twoCol,{width:'100%',minWidth:0}]}><View style={{flex:1,minWidth:0,gap:8}}><Text style={shared.label}>Age</Text><Pressable accessibilityRole="button" accessibilityLabel="Choose your age" onPress={()=>setAgePickerOpen(true)} style={[selectorStyles.searchBox,profile.age&&!ageEligible&&{borderColor:colors.danger}]}><MiniPremiumIcon name="calendar-outline" tone="gold" size={32} iconSize={15}/><Text style={[selectorStyles.searchInput,{paddingHorizontal:0,paddingVertical:0}]}>{profile.age||'Choose age'}</Text><MiniPremiumIcon name="chevron-down" tone="dark" size={26} iconSize={12}/></Pressable>{profile.age&&!ageEligible&&<Text style={styles.formError}>DestinyOne is for adults ages 18–60.</Text>}</View><View style={{flex:1,minWidth:0}}><Field label="Height" placeholder={'5′ 8″'} value={profile.height} onChangeText={(text:string)=>updateProfile('height',text)}/></View></View>
+      <View style={[styles.twoCol,{width:'100%',minWidth:0}]}><View style={{flex:1,minWidth:0,gap:8}}><Text style={shared.label}>Age</Text><Pressable accessibilityRole="button" accessibilityLabel="Search or choose your age" onPress={()=>setAgePickerOpen(true)} style={[selectorStyles.searchBox,profile.age&&!ageEligible&&{borderColor:colors.danger}]}><MiniPremiumIcon name="calendar-outline" tone="gold" size={32} iconSize={15}/><Text style={[selectorStyles.searchInput,{paddingHorizontal:0,paddingVertical:0}]}>{profile.age||'Search or choose'}</Text><MiniPremiumIcon name="chevron-down" tone="dark" size={26} iconSize={12}/></Pressable>{profile.age&&!ageEligible&&<Text style={styles.formError}>DestinyOne is for adults ages 18–60.</Text>}</View><View style={{flex:1,minWidth:0,gap:8}}><Text style={shared.label}>Height</Text><Pressable accessibilityRole="button" accessibilityLabel="Search or choose your height" onPress={()=>setHeightPickerOpen(true)} style={selectorStyles.searchBox}><MiniPremiumIcon name="resize-outline" tone="gold" size={32} iconSize={15}/><Text style={[selectorStyles.searchInput,{paddingHorizontal:0,paddingVertical:0}]}>{profile.height||'Search or choose'}</Text><MiniPremiumIcon name="chevron-down" tone="dark" size={26} iconSize={12}/></Pressable></View></View>
       <View style={{gap:8}}>
         <Text style={shared.label}>City</Text>
         <View style={selectorStyles.searchBox}><MiniPremiumIcon name="location-outline" tone="rose" size={32} iconSize={15}/><TextInput value={cityQuery} onChangeText={text=>{setCityQuery(text);if(text!==profile.city)updateProfile('city','')}} placeholder="Search USA or Canada city" placeholderTextColor="#6F6875" style={selectorStyles.searchInput}/></View>
@@ -854,12 +859,26 @@ function ProfileSetup({
     <VoiceIntroRecorder uri={voiceUri} onChange={onVoiceChange}/>
     <Button label={continueLabel} disabled={!profileReady} onPress={onNext}/>
     <AgePickerSheet visible={agePickerOpen} selectedAge={profile.age} onClose={()=>setAgePickerOpen(false)} onSelect={age=>{updateProfile('age',age);setAgePickerOpen(false)}}/>
+    <HeightPickerSheet visible={heightPickerOpen} selectedHeight={profile.height} onClose={()=>setHeightPickerOpen(false)} onSelect={height=>{updateProfile('height',height);setHeightPickerOpen(false)}}/>
     <PhotoPickerSheet visible={photoPickerIndex!==null} slot={photoPickerIndex===null?0:photoPickerIndex+1} onClose={()=>setPhotoPickerIndex(null)} onCamera={()=>{const index=photoPickerIndex;if(index===null)return;setPhotoPickerIndex(null);void takePhoto(index)}} onGallery={()=>{const index=photoPickerIndex;if(index===null)return;setPhotoPickerIndex(null);void pickPhoto(index)}}/>
   </FormPage>
 }
 
 function AgePickerSheet({visible,selectedAge,onClose,onSelect}:{visible:boolean;selectedAge:string;onClose:()=>void;onSelect:(age:string)=>void}){
-  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,{maxHeight:'82%'}]}><SheetHeader title="Choose your age" subtitle="DestinyOne is for adults ages 18–60." onClose={onClose}/><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{gap:8,paddingBottom:8}}>{Array.from({length:43},(_,index)=>String(index+18)).map(age=><Pressable accessibilityRole="button" accessibilityState={{selected:selectedAge===age}} key={age} onPress={()=>onSelect(age)} style={[selectorStyles.suggestionRow,selectedAge===age&&selectorStyles.suggestionRowSelected]}><Text style={[selectorStyles.suggestionText,selectedAge===age&&selectorStyles.suggestionTextSelected]}>{age}</Text><MiniPremiumIcon name={selectedAge===age?'checkmark-circle':'chevron-forward'} tone={selectedAge===age?'gold':'dark'} size={28} iconSize={13}/></Pressable>)}</ScrollView></SafeAreaView></Modal>
+  const [query,setQuery]=useState('');
+  const ages=Array.from({length:43},(_,index)=>String(index+18)).filter(age=>age.includes(query.trim()));
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,{maxHeight:'82%'}]}><SheetHeader title="Choose your age" subtitle="Search or select an age from 18 to 60." onClose={onClose}/><View style={selectorStyles.searchBox}><MiniPremiumIcon name="search" tone="ruby" size={30} iconSize={14}/><TextInput value={query} onChangeText={setQuery} keyboardType="number-pad" placeholder="Search age" placeholderTextColor="#746975" style={selectorStyles.searchInput}/></View><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{gap:8,paddingTop:10,paddingBottom:8}}>{ages.map(age=><Pressable accessibilityRole="button" accessibilityState={{selected:selectedAge===age}} key={age} onPress={()=>onSelect(age)} style={[selectorStyles.suggestionRow,selectedAge===age&&selectorStyles.suggestionRowSelected]}><Text style={[selectorStyles.suggestionText,selectedAge===age&&selectorStyles.suggestionTextSelected]}>{age}</Text><MiniPremiumIcon name={selectedAge===age?'checkmark-circle':'chevron-forward'} tone={selectedAge===age?'gold':'dark'} size={28} iconSize={13}/></Pressable>)}</ScrollView></SafeAreaView></Modal>
+}
+
+function HeightPickerSheet({visible,selectedHeight,onClose,onSelect}:{visible:boolean;selectedHeight:string;onClose:()=>void;onSelect:(height:string)=>void}){
+  const [query,setQuery]=useState('');
+  const heights=Array.from({length:29},(_,index)=>{const total=56+index;return `${Math.floor(total/12)} ft ${total%12} in`}).filter(height=>height.toLowerCase().includes(query.trim().toLowerCase()));
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={chatStyles.modalBackdrop} onPress={onClose}/><SafeAreaView style={[chatStyles.sheet,{maxHeight:'82%'}]}><SheetHeader title="Choose your height" subtitle="Search by feet or select the closest height." onClose={onClose}/><View style={selectorStyles.searchBox}><MiniPremiumIcon name="search" tone="ruby" size={30} iconSize={14}/><TextInput value={query} onChangeText={setQuery} placeholder="Search, e.g. 5 ft 8" placeholderTextColor="#746975" style={selectorStyles.searchInput}/></View><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{gap:8,paddingTop:10,paddingBottom:8}}>{heights.map(height=><Pressable accessibilityRole="button" accessibilityState={{selected:selectedHeight===height}} key={height} onPress={()=>onSelect(height)} style={[selectorStyles.suggestionRow,selectedHeight===height&&selectorStyles.suggestionRowSelected]}><Text style={[selectorStyles.suggestionText,selectedHeight===height&&selectorStyles.suggestionTextSelected]}>{height}</Text><MiniPremiumIcon name={selectedHeight===height?'checkmark-circle':'chevron-forward'} tone={selectedHeight===height?'gold':'dark'} size={28} iconSize={13}/></Pressable>)}</ScrollView></SafeAreaView></Modal>
+}
+
+function RelationshipModeChoice({value,onChange,onNext}:{value:'single'|'couple'|'';onChange:(value:'single'|'couple')=>void;onNext:()=>void}){
+  const options:Array<{id:'single'|'couple';eyebrow:string;title:string;body:string;icon:keyof typeof Ionicons.glyphMap;points:string[]}>=[{id:'single',eyebrow:'I am single',title:'I want to meet someone',body:'See thoughtful introductions for a serious relationship.',icon:'heart',points:['Curated matches','Shared values first','Chat after mutual interest']},{id:'couple',eyebrow:'I have a partner',title:'Use DestinyOne together',body:'A private space for dates, gifts, chat and small moments.',icon:'heart-circle',points:['No new matches','Connect with your partner','Plan dates together']}];
+  return <FormPage step={3}><SectionTitle eyebrow="Choose your experience" title="Are you looking for someone, or already together?" body="Choose what fits today. You can change it later in Profile."/><View style={modeChoiceStyles.optionList}>{options.map(option=>{const active=value===option.id;return <Pressable key={option.id} onPress={()=>onChange(option.id)} style={[modeChoiceStyles.optionCard,active&&modeChoiceStyles.optionCardOn]}><View style={modeChoiceStyles.optionTop}><PremiumIcon name={option.icon} tone={option.id==='single'?'ruby':'gold'} size={52} iconSize={24}/><View style={{flex:1}}><Text style={modeChoiceStyles.optionEyebrow}>{option.eyebrow}</Text><Text style={modeChoiceStyles.optionTitle}>{option.title}</Text><Text style={modeChoiceStyles.optionBody}>{option.body}</Text></View><MiniPremiumIcon name={active?'checkmark-circle':'ellipse-outline'} tone={active?'gold':'dark'} size={32} iconSize={15}/></View><View style={modeChoiceStyles.pointRow}>{option.points.map(point=><View key={point} style={modeChoiceStyles.point}><Text style={modeChoiceStyles.pointText}>{point}</Text></View>)}</View></Pressable>})}</View><View style={modeChoiceStyles.privacyNote}><MiniPremiumIcon name="lock-closed" tone="ruby" size={31} iconSize={14}/><Text style={modeChoiceStyles.privacyText}>Your choice stays private. Matching never switches on by itself.</Text></View><Button disabled={!value} label={value==='couple'?'Set up Couple Mode':'Continue to your profile'} icon="arrow-forward" onPress={onNext}/></FormPage>
 }
 
 function PhotoPickerSheet({visible,slot,onClose,onCamera,onGallery}:{visible:boolean;slot:number;onClose:()=>void;onCamera:()=>void;onGallery:()=>void}){
@@ -894,7 +913,7 @@ function VoiceIntroRecorder({uri,onChange}:{uri:string;onChange:(uri:string)=>vo
 }
 
 const vibeIcons: Array<keyof typeof Ionicons.glyphMap> = ['people','rocket','airplane','barbell','sparkles','restaurant','briefcase','leaf','heart-circle','color-palette','home','flower','paw','book','musical-notes','globe'];
-function Vibes({value,onChange,onNext}:{value:string[];onChange:(x:string[])=>void;onNext:()=>void}){const toggle=(v:string)=>onChange(value.includes(v)?value.filter(x=>x!==v):value.length<5?[...value,v]:value);return <FormPage step={4} scroll><View style={vibeStyles.hero}><Text style={styles.kicker}>{value.length} OF 5 SELECTED</Text><Text style={[shared.h1,{textAlign:'center'}]}>Pick the energy people should feel from you.</Text><Text style={[shared.body,{textAlign:'center'}]}>Choose exactly five. These help the algorithm surface people with similar life rhythm and values.</Text><View style={vibeStyles.progressDots}>{[0,1,2,3,4].map(index=><View key={index} style={[vibeStyles.progressDot,index<value.length&&vibeStyles.progressDotOn]}/>)}</View></View><View style={styles.vibeGrid}>{vibes.map((v,i)=><Pressable onPress={()=>toggle(v)} key={v} style={[styles.vibeCard,value.includes(v)&&styles.vibeSelected]}><PremiumIcon name={vibeIcons[i]??'heart'} tone={value.includes(v)?'gold':'plum'} size={48} iconSize={22}/><Text style={[styles.vibeText,value.includes(v)&&{color:colors.ivory}]}>{v}</Text><Text style={vibeStyles.vibeMicro}>{value.includes(v)?'Added to your lens':'Tap to choose'}</Text>{value.includes(v)&&<View style={vibeStyles.vibeCheck}><MiniPremiumIcon name="checkmark" tone="gold" size={25} iconSize={12}/></View>}</Pressable>)}</View><View style={vibeStyles.tipCard}><MiniPremiumIcon name="sparkles" tone="gold" size={36} iconSize={17}/><Text style={[styles.helper,{flex:1}]}>Tip: Pick who you are on a normal day—not who sounds impressive. Better inputs mean better matches.</Text></View><Button label={value.length===5?'Looks like me':'Choose 5 to continue'} disabled={value.length!==5} onPress={onNext}/></FormPage>}
+function Vibes({value,onChange,onNext}:{value:string[];onChange:(x:string[])=>void;onNext:()=>void}){const toggle=(v:string)=>onChange(value.includes(v)?value.filter(x=>x!==v):value.length<5?[...value,v]:value);return <FormPage step={5} scroll><View style={vibeStyles.hero}><Text style={styles.kicker}>{value.length} OF 5 SELECTED</Text><Text style={[shared.h1,{textAlign:'center'}]}>Pick the energy people should feel from you.</Text><Text style={[shared.body,{textAlign:'center'}]}>Choose exactly five. These help the algorithm surface people with similar life rhythm and values.</Text><View style={vibeStyles.progressDots}>{[0,1,2,3,4].map(index=><View key={index} style={[vibeStyles.progressDot,index<value.length&&vibeStyles.progressDotOn]}/>)}</View></View><View style={styles.vibeGrid}>{vibes.map((v,i)=><Pressable onPress={()=>toggle(v)} key={v} style={[styles.vibeCard,value.includes(v)&&styles.vibeSelected]}><PremiumIcon name={vibeIcons[i]??'heart'} tone={value.includes(v)?'gold':'plum'} size={48} iconSize={22}/><Text style={[styles.vibeText,value.includes(v)&&{color:colors.ivory}]}>{v}</Text><Text style={vibeStyles.vibeMicro}>{value.includes(v)?'Added to your lens':'Tap to choose'}</Text>{value.includes(v)&&<View style={vibeStyles.vibeCheck}><MiniPremiumIcon name="checkmark" tone="gold" size={25} iconSize={12}/></View>}</Pressable>)}</View><View style={vibeStyles.tipCard}><MiniPremiumIcon name="sparkles" tone="gold" size={36} iconSize={17}/><Text style={[styles.helper,{flex:1}]}>Tip: Pick who you are on a normal day—not who sounds impressive. Better inputs mean better matches.</Text></View><Button label={value.length===5?'Looks like me':'Choose 5 to continue'} disabled={value.length!==5} onPress={onNext}/></FormPage>}
 
 function Intent({value,onChange,onNext}:{value:string;onChange:(x:string)=>void;onNext:()=>void}) {
   const options=[
@@ -902,7 +921,7 @@ function Intent({value,onChange,onNext}:{value:string;onChange:(x:string)=>void;
     {title:'Marriage',description:'Actively looking for a life partner',icon:'diamond-outline' as const},
     {title:'Long-term, leading to Marriage',description:'Build the relationship thoughtfully, with marriage in mind',icon:'infinite-outline' as const},
   ];
-  return <FormPage step={5}>
+  return <FormPage step={6}>
     <SectionTitle eyebrow="Commitment only" title="What are you ready to build?" body="Every person on DestinyOne is here for a committed relationship or marriage—never casual dating."/>
     <View style={styles.seriousPromise}><MiniPremiumIcon name="shield-checkmark" tone="rose" size={38} iconSize={18}/><Text style={styles.seriousPromiseText}>Casual, short-term and hookup intentions are not supported.</Text></View>
     <View style={{gap:12}}>{options.map(({title,description,icon})=><Pressable key={title} onPress={()=>onChange(title)} style={[styles.intent,value===title&&styles.intentSelected]}><PremiumIcon name={icon} tone={value===title?'gold':'plum'} size={48} iconSize={22}/><View style={{flex:1}}><Text style={styles.cardTitle}>{title}</Text><Text style={styles.helper}>{description}</Text></View><View style={[styles.radio,value===title&&styles.radioOn]}>{value===title&&<View style={styles.radioDot}/>}</View></Pressable>)}</View>
@@ -923,7 +942,7 @@ function Alignment({value,onChange,onNext}:{value:Record<string,string>;onChange
   const selected=value[current.key];
   const choose=(option:string)=>onChange({...value,[current.key]:option});
   const advance=()=>question<alignmentQuestions.length-1?setQuestion(question+1):onNext();
-  return <FormPage step={6}>
+  return <FormPage step={7}>
     <View style={alignmentStyles.hero}><PremiumIcon name={(question===0?'diamond':question===1?'happy':question===2?'people':'home') as keyof typeof Ionicons.glyphMap} tone="ruby" size={58} iconSize={27}/><Text style={styles.kicker}>{current.eyebrow}</Text><Text style={[shared.h1,{textAlign:'center'}]}>{current.title}</Text><Text style={[shared.body,{textAlign:'center'}]}>Small answers, big clarity. We use this to match future plans—not to judge anyone.</Text></View>
     <View style={styles.alignmentProgress}><Text style={styles.helper}>{question+1} of {alignmentQuestions.length}</Text><View style={styles.alignmentTrack}><View style={[styles.alignmentFill,{width:`${((question+1)/alignmentQuestions.length)*100}%`}]} /></View></View>
     <View style={{gap:12}}>{current.options.map((option,index)=><Pressable key={option} onPress={()=>choose(option)} style={[styles.answer,alignmentStyles.answerCard,selected===option&&styles.intentSelected]}><MiniPremiumIcon name={(index===0?'heart':index===1?'leaf':'sparkles') as keyof typeof Ionicons.glyphMap} tone={selected===option?'gold':'rose'} size={38} iconSize={18}/><View style={{flex:1}}><Text style={styles.answerText}>{option}</Text><Text style={alignmentStyles.answerSub}>{index===0?'Clear and intentional':index===1?'Warm with room to breathe':'Honest about your rhythm'}</Text></View><MiniPremiumIcon name={selected===option?'checkmark-circle':'ellipse-outline'} tone={selected===option?'gold':'dark'} size={32} iconSize={15}/></Pressable>)}</View>
@@ -4478,14 +4497,14 @@ function PricingPromise({icon,title,body}:{icon:keyof typeof Ionicons.glyphMap;t
 
 function FormPage({children,back,step,scroll: _scroll}:{children:React.ReactNode;back?:()=>void;step?:number;scroll?:boolean}){
   void _scroll;
-  const inner=<View style={[shared.content,formPageStyles.content]}>{(back||step)&&<View style={{gap:18}}>{back?<Pressable onPress={back} style={styles.backButton}><PremiumIcon name="arrow-back" tone="dark" size={42} iconSize={20}/></Pressable>:<View style={{height:42}}/>}{step&&<StepBar step={step} total={6}/>}</View>}{children}</View>;
+  const inner=<View style={[shared.content,formPageStyles.content]}>{(back||step)&&<View style={{gap:18}}>{back?<Pressable onPress={back} style={styles.backButton}><PremiumIcon name="arrow-back" tone="dark" size={42} iconSize={20}/></Pressable>:<View style={{height:42}}/>}{step&&<StepBar step={step} total={7}/>}</View>}{children}</View>;
   return <LinearGradient colors={['#FFFDFC','#F8EDEA','#F8F3ED']} locations={[0,.48,1]} style={{flex:1,overflow:'hidden'}}><View style={styles.formGlow}/><SafeAreaView style={shared.safe}><KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':Platform.OS==='android'?'height':undefined} style={formPageStyles.keyboard}><ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'on-drag'} showsVerticalScrollIndicator={false} contentContainerStyle={formPageStyles.scrollContent}>{inner}</ScrollView></KeyboardAvoidingView></SafeAreaView></LinearGradient>
 }
 
 const formPageStyles=StyleSheet.create({
   keyboard:{flex:1},
   scrollContent:{flexGrow:1,paddingBottom:42},
-  content:{flexGrow:1,paddingBottom:34},
+  content:{flexGrow:1,paddingBottom:34,width:'100%',maxWidth:900,alignSelf:'center'},
 });
 function Segment({label,active,onPress}:{label:string;active:boolean;onPress:()=>void}){return <Pressable onPress={onPress} style={[styles.segmentItem,active&&styles.segmentActive]}><Text style={[styles.segmentText,active&&{color:colors.ivory}]}>{label}</Text></Pressable>}
 function Info({title,body}:{title:string;body:string}){return <View style={{gap:8}}><Text style={styles.sectionLabel}>{title.toUpperCase()}</Text><Text style={[shared.body,{color:'#D3CED6'}]}>{body}</Text></View>}
@@ -4528,6 +4547,34 @@ const authStyles=StyleSheet.create({
   orRow:{flexDirection:'row',alignItems:'center',gap:10},
   orLine:{flex:1,height:1,backgroundColor:'rgba(255,255,255,.10)'},
   orText:{fontFamily:'Poppins_600SemiBold',fontSize:10,color:colors.muted,textTransform:'uppercase',letterSpacing:1.2},
+  methodCard:{gap:11,padding:14,borderRadius:22,backgroundColor:'#FFF9F7',borderWidth:1,borderColor:'#E8D4CE',shadowColor:'#753D4B',shadowOpacity:.07,shadowRadius:14,shadowOffset:{width:0,height:6}},
+  methodTitle:{fontFamily:'Poppins_700Bold',fontSize:13,color:colors.ivory},
+  methodBody:{fontFamily:'Poppins_400Regular',fontSize:11,lineHeight:16,color:colors.muted,marginTop:2},
+});
+
+const onboardingStyles=StyleSheet.create({
+  photoSection:{gap:11,padding:14,borderRadius:24,backgroundColor:'#FFF9F7',borderWidth:1,borderColor:'#EAD8D2',shadowColor:'#713A48',shadowOpacity:.06,shadowRadius:14,shadowOffset:{width:0,height:6}},
+  photoHeading:{flexDirection:'row',alignItems:'center',gap:12},
+  photoHint:{fontFamily:'Poppins_400Regular',fontSize:11,lineHeight:16,color:colors.muted,marginTop:2},
+  photoCount:{minWidth:46,height:31,paddingHorizontal:9,borderRadius:16,backgroundColor:'#FFF2D9',borderWidth:1,borderColor:'#E5C77C',alignItems:'center',justifyContent:'center'},
+  photoCountText:{fontFamily:'Poppins_700Bold',fontSize:11,color:'#9B7017'},
+  photoSlotTitle:{fontFamily:'Poppins_700Bold',fontSize:10.5,color:colors.ivory,marginTop:7,textAlign:'center'},
+  photoSlotBody:{fontFamily:'Poppins_400Regular',fontSize:8.8,color:colors.muted,marginTop:2,textAlign:'center'},
+});
+
+const modeChoiceStyles=StyleSheet.create({
+  optionList:{gap:12},
+  optionCard:{gap:13,padding:16,borderRadius:26,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E7D6D1',shadowColor:'#6A3441',shadowOpacity:.07,shadowRadius:14,shadowOffset:{width:0,height:6}},
+  optionCardOn:{backgroundColor:'#FFF3F5',borderColor:'#C39232',shadowColor:'#B81D45',shadowOpacity:.12,shadowRadius:18},
+  optionTop:{flexDirection:'row',alignItems:'center',gap:12},
+  optionEyebrow:{fontFamily:'Poppins_700Bold',fontSize:9.5,letterSpacing:1.2,textTransform:'uppercase',color:'#B57920'},
+  optionTitle:{fontFamily:'Poppins_700Bold',fontSize:18,color:colors.ivory,marginTop:2},
+  optionBody:{fontFamily:'Poppins_400Regular',fontSize:11.5,lineHeight:16,color:colors.muted,marginTop:3},
+  pointRow:{flexDirection:'row',flexWrap:'wrap',gap:7,paddingTop:11,borderTopWidth:1,borderTopColor:'#EADBD6'},
+  point:{paddingHorizontal:9,paddingVertical:6,borderRadius:14,backgroundColor:'#FFF8E6',borderWidth:1,borderColor:'#E8D3A0'},
+  pointText:{fontFamily:'Poppins_600SemiBold',fontSize:9.2,color:'#54343D'},
+  privacyNote:{padding:13,borderRadius:20,backgroundColor:'#FFF8F5',borderWidth:1,borderColor:'#E8D7D1',flexDirection:'row',alignItems:'center',gap:10},
+  privacyText:{flex:1,fontFamily:'Poppins_600SemiBold',fontSize:10.8,lineHeight:16,color:'#694E55'},
 });
 
 const premiumIconStyles=StyleSheet.create({
@@ -5483,9 +5530,13 @@ const launchStyles=StyleSheet.create({
   cleanHalo:{position:'absolute',width:250,height:250,borderRadius:125,backgroundColor:'rgba(229,9,47,.10)',shadowColor:colors.pink,shadowOpacity:.48,shadowRadius:44},
   preloadTrack:{position:'absolute',bottom:105,width:172,height:3,borderRadius:2,overflow:'hidden',backgroundColor:'rgba(255,255,255,.09)'},
   preloadFill:{width:'100%',height:'100%',borderRadius:2,backgroundColor:colors.gold,transformOrigin:'left'},
+  trustCard:{gap:12,padding:14,borderRadius:24,backgroundColor:'#FFF9F7',borderWidth:1,borderColor:'#E7D6D1',shadowColor:'#743B49',shadowOpacity:.08,shadowRadius:16,shadowOffset:{width:0,height:7}},
+  trustIntro:{flexDirection:'row',alignItems:'center',gap:10},
+  trustTitle:{fontFamily:'Poppins_700Bold',fontSize:13,color:colors.ivory},
+  trustBody:{fontFamily:'Poppins_400Regular',fontSize:10.5,lineHeight:15,color:colors.muted,marginTop:2},
   trustRibbon:{flexDirection:'row',gap:7},
-  trustPoint:{flex:1,minHeight:35,borderRadius:18,backgroundColor:'rgba(255,255,255,.05)',borderWidth:1,borderColor:colors.line,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5},
-  trustLabel:{fontFamily:'Poppins_600SemiBold',fontSize:9,color:'#EBD9E7'},
+  trustPoint:{flex:1,minHeight:43,borderRadius:16,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E8D9D4',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6},
+  trustLabel:{fontFamily:'Poppins_700Bold',fontSize:9.5,color:'#452B33'},
   checkoutCard:{gap:13,padding:17,borderRadius:23,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#705A22'},
   checkoutIcon:{width:43,height:43,borderRadius:22,backgroundColor:'#5A4310',alignItems:'center',justifyContent:'center',marginRight:11},
   applePayButton:{width:'100%',height:52},
