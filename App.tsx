@@ -912,6 +912,7 @@ function HomeClean({profile,items,matchLoadState,matchingPoolStatus,onRetryMatch
   const [notificationsOpen,setNotificationsOpen]=useState(false);
   const [passportOpen,setPassportOpen]=useState(false);
   const useMatchGrid=width>=900;
+  const useDesktopRail=width>=1120;
   const compactHome=width<430;
   const featured=items[0];
   const rest=items.slice(1,25);
@@ -930,7 +931,9 @@ function HomeClean({profile,items,matchLoadState,matchingPoolStatus,onRetryMatch
   const poolNeedsVerification=matchingPoolStatus?.status==='verification_required';
   const poolNeedsPreferences=matchingPoolStatus?.status==='preferences_incomplete';
   const poolMessage=matchingPoolStatus?.suggestions[0]??'No verified profiles meet your preferences right now. We will refresh your introductions as the community grows.';
-  return <LinearGradient colors={['#FFFDFC','#F8EDEA',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,{maxWidth:920,paddingHorizontal:0}]}>
+  return <LinearGradient colors={['#FFFDFC','#F8EDEA',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,homeCleanStyles.pageFrame,useDesktopRail&&homeCleanStyles.pageFrameDesktop]}>
+    {useDesktopRail&&<HomeDesktopRail navigate={navigate}/>} 
+    <View style={homeCleanStyles.homeMain}>
     <View style={homeCleanStyles.header}>
       <View style={{flex:1}}>
         <Text numberOfLines={1} style={[homeCleanStyles.greeting,compactHome&&homeCleanStyles.headingCompact]}>{timeGreeting}, {greetingName} 👋</Text>
@@ -1005,10 +1008,35 @@ function HomeClean({profile,items,matchLoadState,matchingPoolStatus,onRetryMatch
         {matchLoadState==='error'?<Button label="Try again" icon="refresh" onPress={onRetryMatches}/>:matchLoadState==='preview'?<Button label="Adjust filters" onPress={()=>navigate('discovery')}/>:poolNeedsVerification?<Button label="Complete verification" icon="shield-checkmark-outline" onPress={()=>navigate('verifyHub')}/>:poolNeedsPreferences?<Button label="Complete preferences" icon="options-outline" onPress={()=>navigate('discovery')}/>:matchLoadState==='ready'?<Button label="Review preferences" icon="options-outline" onPress={()=>navigate('discovery')}/>:null}
       </View>}
     </ScrollView>
-    <BottomNav active="home" navigate={navigate}/>
+    {!useDesktopRail&&<BottomNav active="home" navigate={navigate}/>} 
     <HomeNotifications visible={notificationsOpen} onClose={()=>setNotificationsOpen(false)} onOpenMatches={()=>{setNotificationsOpen(false);}} />
     <IntentPassportSheet visible={passportOpen} commitment={preferences.intent} timeline={alignment.timeline} childrenPlan={alignment.children} familyStyle={alignment.family} relocation={alignment.relocation} lifestyle={preferences.vibes} onClose={()=>setPassportOpen(false)} onEdit={()=>{setPassportOpen(false);navigate('discovery')}}/>
+    </View>
   </SafeAreaView></LinearGradient>
+}
+
+function HomeDesktopRail({navigate}:{navigate:(s:Screen)=>void}){
+  const navigationMeta:Record<typeof primaryNavigation[number]['target'],{icon:keyof typeof Ionicons.glyphMap;tone:PremiumIconTone}>={home:{icon:'heart',tone:'ruby'},explore:{icon:'compass',tone:'gold'},chat:{icon:'chatbubble',tone:'ruby'},events:{icon:'calendar',tone:'gold'},gifts:{icon:'gift',tone:'gold'},executive:{icon:'briefcase',tone:'gold'},profile:{icon:'person',tone:'dark'}};
+  return <View style={homeCleanStyles.desktopRail}>
+    <View style={homeCleanStyles.desktopBrand}>
+      <Image source={destinyOneLogo} style={homeCleanStyles.desktopLogo}/>
+      <View><Text style={homeCleanStyles.desktopBrandName}>DESTINY<Text style={homeCleanStyles.desktopBrandGold}>ONE</Text></Text><Text style={homeCleanStyles.desktopBrandSub}>Meaningful connections.{"\n"}Extraordinary futures.</Text></View>
+    </View>
+    <View style={homeCleanStyles.desktopNav}>{primaryNavigation.map(({label,target})=>{
+      const meta=navigationMeta[target];
+      const selected=target==='home';
+      return <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label}`} key={target} onPress={()=>navigate(target as Screen)} style={[homeCleanStyles.desktopNavItem,selected&&homeCleanStyles.desktopNavItemOn]}>
+        <Ionicons name={selected?meta.icon:`${meta.icon}-outline` as keyof typeof Ionicons.glyphMap} size={17} color={selected?'#FFF7F4':'#F4DDE1'}/>
+        <Text style={[homeCleanStyles.desktopNavLabel,selected&&homeCleanStyles.desktopNavLabelOn]}>{label}</Text>
+      </Pressable>;
+    })}</View>
+    <Pressable accessibilityRole="button" accessibilityLabel="Explore DestinyOne Premium" onPress={()=>navigate('pricing')} style={homeCleanStyles.desktopPremium}>
+      <PremiumIcon name="diamond" tone="gold" size={42} iconSize={19}/>
+      <Text style={homeCleanStyles.desktopPremiumEyebrow}>DESTINYONE PREMIUM</Text>
+      <Text style={homeCleanStyles.desktopPremiumText}>More thoughtful introductions.</Text>
+      <Text style={homeCleanStyles.desktopPremiumAction}>Explore membership <Ionicons name="arrow-forward" size={11}/></Text>
+    </Pressable>
+  </View>
 }
 
 function HomeNotifications({visible,onClose,onOpenMatches}:{visible:boolean;onClose:()=>void;onOpenMatches:()=>void}){
@@ -4789,6 +4817,24 @@ const focusStyles=StyleSheet.create({
 });
 
 const homeCleanStyles=StyleSheet.create({
+  pageFrame:{maxWidth:920,paddingHorizontal:0},
+  pageFrameDesktop:{maxWidth:1320,paddingHorizontal:16,flexDirection:'row',gap:16,alignSelf:'center'},
+  homeMain:{flex:1,minWidth:0},
+  desktopRail:{width:218,alignSelf:'stretch',marginVertical:10,padding:15,borderRadius:22,backgroundColor:'#210B13',borderWidth:1,borderColor:'#612339',shadowColor:'#4C1828',shadowOpacity:.2,shadowRadius:22,shadowOffset:{width:0,height:10},gap:18},
+  desktopBrand:{flexDirection:'row',alignItems:'center',gap:9,paddingBottom:3},
+  desktopLogo:{width:34,height:34,borderRadius:9},
+  desktopBrandName:{fontFamily:'Poppins_700Bold',fontSize:11,letterSpacing:1.1,color:'#FFF8F4'},
+  desktopBrandGold:{color:'#D7AE47'},
+  desktopBrandSub:{fontFamily:'Poppins_400Regular',fontSize:7.8,lineHeight:11,color:'#E3CBD0',marginTop:2},
+  desktopNav:{gap:5},
+  desktopNavItem:{minHeight:38,paddingHorizontal:11,borderRadius:12,flexDirection:'row',alignItems:'center',gap:10},
+  desktopNavItemOn:{backgroundColor:'#8D1739',borderWidth:1,borderColor:'#E66A88',shadowColor:'#C21B4D',shadowOpacity:.36,shadowRadius:11},
+  desktopNavLabel:{fontFamily:'Poppins_600SemiBold',fontSize:10.5,color:'#F4DDE1'},
+  desktopNavLabelOn:{color:'#FFF9F5'},
+  desktopPremium:{marginTop:'auto',padding:12,borderRadius:16,alignItems:'center',gap:6,backgroundColor:'#321018',borderWidth:1,borderColor:'#80502A'},
+  desktopPremiumEyebrow:{fontFamily:'Poppins_700Bold',fontSize:7.8,letterSpacing:1.05,color:'#DDB54A'},
+  desktopPremiumText:{fontFamily:'Poppins_600SemiBold',fontSize:10.5,lineHeight:15,textAlign:'center',color:'#FFF3E8'},
+  desktopPremiumAction:{fontFamily:'Poppins_700Bold',fontSize:8.7,color:'#F6DDA5',marginTop:2},
   header:{minHeight:84,paddingHorizontal:18,paddingTop:9,paddingBottom:11,flexDirection:'row',alignItems:'center',gap:9},
   headingCompact:{fontSize:20,lineHeight:25},
   greeting:{fontFamily:'Poppins_700Bold',fontSize:24,lineHeight:30,color:'#2A151C',letterSpacing:0},
