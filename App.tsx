@@ -589,7 +589,7 @@ function Splash(){
   const translateY=float.interpolate({inputRange:[0,1],outputRange:[3,-4]});
   const wordsOpacity=progress.interpolate({inputRange:[0,.16,.85,1],outputRange:[0,1,1,.92]});
   const wordsY=progress.interpolate({inputRange:[0,1],outputRange:[10,0]});
-  return <LinearGradient colors={['#030001','#120004','#260008']} locations={[0,.56,1]} style={styles.center}>
+  return <LinearGradient colors={['#FFFDFC','#F8EDEA','#F8F3ED']} locations={[0,.56,1]} style={styles.center}>
     <View style={launchStyles.velvetGlowTop}/><View style={launchStyles.velvetGlowBottom}/>
     <Animated.View style={[launchStyles.cleanHalo,{opacity:glowOpacity,transform:[{scale}]}]}/>
     <Animated.View style={[launchStyles.logoFrame,{transform:[{translateY},{scale}]}]}>
@@ -923,7 +923,7 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
   const poolNeedsVerification=matchingPoolStatus?.status==='verification_required';
   const poolNeedsPreferences=matchingPoolStatus?.status==='preferences_incomplete';
   const poolMessage=matchingPoolStatus?.suggestions[0]??'No verified profiles meet your preferences right now. We will refresh your introductions as the community grows.';
-  return <LinearGradient colors={['#23030A','#0B0104',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,{maxWidth:920,paddingHorizontal:0}]}>
+  return <LinearGradient colors={['#FFFDFC','#F8EDEA',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,{maxWidth:920,paddingHorizontal:0}]}> 
     <View style={homeCleanStyles.header}>
       <View style={{flex:1}}>
         <Text style={styles.kicker}>CURATED FOR YOUR FUTURE</Text>
@@ -986,7 +986,7 @@ function ExploreHub({navigate}:{navigate:(screen:Screen)=>void}){
     {title:'Trusted Circle',body:'Private character vouches from people who know you well.',icon:'people-outline' as const,tone:'gold' as const,target:'circle' as Screen},
     {title:'Trust & verification',body:'Selfie, voice, ID and account trust controls.',icon:'shield-checkmark-outline' as const,tone:'rose' as const,target:'verifyHub' as Screen},
   ];
-  return <LinearGradient colors={['#25040B','#0B0104',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,{maxWidth:920,paddingHorizontal:0}]}>
+  return <LinearGradient colors={['#FFFDFC','#F8EDEA',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,{maxWidth:920,paddingHorizontal:0}]}> 
     <View style={focusStyles.header}><View style={{flex:1}}><Text style={styles.kicker}>DISCOVER WITH INTENTION</Text><Text style={shared.h2}>Your next step</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={()=>navigate('profile')} style={homeCleanStyles.headerButton}><PremiumIcon name="person-outline" tone="ruby" size={36} iconSize={17}/></Pressable></View>
     <ScrollView contentContainerStyle={focusStyles.content} showsVerticalScrollIndicator={false}>
       <View style={[focusStyles.featuredRow,wide&&focusStyles.featuredRowWide]}>
@@ -4325,7 +4325,7 @@ function PricingPromise({icon,title,body}:{icon:keyof typeof Ionicons.glyphMap;t
 function FormPage({children,back,step,scroll: _scroll}:{children:React.ReactNode;back?:()=>void;step?:number;scroll?:boolean}){
   void _scroll;
   const inner=<View style={[shared.content,formPageStyles.content]}>{(back||step)&&<View style={{gap:18}}>{back?<Pressable onPress={back} style={styles.backButton}><PremiumIcon name="arrow-back" tone="dark" size={42} iconSize={20}/></Pressable>:<View style={{height:42}}/>}{step&&<StepBar step={step} total={6}/>}</View>}{children}</View>;
-  return <LinearGradient colors={['#20041B',colors.black,'#140311']} locations={[0,.48,1]} style={{flex:1,overflow:'hidden'}}><View style={styles.formGlow}/><SafeAreaView style={shared.safe}><KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':Platform.OS==='android'?'height':undefined} style={formPageStyles.keyboard}><ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'on-drag'} showsVerticalScrollIndicator={false} contentContainerStyle={formPageStyles.scrollContent}>{inner}</ScrollView></KeyboardAvoidingView></SafeAreaView></LinearGradient>
+  return <LinearGradient colors={['#FFFDFC','#F8EDEA','#F8F3ED']} locations={[0,.48,1]} style={{flex:1,overflow:'hidden'}}><View style={styles.formGlow}/><SafeAreaView style={shared.safe}><KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':Platform.OS==='android'?'height':undefined} style={formPageStyles.keyboard}><ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'on-drag'} showsVerticalScrollIndicator={false} contentContainerStyle={formPageStyles.scrollContent}>{inner}</ScrollView></KeyboardAvoidingView></SafeAreaView></LinearGradient>
 }
 
 const formPageStyles=StyleSheet.create({
@@ -5249,13 +5249,13 @@ const launchStyles=StyleSheet.create({
   preloadLogo:{width:'100%',height:'100%'},
   orbitHeart:{position:'absolute',left:0,top:30,width:34,height:34,borderRadius:17,backgroundColor:colors.pink,alignItems:'center',justifyContent:'center',borderWidth:2,borderColor:'#FF7788',shadowColor:colors.pink,shadowOpacity:.8,shadowRadius:12},
   orbitSpark:{position:'absolute',right:2,bottom:24,width:37,height:37,borderRadius:19,backgroundColor:'#321F06',alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'#7A5D18'},
-  preloadBrand:{fontFamily:'Poppins_700Bold',fontSize:30,letterSpacing:.4,color:colors.ivory,marginTop:22,textShadowColor:'rgba(229,9,47,.32)',textShadowRadius:12},
+  preloadBrand:{fontFamily:'Poppins_700Bold',fontSize:30,letterSpacing:.4,color:colors.ivory,marginTop:22,textShadowColor:'rgba(183,138,47,.22)',textShadowRadius:12},
   preloadBrandOne:{color:colors.gold},
-  preloadLine:{fontFamily:'Poppins_700Bold',fontSize:13.5,lineHeight:19,color:'#FFE2E7',marginTop:9,textAlign:'center',letterSpacing:.2},
-  preloadMood:{fontFamily:'Poppins_400Regular',fontSize:12.5,color:'#CDAFB6',marginTop:7},
+  preloadLine:{fontFamily:'Poppins_700Bold',fontSize:13.5,lineHeight:19,color:'#5D3942',marginTop:9,textAlign:'center',letterSpacing:.2},
+  preloadMood:{fontFamily:'Poppins_400Regular',fontSize:12.5,color:colors.muted,marginTop:7},
   preloadPromise:{flexDirection:'row',alignItems:'center',gap:8,marginTop:22,paddingHorizontal:13,paddingVertical:8,borderRadius:20,backgroundColor:'rgba(255,255,255,.035)',borderWidth:1,borderColor:'rgba(255,255,255,.07)'},
   promiseDot:{width:4,height:4,borderRadius:2,backgroundColor:colors.gold},
-  preloadPromiseText:{fontFamily:'Poppins_600SemiBold',fontSize:8,letterSpacing:1.25,color:'#DCC4C7'},
+  preloadPromiseText:{fontFamily:'Poppins_600SemiBold',fontSize:8,letterSpacing:1.25,color:'#76565E'},
   preloadHalo:{position:'absolute',width:280,height:280,borderRadius:140,backgroundColor:'rgba(229,9,47,.14)',shadowColor:colors.pink,shadowOpacity:.85,shadowRadius:54},
   cleanHalo:{position:'absolute',width:250,height:250,borderRadius:125,backgroundColor:'rgba(229,9,47,.10)',shadowColor:colors.pink,shadowOpacity:.48,shadowRadius:44},
   preloadTrack:{position:'absolute',bottom:105,width:172,height:3,borderRadius:2,overflow:'hidden',backgroundColor:'rgba(255,255,255,.09)'},
