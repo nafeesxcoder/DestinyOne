@@ -1014,21 +1014,25 @@ function ExploreHub({navigate}:{navigate:(screen:Screen)=>void}){
   const {width}=useWindowDimensions();
   const wide=width>=760;
   const tools=[
-    {title:'Match preferences',body:'Intent, family, distance and future-plan filters.',icon:'options-outline' as const,tone:'rose' as const,target:'discovery' as Screen},
-    {title:'Relationship coach',body:'Thoughtful prompts, profile polish and safety-aware support.',icon:'sparkles-outline' as const,tone:'plum' as const,target:'coach' as Screen},
-    {title:'Trusted Circle',body:'Private character vouches from people who know you well.',icon:'people-outline' as const,tone:'gold' as const,target:'circle' as Screen},
-    {title:'Trust & verification',body:'Selfie, voice, ID and account trust controls.',icon:'shield-checkmark-outline' as const,tone:'rose' as const,target:'verifyHub' as Screen},
+    {title:'Relationship coach',body:'Get a better prompt, profile feedback, or thoughtful next step.',icon:'sparkles-outline' as const,tone:'plum' as const,target:'coach' as Screen},
+    {title:'Trust & verification',body:'Manage your selfie, voice intro, ID, and account privacy.',icon:'shield-checkmark-outline' as const,tone:'rose' as const,target:'verifyHub' as Screen},
+    {title:'Trusted Circle',body:'Invite people you trust to vouch for your character privately.',icon:'people-outline' as const,tone:'gold' as const,target:'circle' as Screen},
   ];
   return <LinearGradient colors={['#FFFDFC','#F8EDEA',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,{maxWidth:920,paddingHorizontal:0}]}>
-    <View style={focusStyles.header}><View style={{flex:1}}><Text style={styles.kicker}>DISCOVER WITH INTENTION</Text><Text style={shared.h2}>Your next step</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={()=>navigate('profile')} style={homeCleanStyles.headerButton}><PremiumIcon name="person-outline" tone="ruby" size={36} iconSize={17}/></Pressable></View>
+    <View style={focusStyles.header}><View style={{flex:1}}><Text style={styles.kicker}>DISCOVER WITH INTENTION</Text><Text style={shared.h2}>Make your next move</Text><Text style={focusStyles.headerSub}>Choose what you want to shape today. Your profile stays private.</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={()=>navigate('profile')} style={homeCleanStyles.headerButton}><PremiumIcon name="person-outline" tone="ruby" size={36} iconSize={17}/></Pressable></View>
     <ScrollView contentContainerStyle={focusStyles.content} showsVerticalScrollIndicator={false}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Set your match preferences" onPress={()=>navigate('discovery')} style={focusStyles.primaryCard}>
+        <LinearGradient colors={['#FFF4DC','#FCE6E8']} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
+        <View style={focusStyles.primaryTop}><View style={focusStyles.featureIcon}><PremiumIcon name="options-outline" tone="ruby" size={50} iconSize={23}/></View><View style={focusStyles.primaryCopy}><Text style={styles.kicker}>START HERE</Text><Text style={focusStyles.featureTitle}>Set the kind of connection you want.</Text><Text style={focusStyles.featureBody}>Fine-tune your relationship intent, distance, age range and the values that matter most.</Text></View><Ionicons name="arrow-forward" size={20} color={colors.pink}/></View>
+        <View style={focusStyles.preferenceChips}><Text style={focusStyles.preferenceChip}>Long-term</Text><Text style={focusStyles.preferenceChip}>Shared values</Text><Text style={focusStyles.preferenceChip}>Your distance</Text></View>
+      </Pressable>
       <View style={[focusStyles.featuredRow,wide&&focusStyles.featuredRowWide]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Open Executive Circle" onPress={()=>navigate('executive')} style={[focusStyles.executiveCard,wide&&focusStyles.featuredWide]}><LinearGradient colors={['rgba(212,175,55,.18)','rgba(229,9,47,.08)']} style={StyleSheet.absoluteFill}/><View style={focusStyles.featureIcon}><PremiumIcon name="briefcase" tone="gold" size={50} iconSize={23}/></View><View style={{flex:1}}><Text style={styles.kicker}>EXECUTIVE CIRCLE</Text><Text style={focusStyles.featureTitle}>Selective professional introductions.</Text><Text style={focusStyles.featureBody}>Verified career, values and relationship intent for members who prefer a smaller, curated circle.</Text></View><Ionicons name="chevron-forward" size={19} color={colors.gold}/></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Open people who liked you" onPress={()=>navigate('likes')} style={[focusStyles.likesCard,wide&&focusStyles.likesWide]}><MiniPremiumIcon name="heart-circle" tone="ruby" size={42} iconSize={20}/><View style={{flex:1}}><Text style={focusStyles.likesTitle}>People who chose you</Text><Text style={focusStyles.featureBody}>Private interest, kept calm and intentional.</Text></View><Ionicons name="chevron-forward" size={18} color={colors.muted}/></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open people who liked you" onPress={()=>navigate('likes')} style={[focusStyles.likesCard,wide&&focusStyles.likesWide]}><MiniPremiumIcon name="heart-circle" tone="ruby" size={42} iconSize={20}/><View style={{flex:1}}><Text style={styles.kicker}>PRIVATE INTEREST</Text><Text style={focusStyles.likesTitle}>See who chose you</Text><Text style={focusStyles.featureBody}>Review genuine interest when you are ready. Nothing is public.</Text></View><Ionicons name="chevron-forward" size={18} color={colors.pink}/></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open Executive Circle" onPress={()=>navigate('executive')} style={[focusStyles.executiveCard,wide&&focusStyles.featuredWide]}><View style={focusStyles.featureIcon}><PremiumIcon name="briefcase" tone="gold" size={50} iconSize={23}/></View><View style={{flex:1}}><Text style={styles.kicker}>EXECUTIVE CIRCLE</Text><Text style={focusStyles.featureTitle}>A smaller, curated circle.</Text><Text style={focusStyles.featureBody}>For verified professionals who prefer more selective introductions.</Text></View><Ionicons name="chevron-forward" size={19} color={colors.gold}/></Pressable>
       </View>
-      <View style={homeCleanStyles.sectionRow}><Text style={styles.sectionLabel}>SERIOUS DATING TOOLS</Text><Text style={homeCleanStyles.sectionHint}>Private by default</Text></View>
+      <View style={homeCleanStyles.sectionRow}><Text style={styles.sectionLabel}>BUILD A STRONGER PROFILE</Text><Text style={homeCleanStyles.sectionHint}>Private by default</Text></View>
       <View style={[focusStyles.toolGrid,wide&&focusStyles.toolGridWide]}>{tools.map(tool=><ExploreTool key={tool.title} {...tool} wide={wide} onPress={()=>navigate(tool.target)}/>)}</View>
-      <View style={focusStyles.boundary}><MiniPremiumIcon name="chatbubbles-outline" tone="gold" size={34} iconSize={16}/><View style={{flex:1}}><Text style={focusStyles.boundaryTitle}>Conversation first</Text><Text style={focusStyles.featureBody}>Gifts, GIFs, games and playful extras stay inside Chat, after a mutual connection.</Text></View></View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Open chats" onPress={()=>navigate('chat')} style={focusStyles.boundary}><MiniPremiumIcon name="chatbubbles-outline" tone="gold" size={34} iconSize={16}/><View style={{flex:1}}><Text style={focusStyles.boundaryTitle}>Keep it conversation first</Text><Text style={focusStyles.featureBody}>Chats, gifts, games and date planning open after a mutual connection.</Text></View><Ionicons name="chevron-forward" size={16} color={colors.gold}/></Pressable>
     </ScrollView>
     <BottomNav active="explore" navigate={navigate}/>
   </SafeAreaView></LinearGradient>
@@ -4695,26 +4699,32 @@ const homeStyles=StyleSheet.create({
 });
 
 const focusStyles=StyleSheet.create({
-  header:{minHeight:70,paddingHorizontal:18,paddingTop:7,paddingBottom:10,flexDirection:'row',alignItems:'center',gap:10},
+  header:{minHeight:84,paddingHorizontal:18,paddingTop:10,paddingBottom:12,flexDirection:'row',alignItems:'center',gap:10},
+  headerSub:{fontFamily:'Poppins_400Regular',fontSize:10.5,lineHeight:15,color:colors.muted,marginTop:2},
   content:{paddingHorizontal:18,paddingBottom:104,gap:16},
   featuredRow:{gap:10},
   featuredRowWide:{flexDirection:'row',alignItems:'stretch'},
   featuredWide:{flex:1},
-  executiveCard:{minHeight:154,padding:15,borderRadius:8,overflow:'hidden',borderWidth:1,borderColor:'#DFC581',backgroundColor:'#FFF7EA',flexDirection:'row',alignItems:'center',gap:12},
+  primaryCard:{minHeight:156,padding:16,borderRadius:22,overflow:'hidden',borderWidth:1,borderColor:'#E4C57C',gap:13,shadowColor:'#8B6870',shadowOpacity:.10,shadowRadius:16,elevation:2},
+  primaryTop:{flex:1,flexDirection:'row',alignItems:'center',gap:12},
+  primaryCopy:{flex:1,gap:2},
+  preferenceChips:{flexDirection:'row',flexWrap:'wrap',gap:7,paddingTop:11,borderTopWidth:1,borderTopColor:'rgba(121,82,55,.13)'},
+  preferenceChip:{paddingHorizontal:9,paddingVertical:5,borderRadius:14,overflow:'hidden',backgroundColor:'rgba(255,253,252,.72)',borderWidth:1,borderColor:'#E7CFA1',fontFamily:'Poppins_600SemiBold',fontSize:9,color:'#6A4A35'},
+  executiveCard:{minHeight:124,padding:14,borderRadius:20,overflow:'hidden',borderWidth:1,borderColor:'#E4C57C',backgroundColor:'#FFF8EE',flexDirection:'row',alignItems:'center',gap:12},
   featureIcon:{width:54,height:54,alignItems:'center',justifyContent:'center'},
-  featureTitle:{fontFamily:'Poppins_700Bold',fontSize:17,lineHeight:22,color:colors.ivory,marginTop:2},
+  featureTitle:{fontFamily:'Poppins_700Bold',fontSize:16,lineHeight:21,color:'#2A151C',marginTop:2},
   featureBody:{fontFamily:'Poppins_400Regular',fontSize:10.5,lineHeight:15.5,color:colors.muted,marginTop:3},
-  likesCard:{minHeight:78,padding:13,borderRadius:8,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,flexDirection:'row',alignItems:'center',gap:10},
-  likesWide:{maxWidth:310,minHeight:154},
-  likesTitle:{fontFamily:'Poppins_700Bold',fontSize:13,color:colors.ivory},
+  likesCard:{minHeight:124,padding:14,borderRadius:20,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,flexDirection:'row',alignItems:'center',gap:10},
+  likesWide:{maxWidth:350},
+  likesTitle:{fontFamily:'Poppins_700Bold',fontSize:14,color:'#2A151C',marginTop:1},
   toolGrid:{gap:8},
   toolGridWide:{flexDirection:'row',flexWrap:'wrap'},
-  tool:{minHeight:76,padding:12,borderRadius:8,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,flexDirection:'row',alignItems:'center',gap:10},
+  tool:{minHeight:80,padding:12,borderRadius:18,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,flexDirection:'row',alignItems:'center',gap:10},
   toolWide:{width:'49%'},
-  toolTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
+  toolTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:'#2A151C'},
   toolBody:{fontFamily:'Poppins_400Regular',fontSize:9.5,lineHeight:14,color:colors.muted,marginTop:2},
-  boundary:{minHeight:72,padding:12,borderRadius:8,backgroundColor:'rgba(212,175,55,.06)',borderWidth:1,borderColor:'rgba(212,175,55,.18)',flexDirection:'row',alignItems:'center',gap:10},
-  boundaryTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:colors.ivory},
+  boundary:{minHeight:74,padding:13,borderRadius:19,backgroundColor:'#FFF6E7',borderWidth:1,borderColor:'#E8D2A2',flexDirection:'row',alignItems:'center',gap:10},
+  boundaryTitle:{fontFamily:'Poppins_700Bold',fontSize:12,color:'#2A151C'},
 });
 
 const homeCleanStyles=StyleSheet.create({
