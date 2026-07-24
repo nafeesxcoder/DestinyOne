@@ -1,8 +1,8 @@
 export const colors = {
   // Light ivory canvas with wine-red actions: the approved DestinyOne direction.
   black: '#F8F3ED',
-  plum: '#35141D',
-  plumLight: '#6D2739',
+  plum: '#F2E4E5',
+  plumLight: '#E9D2D6',
   surface: '#FFFDFC',
   surface2: '#F8EDEA',
   purple: '#A80C36',
