@@ -534,7 +534,7 @@ function DestinyOneApp() {
     {screen==='vibes'&&<Vibes value={vibeList} onChange={setVibeList} onNext={()=>setScreen('intent')}/>}
     {screen==='intent'&&<Intent value={intent} onChange={setIntent} onNext={()=>setScreen('alignment')}/>}
     {screen==='alignment'&&<Alignment value={alignment} onChange={setAlignment} onNext={completeOnboarding}/>}
-    {screen==='home'&&<HomeClean items={visibleMatches} matchLoadState={matchLoadState} matchingPoolStatus={matchingPoolStatus} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={setScreen}/>}
+    {screen==='home'&&<HomeClean profile={profileDraft} items={visibleMatches} matchLoadState={matchLoadState} matchingPoolStatus={matchingPoolStatus} onRetryMatches={()=>void refreshServerMatches()} preferences={{intent,vibes:vibeList,filters:matchFilters}} signals={discoverySignals} dismissedCount={dismissedIds.length} profileGrowth={{hasPhoto:profilePhotos.length>0,verified,hasVoiceIntro:!!voiceIntroUri,vouchesCount:vouches.length,vibeCount:vibeList.length,hasIntent:!!intent}} roseAvailability={roseAvailability} crossedPaths={crossedPaths} openDetail={openDetail} onInterested={chooseInterested} onSkip={passMatch} onRose={openRose} navigate={setScreen}/>} 
     {screen==='explore'&&<ExploreHub navigate={setScreen}/>}
     {screen==='circle'&&<TrustedCircle vouches={vouches} coinBalance={coinBalance} rewardMode={vouchRewardsMode} onBack={()=>setScreen('explore')} onAddVouch={(quality)=>{if(vouchRewardsMode==='demo'&&vouches.length<3&&!vouches.includes(quality)){setVouches(current=>[...current,quality]);setCoinBalance(balance=>balance+100)}}}/>}
     {screen==='discovery'&&<DiscoveryCenter filters={matchFilters} onFiltersChange={updateMatchFilters} signals={discoverySignals} smartDiscovery={smartDiscovery} crossedPaths={crossedPaths} onSmartChange={updateSmartDiscovery} onCrossedChange={setCrossedPaths} onClear={clearMatchingActivity} onBack={()=>setScreen('explore')}/>}
@@ -906,12 +906,16 @@ function Alignment({value,onChange,onNext}:{value:Record<string,string>;onChange
   </FormPage>
 }
 
-function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,preferences,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{items:Match[];matchLoadState:MemberMatchLoadState;matchingPoolStatus:MatchingPoolStatus|null;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
+function HomeClean({profile,items,matchLoadState,matchingPoolStatus,onRetryMatches,preferences,signals,dismissedCount,profileGrowth,crossedPaths,openDetail,onInterested,onSkip,onRose,navigate}:{profile:ProfileDraft;items:Match[];matchLoadState:MemberMatchLoadState;matchingPoolStatus:MatchingPoolStatus|null;onRetryMatches:()=>void;preferences:{intent:string;vibes:string[];filters:MatchFilters};signals:DiscoverySignal[];dismissedCount:number;profileGrowth:ProfileGrowthInput;roseAvailability:RoseAvailability;crossedPaths:boolean;openDetail:(m:Match)=>void;onInterested:(m:Match)=>void;onSkip:(m:Match)=>void;onRose:(m:Match)=>void;navigate:(s:Screen)=>void}){
   const {width}=useWindowDimensions();
   const useMatchGrid=width>=900;
   const compactHome=width<430;
   const featured=items[0];
   const rest=items.slice(1,25);
+  const featuredFaces=items.slice(0,3);
+  const currentHour=new Date().getHours();
+  const timeGreeting=currentHour<12?'Good morning':currentHour<17?'Good afternoon':'Good evening';
+  const greetingName=profile.firstName.trim()||'there';
   const growth=buildHomeGrowthLoop({visibleMatches:items,preferences,signals,dismissedCount,profile:profileGrowth});
   const retention=growth.retention;
   const primaryNudge=growth.nudges[0];
@@ -926,24 +930,29 @@ function HomeClean({items,matchLoadState,matchingPoolStatus,onRetryMatches,prefe
   return <LinearGradient colors={['#FFFDFC','#F8EDEA',colors.black]} style={{flex:1}}><SafeAreaView style={[shared.safe,{maxWidth:920,paddingHorizontal:0}]}>
     <View style={homeCleanStyles.header}>
       <View style={{flex:1}}>
-        <Text style={styles.kicker}>CURATED FOR YOUR FUTURE</Text>
-        <Text numberOfLines={1} style={[shared.h2,compactHome&&homeCleanStyles.headingCompact]}>Today's picks</Text>
+        <Text numberOfLines={1} style={[homeCleanStyles.greeting,compactHome&&homeCleanStyles.headingCompact]}>{timeGreeting}, {greetingName} 👋</Text>
+        <Text numberOfLines={1} style={homeCleanStyles.greetingSub}>Thoughtful connections. Meaningful futures.</Text>
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Match filters" onPress={()=>navigate('discovery')} style={homeCleanStyles.headerButton}><PremiumIcon name="options-outline" tone="dark" size={36} iconSize={17}/></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={()=>navigate('profile')} style={homeCleanStyles.headerButton}><PremiumIcon name="person-outline" tone="ruby" size={36} iconSize={17}/></Pressable>
+      <View style={homeCleanStyles.headerActions}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open match filters" onPress={()=>navigate('discovery')} style={homeCleanStyles.headerButton}><PremiumIcon name="options-outline" tone="dark" size={36} iconSize={17}/></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={()=>navigate('profile')} style={homeCleanStyles.headerButton}><PremiumIcon name="person-outline" tone="ruby" size={36} iconSize={17}/></Pressable>
+      </View>
     </View>
 
     <ScrollView contentContainerStyle={homeCleanStyles.content} showsVerticalScrollIndicator={false}>
       <View style={homeCleanStyles.hero}>
-        <LinearGradient colors={['rgba(255,36,72,.15)','rgba(255,255,255,.025)']} style={StyleSheet.absoluteFill}/>
+        <LinearGradient colors={['#FFF9FB','#FCE8EC','#FFF5E8']} style={StyleSheet.absoluteFill}/>
+        <View style={homeCleanStyles.heroGlow}/>
         <View style={homeCleanStyles.dailyCount}>
           <Text style={homeCleanStyles.statNumber}>{retention.dailyMatches}</Text>
           <Text style={homeCleanStyles.statLabel}>curated today</Text>
         </View>
         <View style={homeCleanStyles.heroCopy}>
+          <Text style={homeCleanStyles.heroEyebrow}>CURATED FOR YOUR FUTURE</Text>
           <Text style={homeCleanStyles.heroTitle}>Chosen around your future.</Text>
-          <View style={homeCleanStyles.chipWrap}>{preferenceChips.map(chip=><View key={chip} style={homeCleanStyles.cleanChip}><Text numberOfLines={1} style={homeCleanStyles.cleanChipText}>{chip}</Text></View>)}</View>
+          <Text numberOfLines={3} style={homeCleanStyles.heroBody}>{retention.dailyMatches} thoughtful introductions. Clear intent before chemistry, with room for a real conversation.</Text>
         </View>
+        {featuredFaces.length>0&&<View accessibilityLabel="Today's curated member previews" style={homeCleanStyles.faceStack}>{featuredFaces.map((match,index)=><Image key={match.id} source={{uri:match.photo}} style={[homeCleanStyles.face,{marginLeft:index===0?0:-11,zIndex:featuredFaces.length-index}]}/>)}</View>}
       </View>
 
       {crossedPaths&&<Pressable onPress={()=>navigate('discovery')} style={homeCleanStyles.crossedMini}>
@@ -4685,24 +4694,31 @@ const focusStyles=StyleSheet.create({
 });
 
 const homeCleanStyles=StyleSheet.create({
-  header:{minHeight:70,paddingHorizontal:18,paddingTop:7,paddingBottom:10,flexDirection:'row',alignItems:'center',gap:9},
-  headingCompact:{fontSize:22},
-  headerSub:{fontFamily:'Poppins_400Regular',fontSize:11.5,lineHeight:17,color:'#CDB5BB',marginTop:3},
-  headerButton:{width:40,height:40,borderRadius:20,backgroundColor:'rgba(255,255,255,.045)',borderWidth:1,borderColor:'rgba(255,255,255,.09)',alignItems:'center',justifyContent:'center'},
+  header:{minHeight:84,paddingHorizontal:18,paddingTop:9,paddingBottom:11,flexDirection:'row',alignItems:'center',gap:9},
+  headingCompact:{fontSize:20,lineHeight:25},
+  greeting:{fontFamily:'Poppins_700Bold',fontSize:24,lineHeight:30,color:'#2A151C',letterSpacing:0},
+  greetingSub:{fontFamily:'Poppins_400Regular',fontSize:11.5,lineHeight:17,color:'#78666C',marginTop:2},
+  headerSub:{fontFamily:'Poppins_400Regular',fontSize:11.5,lineHeight:17,color:'#78666C',marginTop:3},
+  headerActions:{flexDirection:'row',gap:8},
+  headerButton:{width:40,height:40,borderRadius:20,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:'#E7D7CF',alignItems:'center',justifyContent:'center',shadowColor:'#67414B',shadowOpacity:.1,shadowRadius:9,elevation:2},
   content:{paddingHorizontal:18,paddingBottom:100,gap:16},
   sideRail:{position:'absolute',right:12,top:132,zIndex:5,gap:9},
   sideButton:{width:58,minHeight:58,borderRadius:20,backgroundColor:'#FFFDFC',borderWidth:1,borderColor:colors.line,alignItems:'center',justifyContent:'center',gap:4,shadowColor:'#6E3442',shadowOpacity:.12,shadowRadius:14},
   goldButton:{borderColor:'#DFC581',backgroundColor:'#FFF6DE'},
   sideText:{fontFamily:'Poppins_700Bold',fontSize:8.5,color:colors.ivory},
-  hero:{minHeight:92,borderRadius:22,overflow:'hidden',padding:13,flexDirection:'row',alignItems:'center',gap:13,borderWidth:1,borderColor:'#EBC9D0',backgroundColor:'#FDEDEF'},
-  dailyCount:{width:72,minHeight:66,borderRadius:18,backgroundColor:'#FFF9F3',borderWidth:1,borderColor:'#D9B866',alignItems:'center',justifyContent:'center',padding:7},
-  heroCopy:{flex:1,gap:8},
-  heroTitle:{fontFamily:'Poppins_700Bold',fontSize:14,color:colors.ivory},
+  hero:{minHeight:132,borderRadius:24,overflow:'hidden',padding:15,flexDirection:'row',alignItems:'center',gap:12,borderWidth:1,borderColor:'#E6C9BC',backgroundColor:'#FDEDEF',shadowColor:'#9C6272',shadowOpacity:.11,shadowRadius:16,elevation:2},
+  heroGlow:{position:'absolute',width:124,height:124,borderRadius:62,backgroundColor:'rgba(245,156,171,.25)',right:-42,top:-52},
+  dailyCount:{width:76,minHeight:82,borderRadius:38,backgroundColor:'#FFF9F3',borderWidth:1.5,borderColor:'#D9B866',alignItems:'center',justifyContent:'center',padding:7,shadowColor:'#B88A1E',shadowOpacity:.14,shadowRadius:9},
+  heroCopy:{flex:1,gap:3,zIndex:1},
+  heroEyebrow:{fontFamily:'Poppins_700Bold',fontSize:8.5,letterSpacing:1.05,color:'#B9891E'},
+  heroTitle:{fontFamily:'Poppins_700Bold',fontSize:16,lineHeight:21,color:'#2A151C'},
   heroTop:{flexDirection:'row',alignItems:'center',gap:13},
   roseSeal:{width:58,height:58,borderRadius:29,backgroundColor:'#A80022',borderWidth:1,borderColor:'rgba(255,255,255,.20)',alignItems:'center',justifyContent:'center',shadowColor:'#FF2448',shadowOpacity:.5,shadowRadius:18},
   roseEmoji:{fontFamily:'Poppins_700Bold',fontSize:25,color:colors.ivory},
   script:{fontFamily:'Satisfy_400Regular',fontSize:31,color:colors.ivory},
-  heroBody:{fontFamily:'Poppins_400Regular',fontSize:12.2,lineHeight:18,color:colors.muted,marginTop:1},
+  heroBody:{fontFamily:'Poppins_400Regular',fontSize:10.2,lineHeight:15,color:'#78666C',marginTop:1},
+  faceStack:{width:47,height:44,flexDirection:'row',alignItems:'center',justifyContent:'flex-end',zIndex:1},
+  face:{width:34,height:34,borderRadius:17,borderWidth:2,borderColor:'#FFF9F3',backgroundColor:'#E6C2C9'},
   chipWrap:{flexDirection:'row',flexWrap:'wrap',gap:6},
   cleanChip:{maxWidth:'100%',paddingHorizontal:9,paddingVertical:5,borderRadius:14,backgroundColor:'#FFF9F3',borderWidth:1,borderColor:'#E5D2C8'},
   cleanChipText:{fontFamily:'Poppins_600SemiBold',fontSize:9.2,color:colors.ivory},
