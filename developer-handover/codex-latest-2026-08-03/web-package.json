@@ -1,0 +1,14 @@
+{
+  "name": "destinyone-web-platform",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev:frontend": "pnpm --filter destinyone-frontend dev",
+    "dev:backend": "pnpm --filter destinyone-backend dev",
+    "build": "pnpm --filter destinyone-frontend build",
+    "start:frontend": "pnpm --filter destinyone-frontend start",
+    "start:backend": "pnpm --filter destinyone-backend start",
+    "check": "pnpm --filter destinyone-backend check && pnpm --filter destinyone-frontend build"
+  }
+}

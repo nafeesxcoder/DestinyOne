@@ -1,0 +1,2 @@
+import FeatureHub from "../components/common/FeatureHub";
+export default function LikesPage() { return <FeatureHub eyebrow="Interest" title="People who chose you thoughtfully" subtitle="No popularity scoreboard. Review genuine interest one person at a time." cards={[{ title: "Anika", body: "Product Designer · New York · Marriage-minded", meta: "Red Rose" }, { title: "Maya", body: "Architect · Chicago · Long-term", meta: "Interested" }]} actions={[{ label: "Review matches", href: "/matches" }, { label: "See Premium access", href: "/membership" }]} />; }

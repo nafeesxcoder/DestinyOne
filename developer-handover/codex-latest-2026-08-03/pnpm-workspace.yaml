@@ -1,0 +1,10 @@
+packages:
+  - frontend
+  - backend
+
+allowBuilds:
+  esbuild: true
+confirmModulesPurge: false
+managePackageManagerVersions: false
+minimumReleaseAgeExclude:
+  - expo-iap@5.0.1

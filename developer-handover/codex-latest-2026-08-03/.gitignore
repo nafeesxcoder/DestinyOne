@@ -1,0 +1,16 @@
+node_modules/
+frontend/.next/
+.next/
+frontend/out/
+frontend/public/actual-app/
+.pnpm-store/
+.expo/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+
+# Local Netlify folder
+.netlify
